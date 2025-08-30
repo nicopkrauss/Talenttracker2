@@ -1,13 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { useAuth } from "@/lib/auth"
+import { useAuth } from "@/lib/auth-context"
 import { Unauthorized } from "./unauthorized"
+import { UserRole } from "@/lib/types"
 
 interface WithAuthOptions {
   requireAuth?: boolean
   requireApproved?: boolean
-  requiredRoles?: string[]
+  requiredRoles?: UserRole[]
   fallback?: React.ComponentType
   unauthorizedMessage?: string
 }
@@ -25,40 +26,35 @@ export function withAuth<P extends object>(
   } = options
 
   return function AuthenticatedComponent(props: P) {
-    const { 
-      user, 
-      userProfile, 
-      loading, 
-      isAuthenticated, 
-      isApproved, 
-      hasAnyRole 
-    } = useAuth()
+    const { user, userProfile, loading } = useAuth()
 
     // Show loading state
     if (loading) {
       return (
-        <div className="min-h-screen flex items-center justify-center">
+        <div className="flex h-screen items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       )
     }
 
     // Check authentication requirement
-    if (requireAuth && !isAuthenticated) {
-      return <FallbackComponent message={unauthorizedMessage || "Please log in to access this page."} />
+    if (requireAuth && !user) {
+      return <FallbackComponent />
     }
 
     // Check approval requirement
-    if (requireApproved && !isApproved) {
-      return <FallbackComponent message={unauthorizedMessage || "Your account is pending approval."} />
+    if (requireApproved && (!userProfile || userProfile.status !== 'active')) {
+      return <FallbackComponent />
     }
 
     // Check role requirements
-    if (requiredRoles.length > 0 && !hasAnyRole(requiredRoles)) {
-      return <FallbackComponent message={unauthorizedMessage || "You don't have permission to access this page."} />
+    if (requiredRoles.length > 0 && userProfile) {
+      const hasRequiredRole = requiredRoles.includes(userProfile.role as UserRole)
+      if (!hasRequiredRole) {
+        return <FallbackComponent />
+      }
     }
 
-    // All checks passed, render the component
     return <Component {...props} />
   }
 }

@@ -148,7 +148,7 @@ async function sendEmailViaService(emailData: EmailRequest): Promise<{ messageId
   console.log(`📧 Simulating email send to ${emailData.to}`)
   
   return {
-    messageId: `demo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    messageId: `demo-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
   }
 }
 

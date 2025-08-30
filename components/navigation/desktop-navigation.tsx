@@ -2,9 +2,11 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { Settings, User } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Settings, User, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavigation } from './navigation-provider'
+import { useAuth } from '@/lib/auth-context'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,6 +49,9 @@ interface UserMenuProps {
 }
 
 function UserMenu({ user }: UserMenuProps) {
+  const { signOut } = useAuth()
+  const router = useRouter()
+  
   // Get user initials for fallback
   const initials = user.name
     .split(' ')
@@ -55,8 +60,20 @@ function UserMenu({ user }: UserMenuProps) {
     .toUpperCase()
     .slice(0, 2)
 
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+      // Redirect to login page after successful sign out
+      router.push('/login')
+    } catch (error) {
+      console.error('Sign out error:', error)
+      // Still redirect to login even if there's an error
+      router.push('/login')
+    }
+  }
+
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
@@ -86,6 +103,14 @@ function UserMenu({ user }: UserMenuProps) {
             <Settings className="w-4 h-4" />
             Settings
           </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem 
+          onClick={handleSignOut}
+          className="flex items-center gap-2"
+        >
+          <LogOut className="w-4 h-4" />
+          Sign Out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

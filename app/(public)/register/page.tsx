@@ -7,14 +7,14 @@ import { toast } from "sonner"
 import { AuthCard, RegistrationForm } from "@/components/auth"
 import { AuthErrorBoundary } from "@/components/auth/auth-error-boundary"
 import { NetworkStatusIndicator } from "@/components/auth/network-status-indicator"
-import { useAuth } from "@/lib/auth"
+import { useAuth } from "@/lib/auth-context"
 import { useErrorHandler } from "@/hooks/use-error-handler"
 import { useErrorToast, useSuccessToast } from "@/hooks/use-error-toast"
 import { type RegistrationInput } from "@/lib/types"
 
 export default function RegisterPage() {
   const router = useRouter()
-  const { signUp } = useAuth()
+  const { signUp, loading: authLoading } = useAuth()
   const [isLoading, setIsLoading] = React.useState(false)
   const { showSuccess } = useSuccessToast()
   
@@ -62,7 +62,7 @@ export default function RegisterPage() {
         <AuthCard>
           <RegistrationForm 
             onSubmit={handleRegistration}
-            isLoading={isLoading || errorHandler.isRetrying}
+            isLoading={isLoading || authLoading || errorHandler.isRetrying}
             error={errorHandler.error}
           />
         </AuthCard>

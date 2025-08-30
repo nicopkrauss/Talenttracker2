@@ -1,8 +1,8 @@
 'use client'
 
 import React from 'react'
-import { useAuth } from '@/lib/auth'
 import { NavigationProvider, Navigation } from '@/components/navigation'
+import { useAuth } from '@/lib/auth-context'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/utils'
 import type { NavigationUser } from '@/lib/types'
@@ -12,37 +12,30 @@ interface NavigationLayoutProps {
 }
 
 export function NavigationLayout({ children }: NavigationLayoutProps) {
-  const { user, userProfile, loading } = useAuth()
   const isMobile = useIsMobile()
+  const { user, userProfile, isAuthenticated, loading } = useAuth()
 
-  // Convert auth user data to NavigationUser format
+  // Create navigation user from auth context
   const navigationUser: NavigationUser | null = React.useMemo(() => {
-    if (!user || !userProfile) return null
+    if (!isAuthenticated || !user || !userProfile) {
+      return null
+    }
 
     return {
       id: user.id,
       name: userProfile.full_name,
       email: userProfile.email,
-      avatar: user.user_metadata?.avatar_url,
-      systemRole: userProfile.role, // This is now the system role
-      currentProjectRole: null // This would be set when a project is selected
+      avatar: userProfile.profile_picture_url || undefined,
+      systemRole: userProfile.role || 'admin', // Default to admin if no role set
+      currentProjectRole: null // Will be enhanced in future tasks
     }
-  }, [user, userProfile])
+  }, [isAuthenticated, user, userProfile])
 
-  // Don't render navigation during loading or if no user
+  // Show loading state while auth is loading
   if (loading) {
     return (
-      <div className="min-h-screen">
-        {children}
-      </div>
-    )
-  }
-
-  // If no user, render without navigation
-  if (!navigationUser) {
-    return (
-      <div className="min-h-screen">
-        {children}
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     )
   }

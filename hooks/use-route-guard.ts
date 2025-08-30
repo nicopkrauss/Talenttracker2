@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { useAuth } from "@/lib/auth"
+import { useAuth } from "@/lib/auth-context"
 import { UserRole } from "@/lib/types"
 
 interface RouteGuardOptions {
@@ -24,82 +24,77 @@ export function useRouteGuard(options: RouteGuardOptions = {}) {
 
   const router = useRouter()
   const pathname = usePathname()
-  const { user, userProfile, loading, hasRole, hasAnyRole, defaultRoute } = useAuth()
+  const { user, userProfile, loading } = useAuth()
+
+  const isAuthenticated = !!user
+  const isApproved = userProfile?.status === 'active'
+  const isPending = userProfile?.status === 'pending'
+
+  const hasRole = (role: UserRole): boolean => {
+    if (!userProfile?.role) return false
+    return userProfile.role === role
+  }
+
+  const hasAnyRole = (roles: UserRole[]): boolean => {
+    if (!userProfile?.role) return false
+    return roles.includes(userProfile.role)
+  }
 
   useEffect(() => {
-    // Don't redirect during loading
     if (loading) return
 
-    // If authentication is required but user is not authenticated
-    if (requireAuth && !user) {
-      const redirectUrl = redirectTo || "/login"
-      const url = new URL(redirectUrl, window.location.origin)
-      if (pathname !== "/" && redirectUrl === "/login") {
-        url.searchParams.set("redirect", pathname)
-      }
-      router.push(url.toString())
+    // Check authentication requirement
+    if (requireAuth && !isAuthenticated) {
+      const loginUrl = redirectTo || `/login?redirect=${encodeURIComponent(pathname)}`
+      router.push(loginUrl)
       return
     }
 
-    // If user is authenticated but no profile exists
-    if (requireAuth && user && !userProfile) {
-      const url = new URL("/login", window.location.origin)
-      url.searchParams.set("error", "no-profile")
-      router.push(url.toString())
+    // Check approval requirement
+    if (requireApproved && isAuthenticated && !isApproved) {
+      if (isPending && allowPending) {
+        // Allow pending users to access this route
+        return
+      }
+      
+      if (isPending) {
+        router.push('/pending')
+        return
+      }
+      
+      // User is rejected or inactive
+      router.push('/login?error=account_inactive')
       return
     }
 
-    // If user profile exists, check status and role requirements
-    if (userProfile) {
-      // Handle pending status
-      if (userProfile.status === "pending" && !allowPending) {
-        router.push("/pending")
+    // Check role requirements
+    if (requiredRoles.length > 0 && isAuthenticated && isApproved) {
+      if (!hasAnyRole(requiredRoles)) {
+        router.push('/unauthorized')
         return
-      }
-
-      // Handle rejected status
-      if (userProfile.status === "rejected") {
-        const url = new URL("/login", window.location.origin)
-        url.searchParams.set("error", "account-rejected")
-        router.push(url.toString())
-        return
-      }
-
-      // Check if approval is required
-      if (requireApproved && userProfile.status !== "approved" && userProfile.status !== "active") {
-        router.push("/pending")
-        return
-      }
-
-      // Check role requirements using the new role system
-      if (requiredRoles.length > 0) {
-        const hasRequiredRole = hasAnyRole(requiredRoles)
-        if (!hasRequiredRole) {
-          const fallbackUrl = redirectTo || defaultRoute
-          router.push(fallbackUrl)
-          return
-        }
       }
     }
   }, [
-    user,
-    userProfile,
     loading,
+    isAuthenticated,
+    isApproved,
+    isPending,
+    requiredRoles,
     pathname,
     router,
+    redirectTo,
     requireAuth,
     requireApproved,
-    requiredRoles,
-    redirectTo,
-    allowPending
+    allowPending,
+    hasAnyRole
   ])
 
   return {
     user,
     userProfile,
     loading,
-    isAuthenticated: !!user,
-    isApproved: userProfile?.status === "approved" || userProfile?.status === "active",
+    isAuthenticated,
+    isApproved,
     hasRole,
     hasAnyRole
   }

@@ -5,17 +5,18 @@ import { Clock, LogOut } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { useAuth } from "@/lib/auth"
+import { useAuth } from "@/lib/auth-context"
 
 export function PendingApprovalPage() {
-  const { signOut } = useAuth()
+  const { signOut, loading } = useAuth()
   const [isSigningOut, setIsSigningOut] = React.useState(false)
 
   const handleSignOut = async () => {
     setIsSigningOut(true)
     try {
       await signOut()
-      // The auth context will handle the redirect to login
+      // Redirect will be handled by auth state change
+      window.location.href = '/login'
     } catch (error) {
       console.error("Sign out error:", error)
       setIsSigningOut(false)
@@ -48,11 +49,11 @@ export function PendingApprovalPage() {
           <div className="animate-in slide-in-from-bottom-4 duration-700 delay-400">
             <Button
               onClick={handleSignOut}
-              disabled={isSigningOut}
+              disabled={isSigningOut || loading}
               variant="outline"
               className="w-full h-12 sm:h-11 font-semibold transition-all duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
             >
-              {isSigningOut ? (
+              {isSigningOut || loading ? (
                 <>
                   <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                   Signing out...

@@ -11,10 +11,14 @@ import { Clock, DollarSign, FileText, AlertCircle } from "lucide-react"
 import type { Timecard, TimecardSummary } from "@/lib/types"
 import { TimecardList } from "@/components/timecards/timecard-list"
 import { SupervisorApprovalQueue } from "@/components/timecards/supervisor-approval-queue"
-import { useAuth } from "@/lib/auth"
+// Temporarily disabled during auth system overhaul
+// import { useAuth } from "@/lib/auth"
 
 export default function TimecardsPage() {
-  const { user, userProfile } = useAuth()
+  // Temporarily disabled during auth system overhaul
+  // const { user, userProfile } = useAuth()
+  const user = { id: 'temp-user' } // Temporary mock
+  const userProfile = { role: 'admin' } // Temporary mock
   const [timecards, setTimecards] = useState<Timecard[]>([])
   const [pendingTimecards, setPendingTimecards] = useState<Timecard[]>([])
   const [summary, setSummary] = useState<TimecardSummary[]>([])

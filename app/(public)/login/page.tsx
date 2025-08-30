@@ -7,7 +7,7 @@ import { toast } from "sonner"
 import { AuthCard, LoginForm } from "@/components/auth"
 import { AuthErrorBoundary } from "@/components/auth/auth-error-boundary"
 import { NetworkStatusIndicator } from "@/components/auth/network-status-indicator"
-import { useAuth } from "@/lib/auth"
+import { useAuth } from "@/lib/auth-context"
 import { useErrorHandler } from "@/hooks/use-error-handler"
 import { useErrorToast } from "@/hooks/use-error-toast"
 import { type LoginInput } from "@/lib/types"
@@ -15,7 +15,7 @@ import { type LoginInput } from "@/lib/types"
 export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { signIn, user, userProfile } = useAuth()
+  const { signIn, user, userProfile, loading: authLoading } = useAuth()
   const [isLoading, setIsLoading] = React.useState(false)
   
   // Enhanced error handling
@@ -47,14 +47,22 @@ export default function LoginPage() {
     }
   }, [searchParams])
 
-  // Let the middleware handle redirects after successful login
+  // Handle redirects after successful login
   React.useEffect(() => {
-    if (user && userProfile) {
-      console.log("User logged in, middleware will handle redirect")
-      // The middleware will automatically redirect based on user status
-      // We don't need to do anything here
+    if (user && userProfile && !authLoading) {
+      const returnUrl = searchParams.get("returnUrl") || "/"
+      
+      // Redirect based on user status
+      if (userProfile.status === 'pending') {
+        router.push('/pending')
+      } else if (userProfile.status === 'active') {
+        router.push(returnUrl)
+      } else {
+        // Handle other statuses (rejected, etc.)
+        toast.error("Account access denied. Please contact support.")
+      }
     }
-  }, [user, userProfile])
+  }, [user, userProfile, authLoading, router, searchParams])
 
   const handleLogin = errorHandler.withErrorHandling(async (data: LoginInput) => {
     setIsLoading(true)
@@ -82,7 +90,7 @@ export default function LoginPage() {
         <AuthCard>
           <LoginForm 
             onSubmit={handleLogin}
-            isLoading={isLoading || errorHandler.isRetrying}
+            isLoading={isLoading || authLoading || errorHandler.isRetrying}
             error={errorHandler.error}
           />
         </AuthCard>
