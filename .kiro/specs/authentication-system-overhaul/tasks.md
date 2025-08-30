@@ -1,9 +1,9 @@
 # Implementation Plan
 
-- [ ] 1. Remove existing authentication code and create backup
+- [ ] 1. Backup current system and prepare for refactoring
   - Create git branch backup of current authentication system
-  - Remove existing auth components from components/auth directory
-  - Remove current lib/auth.tsx file and related utilities
+  - Identify which auth components to keep (login, registration, pending, admin approval)
+  - Remove only the problematic lib/auth.tsx file and related utilities
   - Remove current middleware.ts authentication logic
   - Update package.json to remove unused auth dependencies
   - _Requirements: 1.1, 1.2, 1.6_
@@ -45,33 +45,33 @@
     - Create permission validation helpers
     - _Requirements: 7.1, 7.2, 7.3_
 
-- [ ] 4. Create authentication components
-  - [ ] 4.1 Build new login form component
-    - Create clean login form using react-hook-form and shadcn/ui
-    - Implement real-time validation with proper error display
-    - Add loading states and user feedback during authentication
-    - Handle redirect logic for post-login navigation
+- [ ] 4. Update existing authentication components
+  - [ ] 4.1 Update existing login form component
+    - Modify existing login form to use new authentication context
+    - Update error handling to work with new auth system
+    - Ensure loading states work with new authentication flow
+    - Test redirect logic with new authentication system
     - _Requirements: 5.1, 5.2, 5.6, 6.1_
 
-  - [ ] 4.2 Build new registration form component
-    - Create multi-step registration form with proper validation
-    - Implement terms of service agreement checkbox
-    - Add phone number and location fields with validation
-    - Handle registration success and pending status messaging
+  - [ ] 4.2 Update existing registration form component
+    - Modify existing registration form to use new authentication context
+    - Update form submission to work with new profile creation system
+    - Ensure validation works with new authentication flow
+    - Test registration success handling with new system
     - _Requirements: 4.1, 4.2, 4.3, 4.5, 6.1_
 
-  - [ ] 4.3 Create pending approval page component
-    - Build full-screen pending approval message display
-    - Add logout functionality for pending users
-    - Implement automatic status refresh checking
-    - Create clear messaging about approval process
+  - [ ] 4.3 Update existing pending approval page component
+    - Modify existing pending approval page to use new authentication context
+    - Update logout functionality to work with new auth system
+    - Ensure status checking works with new authentication flow
+    - Test messaging and user experience with new system
     - _Requirements: 4.4, 6.2, 6.3_
 
-  - [ ] 4.4 Build admin approval interface component
-    - Create pending users table with search and filter capabilities
-    - Implement bulk user selection and approval functionality
-    - Add individual user approval with confirmation dialogs
-    - Integrate email notification sending for approved users
+  - [ ] 4.4 Update existing admin approval interface component
+    - Modify existing pending users table to use new authentication context
+    - Update bulk approval functionality to work with new system
+    - Ensure user management operations work with new auth flow
+    - Test email notification integration with updated system
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
 - [ ] 5. Implement route protection system
@@ -127,9 +127,9 @@
     - Test basic authentication flow in development environment
     - _Requirements: 1.1, 1.2, 4.1_
 
-  - [ ] 8.2 Update existing pages and components
-    - Update all pages to use new authentication hooks and components
-    - Replace old protected route usage with new implementation
+  - [ ] 8.2 Update existing pages and components to use new auth system
+    - Update all pages to use new authentication hooks while keeping existing UI
+    - Update existing auth components to work with new authentication context
     - Update navigation components to use new role-based access
     - Fix any TypeScript errors from authentication system changes
     - _Requirements: 7.1, 7.2, 7.3_
