@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Progress } from '@/components/ui/progress'
 import { 
   Calendar, 
   MapPin, 
@@ -15,21 +17,34 @@ import {
   Play, 
   Archive,
   AlertTriangle,
-  Loader2
+  Loader2,
+  CheckCircle2,
+  Circle
 } from 'lucide-react'
-import { Project } from '@/lib/types'
+import { Project, ProjectSetupChecklist } from '@/lib/types'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { useAuth } from '@/lib/auth-context'
+import { hasAdminAccess } from '@/lib/role-utils'
 
 interface ProjectDetailViewProps {
   projectId: string
 }
 
+interface ProjectWithChecklist extends Project {
+  project_setup_checklist?: ProjectSetupChecklist
+}
+
 export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
   const router = useRouter()
-  const [project, setProject] = useState<Project | null>(null)
+  const { userProfile } = useAuth()
+  const [project, setProject] = useState<ProjectWithChecklist | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [checklistLoading, setChecklistLoading] = useState(false)
+
+  // Check if user can edit project settings
+  const canEditProject = userProfile ? hasAdminAccess(userProfile.role) : false
 
   useEffect(() => {
     fetchProject()
@@ -49,8 +64,8 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
         throw new Error('Failed to load project')
       }
       
-      const data = await response.json()
-      setProject(data)
+      const result = await response.json()
+      setProject(result.data)
     } catch (err: any) {
       console.error('Error fetching project:', err)
       setError(err.message || 'Failed to load project')
@@ -105,6 +120,63 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
     } finally {
       setActionLoading(null)
     }
+  }
+
+  const handleChecklistUpdate = async (field: keyof Omit<ProjectSetupChecklist, 'project_id' | 'completed_at' | 'created_at' | 'updated_at'>, value: boolean) => {
+    if (!project?.project_setup_checklist) return
+
+    try {
+      setChecklistLoading(true)
+      
+      const updatedChecklist = {
+        ...project.project_setup_checklist,
+        [field]: value
+      }
+
+      const response = await fetch(`/api/projects/${projectId}/checklist`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updatedChecklist)
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update checklist')
+      }
+
+      // Refresh project data to get updated checklist
+      await fetchProject()
+    } catch (err: any) {
+      console.error('Error updating checklist:', err)
+      setError(err.message || 'Failed to update checklist')
+    } finally {
+      setChecklistLoading(false)
+    }
+  }
+
+  const calculateSetupProgress = () => {
+    if (!project?.project_setup_checklist) return 0
+    
+    const checklist = project.project_setup_checklist
+    const completedItems = [
+      checklist.roles_and_pay_completed,
+      checklist.talent_roster_completed,
+      checklist.team_assignments_completed,
+      checklist.locations_completed
+    ].filter(Boolean).length
+
+    return (completedItems / 4) * 100
+  }
+
+  const isSetupComplete = () => {
+    if (!project?.project_setup_checklist) return false
+    
+    const checklist = project.project_setup_checklist
+    return checklist.roles_and_pay_completed &&
+           checklist.talent_roster_completed &&
+           checklist.team_assignments_completed &&
+           checklist.locations_completed
   }
 
   const formatDate = (dateString: string) => {
@@ -164,58 +236,60 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
                 </Badge>
               </div>
               {project.description && (
-                <p className="text-gray-600">{project.description}</p>
+                <p className="text-muted-foreground">{project.description}</p>
               )}
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleEdit}>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-              {project.status === 'prep' && (
-                <Button 
-                  onClick={handleActivate}
-                  disabled={actionLoading === 'activate'}
-                >
-                  {actionLoading === 'activate' ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Play className="h-4 w-4 mr-2" />
-                  )}
-                  Activate
+            {canEditProject && (
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleEdit}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
                 </Button>
-              )}
-              {project.status === 'active' && (
-                <Button 
-                  variant="outline"
-                  onClick={handleArchive}
-                  disabled={actionLoading === 'archive'}
-                >
-                  {actionLoading === 'archive' ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Archive className="h-4 w-4 mr-2" />
-                  )}
-                  Archive
-                </Button>
-              )}
-            </div>
+                {project.status === 'prep' && (
+                  <Button 
+                    onClick={handleActivate}
+                    disabled={actionLoading === 'activate' || !isSetupComplete()}
+                  >
+                    {actionLoading === 'activate' ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Play className="h-4 w-4 mr-2" />
+                    )}
+                    Activate Project
+                  </Button>
+                )}
+                {project.status === 'active' && (
+                  <Button 
+                    variant="outline"
+                    onClick={handleArchive}
+                    disabled={actionLoading === 'archive'}
+                  >
+                    {actionLoading === 'archive' ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Archive className="h-4 w-4 mr-2" />
+                    )}
+                    Archive
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Project Dates */}
             <div className="space-y-4">
-              <h3 className="font-medium text-gray-900">Project Timeline</h3>
+              <h3 className="font-medium text-foreground">Project Timeline</h3>
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-gray-500" />
-                  <span className="text-gray-600">Start:</span>
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Start:</span>
                   <span>{formatDate(project.start_date)}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-gray-500" />
-                  <span className="text-gray-600">End:</span>
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">End:</span>
                   <span>{formatDate(project.end_date)}</span>
                 </div>
               </div>
@@ -223,26 +297,26 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
 
             {/* Project Details */}
             <div className="space-y-4">
-              <h3 className="font-medium text-gray-900">Project Details</h3>
+              <h3 className="font-medium text-foreground">Project Details</h3>
               <div className="space-y-2">
                 {project.production_company && (
                   <div className="flex items-center gap-2 text-sm">
-                    <Building className="h-4 w-4 text-gray-500" />
-                    <span className="text-gray-600">Production:</span>
+                    <Building className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Production:</span>
                     <span>{project.production_company}</span>
                   </div>
                 )}
                 {project.hiring_contact && (
                   <div className="flex items-center gap-2 text-sm">
-                    <User className="h-4 w-4 text-gray-500" />
-                    <span className="text-gray-600">Contact:</span>
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Contact:</span>
                     <span>{project.hiring_contact}</span>
                   </div>
                 )}
                 {project.project_location && (
                   <div className="flex items-center gap-2 text-sm">
-                    <MapPin className="h-4 w-4 text-gray-500" />
-                    <span className="text-gray-600">Location:</span>
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Location:</span>
                     <span>{project.project_location}</span>
                   </div>
                 )}
@@ -253,33 +327,181 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
       </Card>
 
       {/* Setup Checklist (for prep projects) */}
-      {project.status === 'prep' && (
+      {project.status === 'prep' && project.project_setup_checklist && (
         <Card>
           <CardHeader>
-            <CardTitle>Setup Checklist</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Project Setup Checklist</CardTitle>
+              <Badge variant={isSetupComplete() ? "default" : "secondary"}>
+                {Math.round(calculateSetupProgress())}% Complete
+              </Badge>
+            </div>
+            <Progress value={calculateSetupProgress()} className="mt-2" />
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 text-sm">
-                <div className="w-4 h-4 rounded border border-gray-300 bg-gray-100"></div>
-                <span className="text-gray-600">Add Project Roles & Pay Rates</span>
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3">
+                <Checkbox
+                  id="roles-pay"
+                  checked={project.project_setup_checklist.roles_and_pay_completed}
+                  onCheckedChange={(checked) => 
+                    handleChecklistUpdate('roles_and_pay_completed', checked as boolean)
+                  }
+                  disabled={checklistLoading || !canEditProject}
+                />
+                <div className="flex-1">
+                  <label 
+                    htmlFor="roles-pay" 
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    Add Project Roles & Pay Rates
+                  </label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Configure team roles and set base pay rates for the project
+                  </p>
+                </div>
+                {project.project_setup_checklist.roles_and_pay_completed && (
+                  <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                )}
               </div>
-              <div className="flex items-center gap-3 text-sm">
-                <div className="w-4 h-4 rounded border border-gray-300 bg-gray-100"></div>
-                <span className="text-gray-600">Finalize Talent Roster</span>
+
+              <div className="flex items-center space-x-3">
+                <Checkbox
+                  id="talent-roster"
+                  checked={project.project_setup_checklist.talent_roster_completed}
+                  onCheckedChange={(checked) => 
+                    handleChecklistUpdate('talent_roster_completed', checked as boolean)
+                  }
+                  disabled={checklistLoading || !canEditProject}
+                />
+                <div className="flex-1">
+                  <label 
+                    htmlFor="talent-roster" 
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    Finalize Talent Roster
+                  </label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Import and confirm all talent participating in the project
+                  </p>
+                </div>
+                {project.project_setup_checklist.talent_roster_completed && (
+                  <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                )}
               </div>
-              <div className="flex items-center gap-3 text-sm">
-                <div className="w-4 h-4 rounded border border-gray-300 bg-gray-100"></div>
-                <span className="text-gray-600">Finalize Team Assignments</span>
+
+              <div className="flex items-center space-x-3">
+                <Checkbox
+                  id="team-assignments"
+                  checked={project.project_setup_checklist.team_assignments_completed}
+                  onCheckedChange={(checked) => 
+                    handleChecklistUpdate('team_assignments_completed', checked as boolean)
+                  }
+                  disabled={checklistLoading || !canEditProject}
+                />
+                <div className="flex-1">
+                  <label 
+                    htmlFor="team-assignments" 
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    Finalize Team Assignments
+                  </label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Assign team members to their roles and responsibilities
+                  </p>
+                </div>
+                {project.project_setup_checklist.team_assignments_completed && (
+                  <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                )}
               </div>
-              <div className="flex items-center gap-3 text-sm">
-                <div className="w-4 h-4 rounded border border-gray-300 bg-gray-100"></div>
-                <span className="text-gray-600">Define Talent Locations</span>
+
+              <div className="flex items-center space-x-3">
+                <Checkbox
+                  id="locations"
+                  checked={project.project_setup_checklist.locations_completed}
+                  onCheckedChange={(checked) => 
+                    handleChecklistUpdate('locations_completed', checked as boolean)
+                  }
+                  disabled={checklistLoading || !canEditProject}
+                />
+                <div className="flex-1">
+                  <label 
+                    htmlFor="locations" 
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    Define Talent Locations
+                  </label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Set up location tracking areas for talent management
+                  </p>
+                </div>
+                {project.project_setup_checklist.locations_completed && (
+                  <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                )}
               </div>
             </div>
-            <p className="text-sm text-gray-500 mt-4">
-              Complete all checklist items to activate the project.
-            </p>
+
+            {checklistLoading && (
+              <div className="flex items-center gap-2 mt-4 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Updating checklist...
+              </div>
+            )}
+
+            {!canEditProject && (
+              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  Only administrators and in-house users can modify the project setup checklist.
+                </p>
+              </div>
+            )}
+
+            <div className="mt-6 p-4 bg-muted rounded-lg">
+              {isSetupComplete() ? (
+                <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+                  <CheckCircle2 className="h-5 w-5" />
+                  <div>
+                    <p className="font-medium">Setup Complete!</p>
+                    <p className="text-sm text-green-600 dark:text-green-400">
+                      All checklist items are complete. You can now activate the project.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+                  <Circle className="h-5 w-5" />
+                  <div>
+                    <p className="font-medium">Setup In Progress</p>
+                    <p className="text-sm text-amber-600 dark:text-amber-400">
+                      Complete all checklist items to activate the project.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Setup Progress (for active projects) */}
+      {project.status === 'active' && project.project_setup_checklist && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Project Setup</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+              <CheckCircle2 className="h-5 w-5" />
+              <div>
+                <p className="font-medium">Setup Complete</p>
+                <p className="text-sm text-green-600 dark:text-green-400">
+                  Project was activated on {project.project_setup_checklist.completed_at ? 
+                    new Date(project.project_setup_checklist.completed_at).toLocaleDateString() : 
+                    'Unknown date'
+                  }
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}

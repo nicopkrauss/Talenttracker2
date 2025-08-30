@@ -72,7 +72,17 @@ export async function GET(
         created_at,
         updated_at,
         created_by,
-        created_by_profile:profiles!projects_created_by_fkey(full_name)
+        created_by_profile:profiles!projects_created_by_fkey(full_name),
+        project_setup_checklist (
+          project_id,
+          roles_and_pay_completed,
+          talent_roster_completed,
+          team_assignments_completed,
+          locations_completed,
+          completed_at,
+          created_at,
+          updated_at
+        )
       `)
       .eq('id', projectId)
       .single()

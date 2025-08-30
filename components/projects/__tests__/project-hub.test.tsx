@@ -4,6 +4,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ProjectHub } from '../project-hub'
 import { Project } from '@/lib/types'
 
+// Mock the auth context
+vi.mock('@/lib/auth-context', () => ({
+  useAuth: vi.fn(() => ({
+    isAuthenticated: true,
+    user: { id: 'user-123' },
+    userProfile: { role: 'admin' },
+    loading: false
+  }))
+}))
+
 // Mock fetch
 global.fetch = vi.fn()
 

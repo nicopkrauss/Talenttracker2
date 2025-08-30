@@ -1,0 +1,20 @@
+{
+  "enabled": true,
+  "name": "UI Theme Validation",
+  "description": "Automatically checks that both light and dark mode colors have been properly set after any UI change or implementation",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "components/**/*.tsx",
+      "app/**/*.tsx",
+      "styles/**/*.css",
+      "app/globals.css",
+      "components/theme-provider.tsx"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A UI component or styling file has been modified. Please review the changes and verify that both light and dark mode colors have been properly implemented. Check for:\n\n1. CSS variables or Tailwind classes that support both themes\n2. Proper use of theme-aware color tokens (e.g., text-foreground, bg-background)\n3. Any hardcoded colors that might not adapt to theme changes\n4. Consistent color contrast ratios in both light and dark modes\n5. Theme provider integration if new components were added\n\nIf any theme-related issues are found, provide specific recommendations for fixing them."
+  }
+}

@@ -4,14 +4,26 @@ import { Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { ProjectHub } from '@/components/projects/project-hub'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { useAuth } from '@/lib/auth-context'
 import { UserRole } from '@/lib/types'
 
 export default function ProjectsPage() {
   const router = useRouter()
+  const { userProfile, isAuthenticated, loading } = useAuth()
 
-  // TODO: Get actual user role from auth context
-  // For now, defaulting to admin for development
-  const userRole: UserRole = 'admin'
+  // Get user role from auth context, fallback to escort if not available
+  const userRole: UserRole = userProfile?.role || 'escort'
+
+  // Show loading spinner while auth is loading
+  if (loading) {
+    return <LoadingSpinner />
+  }
+
+  // Redirect to login if not authenticated
+  if (!isAuthenticated) {
+    router.push('/login')
+    return <LoadingSpinner />
+  }
 
   const handleCreateProject = () => {
     router.push('/projects/new')

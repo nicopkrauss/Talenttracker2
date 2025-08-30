@@ -18,6 +18,7 @@ import {
 import { ProjectCard } from "./project-card"
 import { Project, UserRole, ProjectStatus } from "@/lib/types"
 import { hasAdminAccess } from "@/lib/role-utils"
+import { useAuth } from "@/lib/auth-context"
 
 interface ProjectHubProps {
   userRole: UserRole
@@ -51,11 +52,19 @@ export function ProjectHub({
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | "all">("all")
   const [refreshing, setRefreshing] = useState(false)
 
+  const { isAuthenticated, user } = useAuth()
   const isAdmin = hasAdminAccess(userRole === 'admin' || userRole === 'in_house' ? userRole : null)
   const canCreateProjects = isAdmin
 
   // Fetch projects from API
   const fetchProjects = async (showRefreshIndicator = false) => {
+    // Don't fetch if user is not authenticated
+    if (!isAuthenticated || !user) {
+      setLoading(false)
+      setRefreshing(false)
+      return
+    }
+
     try {
       if (showRefreshIndicator) {
         setRefreshing(true)
@@ -87,10 +96,10 @@ export function ProjectHub({
     }
   }
 
-  // Load projects on component mount
+  // Load projects on component mount and when authentication state changes
   useEffect(() => {
     fetchProjects()
-  }, [])
+  }, [isAuthenticated, user])
 
   // Filter projects based on search and status
   const filteredProjects = projects.filter(project => {
@@ -135,6 +144,27 @@ export function ProjectHub({
     return project.status === 'active'
   }
 
+  // Don't render if user is not authenticated
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Projects</h1>
+          </div>
+        </div>
+        
+        <Card>
+          <CardContent className="p-8">
+            <div className="flex items-center justify-center space-x-2">
+              <span className="text-muted-foreground">Please sign in to view projects.</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -147,7 +177,7 @@ export function ProjectHub({
         <Card>
           <CardContent className="p-8">
             <div className="flex items-center justify-center space-x-2">
-              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               <span className="text-muted-foreground">Loading projects...</span>
             </div>
           </CardContent>
@@ -217,7 +247,7 @@ export function ProjectHub({
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search projects by name, description, or production company..."
                     value={searchTerm}
@@ -266,11 +296,11 @@ export function ProjectHub({
       {projects.length === 0 && (
         <Card>
           <CardContent className="p-12 text-center">
-            <FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <FolderOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">
               No projects yet
             </h3>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
               {canCreateProjects 
                 ? "Get started by creating your first project. Projects help you organize talent, teams, and timecards for your productions."
                 : "You don't have access to any projects yet. Contact your administrator to get assigned to projects."
@@ -290,11 +320,11 @@ export function ProjectHub({
       {projects.length > 0 && filteredProjects.length === 0 && (
         <Card>
           <CardContent className="p-8 text-center">
-            <Search className="h-8 w-8 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <Search className="h-8 w-8 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">
               No projects found
             </h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               Try adjusting your search terms or filters to find what you're looking for.
             </p>
             <Button

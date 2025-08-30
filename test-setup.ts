@@ -1,5 +1,11 @@
 import '@testing-library/jest-dom'
 import { vi } from 'vitest'
+import { toHaveAccessibleContrast } from './lib/__tests__/contrast-validation'
+
+// Extend Vitest matchers with custom theme testing matchers
+expect.extend({
+  toHaveAccessibleContrast
+})
 
 // Mock ResizeObserver
 global.ResizeObserver = vi.fn().mockImplementation(() => ({
@@ -7,6 +13,21 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
   unobserve: vi.fn(),
   disconnect: vi.fn(),
 }))
+
+// Mock matchMedia for next-themes
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation(query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(), // deprecated
+    removeListener: vi.fn(), // deprecated
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+})
 
 // Mock Next.js router
 vi.mock('next/navigation', () => ({

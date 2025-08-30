@@ -63,10 +63,21 @@ export async function POST(
       )
     }
 
-    // Get current project status
+    // Get current project status and setup checklist
     const { data: project, error: projectError } = await supabase
       .from('projects')
-      .select('id, name, status')
+      .select(`
+        id, 
+        name, 
+        status,
+        project_setup_checklist (
+          roles_and_pay_completed,
+          talent_roster_completed,
+          team_assignments_completed,
+          locations_completed,
+          completed_at
+        )
+      `)
       .eq('id', projectId)
       .single()
 
@@ -96,9 +107,39 @@ export async function POST(
       )
     }
 
-    // TODO: Check if setup checklist is complete
-    // For now, we'll allow activation without checklist validation
-    // This will be implemented when the setup checklist feature is ready
+    // Check if setup checklist is complete
+    const checklist = project.project_setup_checklist
+    if (!checklist) {
+      return NextResponse.json(
+        { 
+          error: 'Project setup checklist not found. Please complete project setup first.',
+          code: 'CHECKLIST_NOT_FOUND'
+        },
+        { status: 400 }
+      )
+    }
+
+    const isChecklistComplete = checklist.roles_and_pay_completed &&
+                               checklist.talent_roster_completed &&
+                               checklist.team_assignments_completed &&
+                               checklist.locations_completed
+
+    if (!isChecklistComplete) {
+      const incompleteItems = []
+      if (!checklist.roles_and_pay_completed) incompleteItems.push('Project Roles & Pay Rates')
+      if (!checklist.talent_roster_completed) incompleteItems.push('Talent Roster')
+      if (!checklist.team_assignments_completed) incompleteItems.push('Team Assignments')
+      if (!checklist.locations_completed) incompleteItems.push('Talent Locations')
+
+      return NextResponse.json(
+        { 
+          error: 'Project cannot be activated. Please complete all setup checklist items.',
+          code: 'CHECKLIST_INCOMPLETE',
+          incomplete_items: incompleteItems
+        },
+        { status: 400 }
+      )
+    }
 
     // Activate the project
     const { data: updatedProject, error: updateError } = await supabase

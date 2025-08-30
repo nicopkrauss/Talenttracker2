@@ -64,11 +64,11 @@ export function ProjectCard({
   const getStatusBadge = () => {
     switch (project.status) {
       case 'prep':
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Prep</Badge>
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">Prep</Badge>
       case 'active':
-        return <Badge variant="default" className="bg-green-100 text-green-800">Active</Badge>
+        return <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">Active</Badge>
       case 'archived':
-        return <Badge variant="outline" className="bg-gray-100 text-gray-600">Archived</Badge>
+        return <Badge variant="outline" className="bg-muted text-muted-foreground">Archived</Badge>
       default:
         return <Badge variant="outline">Unknown</Badge>
     }
@@ -76,13 +76,13 @@ export function ProjectCard({
 
   const getDateStatus = () => {
     if (isUpcoming) {
-      return <span className="text-blue-600 text-sm">Starts {format(startDate, 'MMM d, yyyy')}</span>
+      return <span className="text-blue-600 dark:text-blue-400 text-sm">Starts {format(startDate, 'MMM d, yyyy')}</span>
     }
     if (isActive) {
-      return <span className="text-green-600 text-sm">Ends {format(endDate, 'MMM d, yyyy')}</span>
+      return <span className="text-green-600 dark:text-green-400 text-sm">Ends {format(endDate, 'MMM d, yyyy')}</span>
     }
     if (isPast) {
-      return <span className="text-gray-500 text-sm">Ended {format(endDate, 'MMM d, yyyy')}</span>
+      return <span className="text-muted-foreground text-sm">Ended {format(endDate, 'MMM d, yyyy')}</span>
     }
     return null
   }
@@ -218,7 +218,7 @@ export function ProjectCard({
               variant="default"
               size="sm"
               onClick={handleActivateProject}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600"
             >
               <Play className="h-4 w-4 mr-1" />
               Activate
