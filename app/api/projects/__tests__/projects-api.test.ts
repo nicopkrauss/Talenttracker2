@@ -6,7 +6,7 @@ import { GET, POST } from '../route'
 vi.mock('@supabase/ssr', () => ({
   createServerClient: vi.fn(() => ({
     auth: {
-      getSession: vi.fn()
+      getUser: vi.fn()
     },
     from: vi.fn(() => ({
       select: vi.fn(() => ({
@@ -44,15 +44,15 @@ describe('Projects API Routes', () => {
   })
 
   describe('GET /api/projects', () => {
-    it('should return 401 when no session', async () => {
+    it('should return 401 when no user', async () => {
       const request = new NextRequest('http://localhost:3000/api/projects')
       
-      // Mock no session
+      // Mock no user
       const mockSupabase = await import('@supabase/ssr')
       const createServerClient = mockSupabase.createServerClient as any
       createServerClient.mockReturnValue({
         auth: {
-          getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null })
+          getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null })
         }
       })
 
@@ -71,7 +71,7 @@ describe('Projects API Routes', () => {
   })
 
   describe('POST /api/projects', () => {
-    it('should return 401 when no session', async () => {
+    it('should return 401 when no user', async () => {
       const request = new NextRequest('http://localhost:3000/api/projects', {
         method: 'POST',
         body: JSON.stringify({
@@ -81,12 +81,12 @@ describe('Projects API Routes', () => {
         })
       })
       
-      // Mock no session
+      // Mock no user
       const mockSupabase = await import('@supabase/ssr')
       const createServerClient = mockSupabase.createServerClient as any
       createServerClient.mockReturnValue({
         auth: {
-          getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null })
+          getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null })
         }
       })
 

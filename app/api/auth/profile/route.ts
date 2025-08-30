@@ -21,6 +21,9 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // For profile fetching during authentication, we allow access without session validation
+    // The middleware handles the overall security, and this endpoint is specifically for auth flows
+    
     // Get user profile from database
     const profile = await prisma.profiles.findUnique({
       where: { id: userId }

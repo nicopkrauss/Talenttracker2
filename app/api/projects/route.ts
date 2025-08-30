@@ -20,10 +20,10 @@ export async function GET(request: NextRequest) {
       }
     )
 
-    // Get current session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    // Get authenticated user (more secure than getSession)
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
     
-    if (sessionError || !session) {
+    if (userError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized', code: 'UNAUTHORIZED' },
         { status: 401 }
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     const { data: userProfile, error: profileError } = await supabase
       .from('profiles')
       .select('id, role, status')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single()
 
     if (profileError || !userProfile) {
@@ -126,10 +126,10 @@ export async function POST(request: NextRequest) {
       }
     )
 
-    // Get current session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    // Get authenticated user (more secure than getSession)
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
     
-    if (sessionError || !session) {
+    if (userError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized', code: 'UNAUTHORIZED' },
         { status: 401 }
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
     const { data: userProfile, error: profileError } = await supabase
       .from('profiles')
       .select('id, role, status')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single()
 
     if (profileError || !userProfile) {
@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
         start_date: projectData.start_date,
         end_date: projectData.end_date,
         status: 'prep',
-        created_by: session.user.id
+        created_by: user.id
       })
       .select(`
         id,

@@ -12,7 +12,7 @@
  */
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
 import type { User, Session } from '@supabase/supabase-js'
 import { 
   UserProfile, 
@@ -35,7 +35,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables. Please check your .env.local file.')
 }
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
+const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey)
 
 // Authentication context interface
 export interface AuthContextType {
@@ -138,23 +138,49 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [fetchUserProfile])
 
   /**
+   * Handle initial user state (for getUser() calls)
+   */
+  const handleInitialUser = useCallback(async (user: User | null) => {
+    setUser(user)
+    setSession(null) // We don't have session data from getUser()
+    
+    if (user) {
+      // Fetch user profile when user is authenticated
+      const profile = await fetchUserProfile(user.id)
+      setUserProfile(profile)
+    } else {
+      // Clear profile when user is not authenticated
+      setUserProfile(null)
+      setCurrentProjectRole(null)
+    }
+    
+    setLoading(false)
+  }, [fetchUserProfile])
+
+  /**
    * Initialize authentication state
    */
   useEffect(() => {
     // Get initial session
     const initializeAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession()
+        const { data: { user }, error } = await supabase.auth.getUser()
         
         if (error) {
-          console.error('Error getting session:', error)
+          // Only log actual errors, not expected "no session" states
+          if (error.message !== 'Auth session missing!' && !error.message.includes('session missing')) {
+            console.error('Error getting user:', error)
+          }
           setLoading(false)
           return
         }
 
-        await handleAuthStateChange('INITIAL_SESSION', session)
+        await handleInitialUser(user)
       } catch (error) {
-        console.error('Error initializing auth:', error)
+        // Only log unexpected errors, not expected "no session" states
+        if (error instanceof Error && !error.message.includes('session missing')) {
+          console.error('Error initializing auth:', error)
+        }
         setLoading(false)
       }
     }
@@ -183,9 +209,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (error) {
         const authError = handleAuthError(error)
-        logError(authError, { action: 'signIn', email: data.email })
         const errorMessage = getUserFriendlyMessage(authError)
-        console.error('Sign in error:', errorMessage, error)
+        
+        // Only log system errors, not user errors like wrong passwords
+        const userErrors = ['INVALID_CREDENTIALS', 'EMAIL_NOT_CONFIRMED', 'PASSWORD_ERROR']
+        if (!userErrors.includes(authError.code)) {
+          logError(authError, { action: 'signIn', email: data.email })
+          console.error('Sign in system error:', errorMessage, error)
+        }
+        
         throw new Error(errorMessage)
       }
 
@@ -218,9 +250,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (authError) {
         const error = handleAuthError(authError)
-        logError(error, { action: 'signUp', email: normalizedEmail })
         const errorMessage = getUserFriendlyMessage(error)
-        console.error('Sign up error:', errorMessage, authError)
+        
+        // Only log system errors, not user errors like duplicate email
+        const userErrors = ['EMAIL_EXISTS', 'PASSWORD_ERROR', 'VALIDATION_ERROR']
+        if (!userErrors.includes(error.code)) {
+          logError(error, { action: 'signUp', email: normalizedEmail })
+          console.error('Sign up system error:', errorMessage, authError)
+        }
+        
         throw new Error(errorMessage)
       }
 
