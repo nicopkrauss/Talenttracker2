@@ -100,12 +100,12 @@ export default function TalentProfilePage() {
                 <h1 className="text-2xl font-bold">
                   {talent.first_name} {talent.last_name}
                 </h1>
-                <p className="text-gray-600">{talent.rep_email}</p>
+                <p className="text-muted-foreground">{talent.rep_email}</p>
                 <div className="flex items-center space-x-2 mt-2">
                   <Badge className="bg-blue-500 text-white">
                     Active
                   </Badge>
-                  <div className="flex items-center text-sm text-gray-600">
+                  <div className="flex items-center text-sm text-muted-foreground">
                     <span className="font-medium">Projects: </span>
                     <span className="ml-1">
                       {talent.talent_project_assignments?.filter(a => a.status === 'active').length || 0}
@@ -153,13 +153,13 @@ export default function TalentProfilePage() {
               <CardContent className="space-y-3">
                 {talent.contact_info?.phone && (
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Phone</label>
+                    <label className="text-sm font-medium text-muted-foreground">Phone</label>
                     <p>{talent.contact_info.phone}</p>
                   </div>
                 )}
                 {talent.contact_info?.email && (
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Email</label>
+                    <label className="text-sm font-medium text-muted-foreground">Email</label>
                     <p>{talent.contact_info.email}</p>
                   </div>
                 )}
@@ -179,11 +179,11 @@ export default function TalentProfilePage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>
-                  <label className="text-sm font-medium text-gray-600">Name</label>
+                  <label className="text-sm font-medium text-muted-foreground">Name</label>
                   <p>{talent.rep_name}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-600">Email</label>
+                  <label className="text-sm font-medium text-muted-foreground">Email</label>
                   <p>
                     <a 
                       href={`mailto:${talent.rep_email}`}
@@ -194,7 +194,7 @@ export default function TalentProfilePage() {
                   </p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-600">Phone</label>
+                  <label className="text-sm font-medium text-muted-foreground">Phone</label>
                   <p>
                     <a 
                       href={`tel:${talent.rep_phone}`}
@@ -229,7 +229,7 @@ export default function TalentProfilePage() {
               </CardHeader>
               <CardContent>
                 {talent.talent_project_assignments?.filter(a => a.status === 'active').length === 0 ? (
-                  <p className="text-gray-500 text-sm">No active project assignments</p>
+                  <p className="text-muted-foreground text-sm">No active project assignments</p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {talent.talent_project_assignments

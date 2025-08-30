@@ -158,7 +158,7 @@ export default function TalentPage() {
                     <CardTitle className="text-lg">
                       {person.first_name} {person.last_name}
                     </CardTitle>
-                    <p className="text-sm text-gray-600">{person.rep_email || 'No email'}</p>
+                    <p className="text-sm text-muted-foreground">{person.rep_email || 'No email'}</p>
                   </div>
                 </div>
                 <Badge className="bg-blue-500 text-white">Active</Badge>

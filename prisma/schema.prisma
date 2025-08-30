@@ -323,6 +323,7 @@ model users {
   one_time_tokens             one_time_tokens[]
   sessions                    sessions[]
   profiles                    profiles?
+  auth_logs                   auth_logs[]
 
   @@index([instance_id])
   @@index([is_anonymous])
@@ -446,6 +447,21 @@ model projects {
   timecards                  timecards[]
   user_favorites             user_favorites[]
 
+  @@schema("public")
+}
+
+model auth_logs {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  event_type String    @db.VarChar(50)
+  email      String?   @db.VarChar(255)
+  user_id    String?   @db.Uuid
+  ip_address String?   @db.VarChar(45)
+  details    String?
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  users      users?    @relation(fields: [user_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([created_at(sort: Desc)], map: "idx_auth_logs_created")
+  @@index([event_type, created_at(sort: Desc)], map: "idx_auth_logs_type")
   @@schema("public")
 }
 

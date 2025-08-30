@@ -235,7 +235,7 @@ export function TalentProjectManager({ talent, onUpdate }: TalentProjectManagerP
                     <Badge variant="secondary">
                       {assignment.projects?.name || "Unknown Project"}
                     </Badge>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-muted-foreground">
                       Assigned {new Date(assignment.assigned_at).toLocaleDateString()}
                     </span>
                   </div>
@@ -275,7 +275,7 @@ export function TalentProjectManager({ talent, onUpdate }: TalentProjectManagerP
           ) : (
             <>
               <div className="space-y-3">
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   Select one or more projects to assign this talent to:
                 </p>
                 

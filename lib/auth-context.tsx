@@ -23,7 +23,6 @@ import {
   ProfileError
 } from './auth-types'
 import { UserRole } from './types'
-import { BrowserProfileService } from './profile-service-browser'
 import { getEffectiveUserRole, hasRole, hasAnyRole, canAccessAdminFeatures } from './role-utils'
 import { AuthErrorHandler, handleAuthError, getUserFriendlyMessage, logError } from './auth-error-handler'
 
@@ -95,12 +94,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
    */
   const fetchUserProfile = useCallback(async (userId: string): Promise<UserProfile | null> => {
     try {
-      const result = await BrowserProfileService.getProfile(userId)
-      if (result.success && result.data) {
-        return result.data
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+
+      if (error) {
+        console.error('Failed to fetch user profile:', error)
+        return null
       }
-      console.error('Failed to fetch user profile:', result.error)
-      return null
+
+      return profile
     } catch (error) {
       console.error('Error fetching user profile:', error)
       return null
@@ -267,30 +272,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       // Create user profile
-      const profileData = {
-        firstName: data.firstName.trim(),
-        lastName: data.lastName.trim(),
-        full_name: `${data.firstName.trim()} ${data.lastName.trim()}`,
-        email: normalizedEmail,
-        phone: data.phone?.trim(),
-        city: data.city?.trim(),
-        state: data.state?.trim(),
-      }
-
-      const profileResult = await BrowserProfileService.createProfile(authData.user.id, profileData)
-
-      if (!profileResult.success) {
-        // Log the profile creation error
-        const profileError: ProfileError = {
-          code: 'PROFILE_CREATION_FAILED',
-          message: profileResult.error || 'Failed to create user profile'
-        }
-        logError(profileError, { 
-          action: 'createProfile', 
-          userId: authData.user.id,
-          email: normalizedEmail 
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: authData.user.id,
+          full_name: `${data.firstName.trim()} ${data.lastName.trim()}`,
+          email: normalizedEmail,
+          phone: data.phone?.trim(),
+          city: data.city?.trim(),
+          state: data.state?.trim(),
+          status: 'pending', // New users start as pending
+          role: 'escort', // Default role
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
 
+      if (profileError) {
+        console.error('Failed to create user profile:', profileError)
         // If profile creation fails, we should ideally clean up the auth user
         // For now, we'll throw an error with guidance
         throw new Error('Account created but profile setup failed. Please contact support.')
