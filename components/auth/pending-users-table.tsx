@@ -107,7 +107,7 @@ export function PendingUsersTable({
         <CardContent className="p-8 text-center">
           <UserCheck className="w-12 h-12 mx-auto text-gray-400 mb-4" />
           <h3 className="text-lg font-medium mb-2">No Pending Approvals</h3>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             All user registrations have been processed. New registrations will appear here for approval.
           </p>
         </CardContent>
