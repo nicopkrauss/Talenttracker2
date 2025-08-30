@@ -1,0 +1,11 @@
+{
+  "existingColumns": [
+    "id",
+    "created_at",
+    "updated_at",
+    "user_id",
+    "project_id",
+    "status"
+  ],
+  "timestamp": "2025-08-29T19:56:36.814Z"
+}

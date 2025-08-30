@@ -1,0 +1,15 @@
+{
+  "talentColumns": [
+    "id",
+    "created_at",
+    "updated_at",
+    "first_name",
+    "last_name",
+    "rep_name",
+    "rep_email",
+    "rep_phone",
+    "notes",
+    "contact_info"
+  ],
+  "timestamp": "2025-08-29T20:19:12.966Z"
+}
