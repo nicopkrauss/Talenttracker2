@@ -23,7 +23,21 @@ export default function LoginPage() {
     maxRetries: 3,
     retryDelay: 1000,
     onError: (error) => {
-      console.error("Login error:", error)
+      // Only log system errors, not user errors like wrong passwords
+      const userErrorMessages = [
+        'Invalid email or password',
+        'The email or password you entered is incorrect',
+        'Please confirm your email address',
+        'An account with this email address already exists'
+      ]
+      
+      const isUserError = userErrorMessages.some(msg => 
+        error?.message?.includes(msg)
+      )
+      
+      if (!isUserError) {
+        console.error("Login system error:", error)
+      }
     },
     onRetrySuccess: () => {
       toast.success("Login successful!")

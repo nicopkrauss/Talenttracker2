@@ -146,7 +146,27 @@ export function useErrorHandler(options: UseErrorHandlerOptions = {}) {
           return result
         } catch (error) {
           handleError(error)
-          throw error // Re-throw so caller can handle if needed
+          
+          // Don't re-throw user authentication errors to prevent console logging
+          const userErrorMessages = [
+            'Invalid email or password',
+            'The email or password you entered is incorrect',
+            'Please confirm your email address',
+            'An account with this email address already exists',
+            'Password does not meet requirements'
+          ]
+          
+          const isUserError = userErrorMessages.some(msg => 
+            error?.message?.includes(msg)
+          )
+          
+          // Only re-throw system errors, not user errors
+          if (!isUserError) {
+            throw error
+          }
+          
+          // For user errors, return undefined to indicate failure without throwing
+          return undefined
         }
       }
     },

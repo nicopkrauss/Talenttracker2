@@ -23,7 +23,22 @@ export default function RegisterPage() {
     maxRetries: 3,
     retryDelay: 1000,
     onError: (error) => {
-      console.error("Registration error:", error)
+      // Only log system errors, not user errors like duplicate email
+      const userErrorMessages = [
+        'An account with this email address already exists',
+        'Password does not meet requirements',
+        'Invalid data provided',
+        'Please confirm your email address'
+      ]
+      
+      const isUserError = userErrorMessages.some(msg => 
+        error?.message?.includes(msg)
+      )
+      
+      if (!isUserError) {
+        console.error("Registration system error:", error)
+      }
+      
       // Ensure we always have a meaningful error message
       if (!error.message || error.message.trim() === '' || error.message === '{}') {
         console.error("Empty error message detected, providing fallback")
