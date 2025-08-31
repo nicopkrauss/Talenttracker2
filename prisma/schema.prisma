@@ -322,8 +322,8 @@ model users {
   mfa_factors                 mfa_factors[]
   one_time_tokens             one_time_tokens[]
   sessions                    sessions[]
-  profiles                    profiles?
   auth_logs                   auth_logs[]
+  profiles                    profiles?
 
   @@index([instance_id])
   @@index([is_anonymous])
@@ -416,24 +416,24 @@ model profiles {
 model project_roles {
   id         String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   project_id String?      @db.Uuid
-  role       project_role
   base_pay   Decimal?     @db.Decimal(10, 2)
   created_at DateTime?    @default(now()) @db.Timestamptz(6)
+  role       project_role
   projects   projects?    @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@schema("public")
 }
 
 model project_setup_checklist {
-  project_id                  String    @id @db.Uuid
-  roles_and_pay_completed     Boolean   @default(false)
-  talent_roster_completed     Boolean   @default(false)
-  team_assignments_completed  Boolean   @default(false)
-  locations_completed         Boolean   @default(false)
-  completed_at                DateTime? @db.Timestamptz(6)
-  created_at                  DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at                  DateTime? @default(now()) @db.Timestamptz(6)
-  projects                    projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  project_id                 String    @id @db.Uuid
+  roles_and_pay_completed    Boolean?  @default(false)
+  talent_roster_completed    Boolean?  @default(false)
+  team_assignments_completed Boolean?  @default(false)
+  locations_completed        Boolean?  @default(false)
+  completed_at               DateTime? @db.Timestamptz(6)
+  created_at                 DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at                 DateTime? @default(now()) @db.Timestamptz(6)
+  projects                   projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([project_id], map: "idx_project_setup_checklist_project_id")
   @@index([roles_and_pay_completed, talent_roster_completed, team_assignments_completed, locations_completed], map: "idx_project_setup_checklist_completed")
@@ -453,12 +453,13 @@ model projects {
   created_by                 String?                      @db.Uuid
   created_at                 DateTime?                    @default(now()) @db.Timestamptz(6)
   updated_at                 DateTime?                    @default(now()) @db.Timestamptz(6)
+  talent_expected            Int?
   notifications              notifications[]
+  project_locations          project_locations[]
   project_roles              project_roles[]
   project_setup_checklist    project_setup_checklist?
   profiles                   profiles?                    @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   shifts                     shifts[]
-  project_locations          project_locations[]
   talent_project_assignments talent_project_assignments[]
   team_assignments           team_assignments[]
   timecards                  timecards[]
@@ -475,7 +476,7 @@ model auth_logs {
   ip_address String?   @db.VarChar(45)
   details    String?
   created_at DateTime? @default(now()) @db.Timestamptz(6)
-  users      users?    @relation(fields: [user_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  users      users?    @relation(fields: [user_id], references: [id], onUpdate: NoAction)
 
   @@index([created_at(sort: Desc)], map: "idx_auth_logs_created")
   @@index([event_type, created_at(sort: Desc)], map: "idx_auth_logs_type")
@@ -542,16 +543,15 @@ model talent {
 }
 
 model project_locations {
-  id            String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  project_id    String?         @db.Uuid
-  name          String
-  is_default    Boolean         @default(false)
-  sort_order    Int             @default(0)
-  created_at    DateTime?       @default(now()) @db.Timestamptz(6)
-  projects      projects?       @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  talent_status talent_status[]
+  id         String    @id(map: "talent_locations_pkey") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  project_id String?   @db.Uuid
+  name       String
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  is_default Boolean?  @default(false)
+  sort_order Int?      @default(0)
+  projects   projects? @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "talent_locations_project_id_fkey")
 
-  @@unique([project_id, name])
+  @@unique([project_id, name], map: "talent_locations_project_id_name_key")
   @@index([project_id], map: "idx_project_locations_project_id")
   @@index([project_id, is_default], map: "idx_project_locations_project_default")
   @@index([project_id, sort_order], map: "idx_project_locations_sort_order")
@@ -579,14 +579,13 @@ model talent_project_assignments {
 }
 
 model talent_status {
-  id                String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  talent_id         String?            @db.Uuid
-  location_id       String?            @db.Uuid
-  updated_by        String?            @db.Uuid
-  updated_at        DateTime?          @default(now()) @db.Timestamptz(6)
-  project_locations project_locations? @relation(fields: [location_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  talent            talent?            @relation(fields: [talent_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  profiles          profiles?          @relation(fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  talent_id   String?   @db.Uuid
+  location_id String?   @db.Uuid
+  updated_by  String?   @db.Uuid
+  updated_at  DateTime? @default(now()) @db.Timestamptz(6)
+  talent      talent?   @relation(fields: [talent_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles    profiles? @relation(fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@schema("public")
 }
@@ -595,10 +594,10 @@ model team_assignments {
   id             String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   project_id     String?      @db.Uuid
   user_id        String?      @db.Uuid
-  role           project_role
   pay_rate       Decimal?     @db.Decimal(10, 2)
   schedule_notes String?
   created_at     DateTime?    @default(now()) @db.Timestamptz(6)
+  role           project_role
   projects       projects?    @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   profiles       profiles?    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 

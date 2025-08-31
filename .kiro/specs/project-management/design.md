@@ -345,3 +345,254 @@ CREATE POLICY project_access ON projects
 - **Data Minimization**: Only collect necessary project information
 - **Retention Policies**: Implement data retention rules for archived projects
 - **User Consent**: Ensure proper consent for data collection and processing
+
+## Enhanced Project Details Page Design
+
+### Overview
+
+The project details page has been redesigned as a comprehensive project management hub with two distinct modes based on project status. This design follows the wireframe specification in `project-details-wireframe.md` and provides a complete interface for managing all aspects of a project.
+
+### Layout Architecture
+
+#### Mode-Based Interface
+The page dynamically switches between two modes:
+- **Setup Mode** (Prep Status): Tabbed interface for project configuration
+- **Operations Mode** (Active Status): Dashboard interface for live project management
+
+#### Component Hierarchy
+```
+ProjectDetailLayout
+├── ProjectHeader (sticky)
+├── ProjectOverviewCard (always visible)
+└── ConditionalContent
+    ├── ProjectTabs (prep status)
+    │   ├── InfoTab
+    │   ├── RolesTeamTab
+    │   ├── TalentRosterTab
+    │   ├── AssignmentsTab
+    │   └── SettingsTab
+    └── OperationsDashboard (active status)
+        ├── LiveKPIsSection
+        ├── TalentLocationsBoard
+        └── TeamStatusBoard
+```
+
+### Enhanced Data Models
+
+#### Extended Project Model
+```typescript
+interface EnhancedProject extends Project {
+  talentExpected?: number;
+  description?: string;
+  statistics: ProjectStatistics;
+  setupChecklist: ProjectSetupChecklist;
+}
+
+interface ProjectStatistics {
+  talentExpected: number;
+  talentAssigned: number;
+  staffNeeded: number;
+  staffAssigned: number;
+  staffCheckedIn: number;
+  talentPresent: number;
+  activeEscorts: number;
+  staffOvertime: {
+    over8Hours: number;
+    over12Hours: number;
+  };
+}
+```
+
+#### Location Management
+```typescript
+interface ProjectLocation {
+  id: string;
+  projectId: string;
+  name: string;
+  abbreviation: string;
+  color: string;
+  isDefault: boolean;
+  sortOrder: number;
+}
+```
+
+#### Team Assignment
+```typescript
+interface TeamAssignment {
+  id: string;
+  projectId: string;
+  userId: string;
+  roleId: string;
+  payRateOverride?: number;
+  shiftOverride?: string;
+  isActive: boolean;
+}
+```
+
+#### Talent Assignment
+```typescript
+interface TalentAssignment {
+  id: string;
+  projectId: string;
+  talentId: string;
+  escortId?: string;
+  status: 'assigned' | 'unassigned' | 'present' | 'not_arrived';
+  currentLocationId?: string;
+}
+```
+
+### Component Specifications
+
+#### ProjectHeader Component
+```typescript
+interface ProjectHeaderProps {
+  project: EnhancedProject;
+  onEdit: () => void;
+}
+```
+- Sticky positioning at top of page
+- Displays project title, status badge, and edit action
+- Responsive design for mobile and desktop
+
+#### ProjectOverviewCard Component
+```typescript
+interface ProjectOverviewCardProps {
+  project: EnhancedProject;
+  onActivate?: () => void;
+}
+```
+- Always visible below header
+- Shows project statistics and setup checklist (prep only)
+- Displays "Set Project to Active" button when checklist complete
+
+#### ProjectTabs Component
+```typescript
+interface ProjectTabsProps {
+  project: EnhancedProject;
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+}
+```
+- Only visible for prep status projects
+- Manages tab state and content switching
+- Integrates with setup checklist completion
+
+#### InfoTab Component
+```typescript
+interface InfoTabProps {
+  project: EnhancedProject;
+  onUpdateDescription: (description: string) => void;
+  onLocationUpdate: () => void;
+}
+```
+- Editable project description
+- Location management interface
+- Default location creation and custom location management
+
+#### RolesTeamTab Component
+```typescript
+interface RolesTeamTabProps {
+  project: EnhancedProject;
+  roles: ProjectRole[];
+  staff: User[];
+  assignments: TeamAssignment[];
+  onRoleUpdate: (role: ProjectRole) => void;
+  onAssignmentUpdate: (assignment: TeamAssignment) => void;
+}
+```
+- Role definition table with pay rates and time types
+- Drag-and-drop team assignment interface
+- Inline overrides for pay and shifts
+
+#### OperationsDashboard Component
+```typescript
+interface OperationsDashboardProps {
+  project: EnhancedProject;
+  liveData: LiveProjectData;
+  onLocationUpdate: (talentId: string, locationId: string) => void;
+  onCheckout: (userIds: string[]) => void;
+}
+
+interface LiveProjectData {
+  talentLocations: TalentLocationStatus[];
+  teamStatus: TeamMemberStatus[];
+  kpis: ProjectStatistics;
+}
+```
+- Real-time project monitoring
+- Live KPIs with color-coded alerts
+- Talent location tracking with quick actions
+- Team status with checkout controls
+
+### API Extensions
+
+#### New Endpoints
+```typescript
+// Project statistics
+GET /api/projects/[id]/statistics
+Response: ProjectStatistics
+
+// Location management
+GET /api/projects/[id]/locations
+POST /api/projects/[id]/locations
+PUT /api/projects/[id]/locations/[locationId]
+DELETE /api/projects/[id]/locations/[locationId]
+
+// Team assignments
+GET /api/projects/[id]/team-assignments
+POST /api/projects/[id]/team-assignments
+PUT /api/projects/[id]/team-assignments/[assignmentId]
+
+// Talent assignments
+GET /api/projects/[id]/talent-assignments
+POST /api/projects/[id]/talent-assignments
+PUT /api/projects/[id]/talent-assignments/[assignmentId]
+
+// Live operations
+GET /api/projects/[id]/live-status
+POST /api/projects/[id]/talent-location-update
+POST /api/projects/[id]/checkout-staff
+
+// Audit and attachments
+GET /api/projects/[id]/audit-log
+POST /api/projects/[id]/attachments
+```
+
+### State Management
+
+#### Project Context
+```typescript
+interface ProjectContextValue {
+  project: EnhancedProject;
+  statistics: ProjectStatistics;
+  isLoading: boolean;
+  error: string | null;
+  updateProject: (updates: Partial<Project>) => Promise<void>;
+  refreshStatistics: () => Promise<void>;
+}
+```
+
+#### Real-time Updates
+- WebSocket connections for active projects
+- Optimistic updates for immediate feedback
+- Conflict resolution for concurrent modifications
+- Automatic refresh on data changes
+
+### Performance Optimizations
+
+#### Lazy Loading
+- Tab content loaded on demand
+- Large datasets paginated
+- Images and attachments loaded progressively
+
+#### Caching Strategy
+- Project data cached with TTL
+- Statistics cached with shorter TTL for active projects
+- Location and role data cached until modified
+
+#### Real-time Efficiency
+- Selective subscriptions based on user role
+- Debounced updates to prevent UI thrashing
+- Efficient diff algorithms for data updates
+
+This enhanced design provides a comprehensive project management interface that scales from simple project setup to complex operational management while maintaining performance and usability across all device types.

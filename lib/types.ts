@@ -295,6 +295,11 @@ export const projectFormSchema = z.object({
   project_location: z.string()
     .max(255, "Project location must be 255 characters or less")
     .optional(),
+
+  talent_expected: z.number()
+    .int("Expected talent must be a whole number")
+    .min(0, "Expected talent cannot be negative")
+    .optional(),
   
   start_date: z.string()
     .min(1, "Start date is required")
@@ -513,6 +518,7 @@ export interface Project {
   production_company?: string
   hiring_contact?: string
   location?: string
+  talent_expected?: number
   start_date: string // ISO date string
   end_date: string // ISO date string
   status: ProjectStatus
@@ -591,6 +597,7 @@ export interface ProjectFormData {
   production_company?: string
   hiring_contact?: string
   project_location?: string
+  talent_expected?: number
   start_date: string
   end_date: string
 }
@@ -606,6 +613,26 @@ export interface ProjectLocationFormData {
   name: string
   is_default?: boolean
   sort_order?: number
+}
+
+// Project statistics interface
+export interface ProjectStatistics {
+  talentExpected: number
+  talentAssigned: number
+  staffNeeded: number
+  staffAssigned: number
+  staffCheckedIn?: number
+  talentPresent?: number
+  activeEscorts?: number
+  staffOvertime?: {
+    over8Hours: number
+    over12Hours: number
+  }
+}
+
+// Enhanced project interface with statistics
+export interface EnhancedProject extends Project {
+  statistics: ProjectStatistics
 }
 
 // Project details interface (extended project with all related data)

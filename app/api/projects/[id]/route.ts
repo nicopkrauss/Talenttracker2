@@ -7,7 +7,7 @@ import { hasAdminAccess } from '@/lib/role-utils'
 // GET /api/projects/[id] - Get project details
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const cookieStore = await cookies()
@@ -48,7 +48,7 @@ export async function GET(
     }
 
     // Validate project ID format
-    const projectId = params.id
+    const { id: projectId } = await params
     if (!projectId || typeof projectId !== 'string') {
       return NextResponse.json(
         { error: 'Invalid project ID', code: 'INVALID_PROJECT_ID' },
@@ -66,6 +66,7 @@ export async function GET(
         production_company,
         hiring_contact,
         location,
+        talent_expected,
         start_date,
         end_date,
         status,
@@ -136,7 +137,7 @@ export async function GET(
 // PUT /api/projects/[id] - Update project
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const cookieStore = await cookies()
@@ -185,7 +186,7 @@ export async function PUT(
     }
 
     // Validate project ID format
-    const projectId = params.id
+    const { id: projectId } = await params
     if (!projectId || typeof projectId !== 'string') {
       return NextResponse.json(
         { error: 'Invalid project ID', code: 'INVALID_PROJECT_ID' },
@@ -240,6 +241,7 @@ export async function PUT(
         production_company: projectData.production_company || null,
         hiring_contact: projectData.hiring_contact || null,
         location: projectData.project_location || null,
+        talent_expected: body.talent_expected || null,
         start_date: projectData.start_date,
         end_date: projectData.end_date,
         updated_at: new Date().toISOString()
@@ -252,6 +254,7 @@ export async function PUT(
         production_company,
         hiring_contact,
         location,
+        talent_expected,
         start_date,
         end_date,
         status,

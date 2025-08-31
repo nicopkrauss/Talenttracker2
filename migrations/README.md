@@ -1,141 +1,66 @@
 # Database Migrations
 
-This directory contains SQL migration scripts for the talent info enhancement feature.
+This directory contains SQL migration scripts that have been applied to the database, along with archived migrations for historical reference.
 
-## Files
+## Current Structure
 
-- `001_talent_info_enhancement.sql` - Main migration script
-- `001_talent_info_enhancement_rollback.sql` - Rollback script
-- `run_migration.js` - Node.js script to run migrations
+### Applied Migrations
+These migrations have been successfully applied to the database and are tracked in the `schema_migrations` table:
 
-## Migration Details
+- `005_add_missing_timecard_columns.sql` - Added missing columns to timecards table
+- `008_separate_system_and_project_roles.sql` - Separated system and project role management
+- `010_create_project_setup_checklist_table.sql` - Created project setup checklist functionality
+- `011_rename_talent_locations_to_project_locations.sql` - Renamed table for better clarity
+- `012_add_project_locations_fields.sql` - Enhanced project locations with additional fields
+- `013_update_talent_status_foreign_key.sql` - Updated foreign key relationships
+- `014_add_project_setup_indexes.sql` - Added performance indexes for project setup
+- `015_create_default_setup_checklists.sql` - Created default setup checklists
+- `016_update_default_locations.sql` - Updated default location configurations
 
-### 001_talent_info_enhancement.sql
+### Archived Migrations
+Unapplied migrations have been moved to the `archive/` directory for historical reference. These were part of earlier development iterations but were superseded by other approaches or became obsolete.
 
-This migration performs the following changes:
+## Current Database Schema Management
 
-1. **Archive Emergency Contact Data**: Creates an archive table and preserves existing emergency contact information before removal
-2. **Add Representative Fields**: Adds `rep_name`, `rep_email`, and `rep_phone` columns to `talent_profiles` table
-3. **Remove Emergency Contact Fields**: Removes `emergency_contact_name`, `emergency_contact_phone`, and `emergency_contact_relationship` columns
-4. **Create Talent-Project Assignments Table**: Creates `talent_project_assignments` table for many-to-many relationships
-5. **Add Indexes**: Creates performance indexes on the new table
-6. **Add Constraints**: Adds data validation constraints for email and phone formats
-7. **Create Triggers**: Adds trigger for automatic `updated_at` timestamp updates
-8. **Migrate Existing Data**: Migrates existing project assignments if `project_id` column exists
+The project now primarily uses **Prisma** for schema management and migrations. The SQL migrations in this directory represent the historical evolution of the database schema and should be preserved for audit and reference purposes.
 
-### Database Schema Changes
+## Running New Migrations
 
-#### talent_profiles table changes:
-- **Added**: `rep_name VARCHAR(100) NOT NULL`
-- **Added**: `rep_email VARCHAR(255) NOT NULL`
-- **Added**: `rep_phone VARCHAR(20) NOT NULL`
-- **Removed**: `emergency_contact_name`
-- **Removed**: `emergency_contact_phone`
-- **Removed**: `emergency_contact_relationship`
-- **Removed**: `project_id` (if exists, migrated to new table)
+For new database changes, use the established migration workflow:
 
-#### New table: talent_project_assignments
+### Using the Node.js Migration Script
+```bash
+node scripts/run-migration.js path/to/migration.sql
+```
+
+### Direct Database Inspection
+```bash
+node scripts/inspect-database.js
+```
+
+## Migration History
+
+You can view the complete migration history by checking the `schema_migrations` table:
+
 ```sql
-CREATE TABLE talent_project_assignments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  talent_id UUID NOT NULL REFERENCES talent_profiles(id) ON DELETE CASCADE,
-  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  assigned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  assigned_by UUID REFERENCES profiles(id),
-  status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'completed')),
-  escort_id UUID REFERENCES profiles(id),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(talent_id, project_id, status)
-);
+SELECT migration_name, applied_at, notes 
+FROM schema_migrations 
+ORDER BY applied_at;
 ```
 
-#### New archive table: talent_emergency_contacts_archive
-```sql
-CREATE TABLE talent_emergency_contacts_archive (
-  id UUID,
-  emergency_contact_name VARCHAR(100),
-  emergency_contact_phone VARCHAR(20),
-  emergency_contact_relationship VARCHAR(50),
-  archived_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  PRIMARY KEY (id)
-);
-```
+## Best Practices
 
-## Running Migrations
+1. **New Migrations**: Create new migration files with sequential numbering
+2. **Testing**: Always test migrations on a development database first
+3. **Documentation**: Include clear descriptions and rollback instructions
+4. **Prisma Integration**: Consider using Prisma migrations for new schema changes
+5. **Backup**: Always backup production data before applying migrations
 
-### Using Supabase CLI (Recommended)
-If you have Supabase CLI installed:
+## Archive Directory
 
-```bash
-# Apply migration
-supabase db reset
-# or
-supabase migration up
+The `archive/` directory contains migrations that were created during development but never applied. These are preserved for:
+- Historical reference
+- Understanding the evolution of the database design
+- Potential future reference or adaptation
 
-# Rollback migration
-psql -h your-host -U your-user -d your-database -f migrations/001_talent_info_enhancement_rollback.sql
-```
-
-### Using psql directly
-```bash
-# Apply migration
-psql -h your-host -U your-user -d your-database -f migrations/001_talent_info_enhancement.sql
-
-# Rollback migration
-psql -h your-host -U your-user -d your-database -f migrations/001_talent_info_enhancement_rollback.sql
-```
-
-### Using Node.js script
-```bash
-node migrations/run_migration.js
-```
-
-## Validation
-
-After running the migration, verify:
-
-1. **talent_profiles table structure**:
-   ```sql
-   \d talent_profiles
-   ```
-
-2. **talent_project_assignments table exists**:
-   ```sql
-   \d talent_project_assignments
-   ```
-
-3. **Archive table contains data** (if emergency contacts existed):
-   ```sql
-   SELECT COUNT(*) FROM talent_emergency_contacts_archive;
-   ```
-
-4. **Constraints are in place**:
-   ```sql
-   SELECT conname, contype FROM pg_constraint WHERE conrelid = 'talent_profiles'::regclass;
-   ```
-
-5. **Indexes are created**:
-   ```sql
-   SELECT indexname FROM pg_indexes WHERE tablename = 'talent_project_assignments';
-   ```
-
-## Rollback Considerations
-
-The rollback migration will:
-- Restore the `project_id` column to `talent_profiles`
-- Migrate only the first active assignment per talent back to the single project model
-- Restore emergency contact fields from the archive
-- Remove all representative information fields
-- Drop the `talent_project_assignments` table
-
-**Note**: Rolling back will result in data loss for:
-- Multiple project assignments per talent (only first assignment is preserved)
-- Representative information
-- Assignment history and metadata
-
-## Requirements Satisfied
-
-This migration satisfies the following requirements:
-- **1.1**: Adds required representative fields (rep_name, rep_email, rep_phone)
-- **7.3**: Removes emergency contact fields while preserving data in archive format
+See `archive/README.md` for details on archived migrations.

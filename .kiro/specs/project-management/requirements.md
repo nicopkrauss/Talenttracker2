@@ -105,3 +105,75 @@ The Project Management system is a core feature that enables administrators and 
 3. WHEN viewing archived projects THEN the system SHALL display them in a separate section
 4. WHEN a project is archived THEN the system SHALL preserve all associated data (timecards, talent, assignments)
 5. WHEN I need to reactivate an archived project THEN the system SHALL provide an "Unarchive" option
+
+### Requirement 9
+
+**User Story:** As an Admin or In-House user, I want a comprehensive project details page that serves as the central hub for project management, so that I can efficiently manage all aspects of a project from one location.
+
+#### Acceptance Criteria
+
+1. WHEN I view a project details page THEN the system SHALL display a sticky header with project title, status badge, and quick actions
+2. WHEN viewing project details THEN the system SHALL show a project overview card with comprehensive statistics including dates, location, production company, hiring contact, talent counts, and staff counts
+3. WHEN a project is in "Prep" status THEN the system SHALL display tabbed navigation with Info, Roles & Team, Talent Roster, Assignments, and Settings tabs
+4. WHEN a project is in "Active" status THEN the system SHALL display an operations dashboard with live KPIs, talent location tracking, and team status monitoring
+5. WHEN viewing project statistics THEN the system SHALL show real-time counts of expected vs assigned talent and needed vs assigned staff
+
+### Requirement 10
+
+**User Story:** As an Admin or In-House user, I want to manage project information and locations through dedicated tabs, so that I can organize project setup efficiently.
+
+#### Acceptance Criteria
+
+1. WHEN I access the Info tab THEN the system SHALL provide an editable description field for project details
+2. WHEN managing talent locations THEN the system SHALL display default locations (House, Holding, Stage) and allow adding custom locations with name, abbreviation, and color
+3. WHEN adding custom locations THEN the system SHALL validate unique names within the project
+4. WHEN I complete location setup THEN the system SHALL mark the locations checklist item as complete
+5. WHEN locations are modified after finalization THEN the system SHALL update the checklist status accordingly
+
+### Requirement 11
+
+**User Story:** As an Admin or In-House user, I want to configure team roles and assignments through a dedicated interface, so that I can manage project staffing effectively.
+
+#### Acceptance Criteria
+
+1. WHEN I access the Roles & Team tab THEN the system SHALL display a role definition table with base pay, time type, and assignment counts
+2. WHEN managing team assignments THEN the system SHALL provide a drag-and-drop interface with staff directory and role drop-zones
+3. WHEN assigning staff to roles THEN the system SHALL allow inline pay rate and shift overrides
+4. WHEN I finalize team assignments THEN the system SHALL mark the team assignments checklist item as complete
+5. WHEN team assignments are modified after finalization THEN the system SHALL update the checklist status accordingly
+
+### Requirement 12
+
+**User Story:** As an Admin or In-House user, I want to manage talent roster and assignments through dedicated interfaces, so that I can efficiently organize talent for the project.
+
+#### Acceptance Criteria
+
+1. WHEN I access the Talent Roster tab THEN the system SHALL provide CSV import functionality and manual talent entry options
+2. WHEN managing talent THEN the system SHALL display a sortable and filterable talent table with name, contact, role, escort, and status
+3. WHEN I access the Assignments tab THEN the system SHALL provide a drag-and-drop interface for pairing talent with escorts
+4. WHEN making talent-escort assignments THEN the system SHALL provide "Randomize Remaining" and "Clear All Assignments" actions
+5. WHEN I finalize talent roster or assignments THEN the system SHALL mark the appropriate checklist items as complete
+
+### Requirement 13
+
+**User Story:** As an Admin or In-House user, I want to configure project settings and view audit information, so that I can maintain project governance and track changes.
+
+#### Acceptance Criteria
+
+1. WHEN I access the Settings tab THEN the system SHALL provide configuration options for default break duration, payroll export format, and notification rules
+2. WHEN viewing project history THEN the system SHALL display an audit log showing who made what changes and when
+3. WHEN managing project documentation THEN the system SHALL allow uploading attachments and adding notes
+4. WHEN project settings are changed THEN the system SHALL log the changes in the audit trail
+5. WHEN accessing audit information THEN the system SHALL display changes in chronological order with user attribution
+
+### Requirement 14
+
+**User Story:** As an Admin or In-House user, I want to monitor active projects through a live operations dashboard, so that I can track project status and manage operations in real-time.
+
+#### Acceptance Criteria
+
+1. WHEN viewing an active project THEN the system SHALL display live KPIs including staff check-in status, talent presence, and shift duration alerts
+2. WHEN monitoring talent locations THEN the system SHALL provide a real-time board showing each talent's current location with quick-move actions
+3. WHEN managing team status THEN the system SHALL display current shift states, time worked, and overtime warnings with color-coded alerts
+4. WHEN supervising staff THEN the system SHALL provide multi-select checkout controls for efficient shift management
+5. WHEN shift durations exceed thresholds THEN the system SHALL display yellow warnings at 8 hours and red alerts at 12 hours
