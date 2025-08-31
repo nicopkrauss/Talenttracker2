@@ -21,7 +21,7 @@ const mockProject: Project = {
   description: 'A test project description',
   production_company: 'Test Studios',
   hiring_contact: 'John Doe',
-  project_location: 'Los Angeles, CA',
+  location: 'Los Angeles, CA',
   start_date: '2024-01-01',
   end_date: '2024-12-31',
   status: 'prep',
@@ -186,7 +186,7 @@ describe('ProjectCard', () => {
       description: undefined,
       production_company: undefined,
       hiring_contact: undefined,
-      project_location: undefined
+      location: undefined
     }
     
     render(<ProjectCard {...defaultProps} project={minimalProject} />)

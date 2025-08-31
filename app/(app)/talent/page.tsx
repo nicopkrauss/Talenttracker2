@@ -74,7 +74,7 @@ export default function TalentPage() {
 
   const getCurrentLocation = (person: TalentProfile) => {
     const latestStatus = person.talent_status?.[0]
-    return latestStatus?.talent_locations?.name || "Unknown"
+    return latestStatus?.project_locations?.name || "Unknown"
   }
 
   const getEscortName = (person: TalentProfile) => {

@@ -42,7 +42,7 @@ export function ProjectForm({
       description: initialData?.description || "",
       production_company: initialData?.production_company || "",
       hiring_contact: initialData?.hiring_contact || "",
-      project_location: initialData?.project_location || "",
+      project_location: initialData?.location || "",
       start_date: initialData?.start_date ? 
         new Date(initialData.start_date).toISOString().split('T')[0] : "",
       end_date: initialData?.end_date ? 

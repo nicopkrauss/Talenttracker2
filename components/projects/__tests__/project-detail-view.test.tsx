@@ -31,7 +31,7 @@ const mockProject = {
   description: 'A test project',
   production_company: 'Test Productions',
   hiring_contact: 'John Doe',
-  project_location: 'Los Angeles',
+  location: 'Los Angeles',
   start_date: '2024-01-01',
   end_date: '2024-01-31',
   status: 'prep',

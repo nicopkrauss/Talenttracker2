@@ -47,7 +47,7 @@ async function inspectDatabase() {
   const knownTables = [
     'profiles', 'projects', 'talent', 'talent_project_assignments', 
     'team_assignments', 'timecards', 'notifications', 'schema_migrations',
-    'talent_status', 'talent_locations', 'user_favorites'
+    'talent_status', 'project_locations', 'user_favorites'
   ]
   
   console.log('📋 CHECKING KNOWN TABLES:')

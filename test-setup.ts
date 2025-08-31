@@ -2,6 +2,10 @@ import '@testing-library/jest-dom'
 import { vi } from 'vitest'
 import { toHaveAccessibleContrast } from './lib/__tests__/contrast-validation'
 
+// Set up environment variables for tests
+process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key'
+
 // Extend Vitest matchers with custom theme testing matchers
 expect.extend({
   toHaveAccessibleContrast

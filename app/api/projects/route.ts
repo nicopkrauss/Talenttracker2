@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
         description,
         production_company,
         hiring_contact,
-        project_location: location,
+        location,
         start_date,
         end_date,
         status,
@@ -113,6 +113,8 @@ export async function GET(request: NextRequest) {
 // POST /api/projects - Create new project
 export async function POST(request: NextRequest) {
   try {
+    console.log('POST /api/projects - Starting request')
+    
     const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -128,8 +130,10 @@ export async function POST(request: NextRequest) {
 
     // Get authenticated user (more secure than getSession)
     const { data: { user }, error: userError } = await supabase.auth.getUser()
+    console.log('User auth check:', { user: user?.id, error: userError })
     
     if (userError || !user) {
+      console.log('Authentication failed:', userError)
       return NextResponse.json(
         { error: 'Unauthorized', code: 'UNAUTHORIZED' },
         { status: 401 }
@@ -143,7 +147,10 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
+    console.log('User profile check:', { profile: userProfile, error: profileError })
+
     if (profileError || !userProfile) {
+      console.log('Profile not found:', profileError)
       return NextResponse.json(
         { error: 'User profile not found', code: 'PROFILE_NOT_FOUND' },
         { status: 404 }
@@ -151,7 +158,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user has permission to create projects (Admin or In-House only)
+    console.log('Checking admin access for role:', userProfile.role)
     if (!hasAdminAccess(userProfile.role)) {
+      console.log('Insufficient permissions for role:', userProfile.role)
       return NextResponse.json(
         { error: 'Insufficient permissions to create projects', code: 'INSUFFICIENT_PERMISSIONS' },
         { status: 403 }
@@ -160,9 +169,13 @@ export async function POST(request: NextRequest) {
 
     // Parse and validate request body
     const body = await request.json()
+    console.log('Request body:', body)
+    
     const validationResult = projectFormSchema.safeParse(body)
+    console.log('Validation result:', { success: validationResult.success, error: validationResult.error })
 
     if (!validationResult.success) {
+      console.log('Validation failed:', validationResult.error.flatten().fieldErrors)
       return NextResponse.json(
         { 
           error: 'Validation failed',
@@ -174,6 +187,7 @@ export async function POST(request: NextRequest) {
     }
 
     const projectData = validationResult.data
+    console.log('Validated project data:', projectData)
 
     // Create the project
     const { data: newProject, error: createError } = await supabase
@@ -195,7 +209,7 @@ export async function POST(request: NextRequest) {
         description,
         production_company,
         hiring_contact,
-        project_location: location,
+        location,
         start_date,
         end_date,
         status,

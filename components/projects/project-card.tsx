@@ -148,10 +148,10 @@ export function ProjectCard({
             </div>
           )}
           
-          {project.project_location && (
+          {project.location && (
             <div className="flex items-center gap-2 text-sm text-foreground/80">
               <MapPin className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-              <span className="truncate">{project.project_location}</span>
+              <span className="truncate">{project.location}</span>
             </div>
           )}
           

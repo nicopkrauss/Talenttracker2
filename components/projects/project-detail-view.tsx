@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   Circle
 } from 'lucide-react'
+import { ProjectRolesChecklistItem } from './project-roles-checklist-item'
 import { Project, ProjectSetupChecklist } from '@/lib/types'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { useAuth } from '@/lib/auth-context'
@@ -313,11 +314,11 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
                     <span>{project.hiring_contact}</span>
                   </div>
                 )}
-                {project.project_location && (
+                {project.location && (
                   <div className="flex items-center gap-2 text-sm">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Location:</span>
-                    <span>{project.project_location}</span>
+                    <span>{project.location}</span>
                   </div>
                 )}
               </div>
@@ -340,30 +341,23 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <Checkbox
-                  id="roles-pay"
-                  checked={project.project_setup_checklist.roles_and_pay_completed}
-                  onCheckedChange={(checked) => 
-                    handleChecklistUpdate('roles_and_pay_completed', checked as boolean)
-                  }
-                  disabled={checklistLoading || !canEditProject}
-                />
-                <div className="flex-1">
-                  <label 
-                    htmlFor="roles-pay" 
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                  >
-                    Add Project Roles & Pay Rates
-                  </label>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Configure team roles and set base pay rates for the project
-                  </p>
-                </div>
-                {project.project_setup_checklist.roles_and_pay_completed && (
-                  <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-                )}
-              </div>
+              <ProjectRolesChecklistItem
+                projectId={projectId}
+                isCompleted={project.project_setup_checklist.roles_and_pay_completed}
+                onCompletionChange={(completed) => {
+                  // Update the local state immediately for better UX
+                  setProject(prev => prev ? {
+                    ...prev,
+                    project_setup_checklist: prev.project_setup_checklist ? {
+                      ...prev.project_setup_checklist,
+                      roles_and_pay_completed: completed
+                    } : undefined
+                  } : null)
+                  // Also refresh the full project data
+                  fetchProject()
+                }}
+                disabled={checklistLoading || !canEditProject}
+              />
 
               <div className="flex items-center space-x-3">
                 <Checkbox

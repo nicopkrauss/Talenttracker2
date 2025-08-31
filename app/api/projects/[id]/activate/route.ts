@@ -155,7 +155,7 @@ export async function POST(
         description,
         production_company,
         hiring_contact,
-        project_location: location,
+        location,
         start_date,
         end_date,
         status,

@@ -13,6 +13,8 @@ export default function NewProjectPage() {
   const router = useRouter()
 
   const handleSubmit = async (data: ProjectFormData) => {
+    console.log('Submitting project data:', data)
+    
     const response = await fetch('/api/projects', {
       method: 'POST',
       headers: {
@@ -21,13 +23,18 @@ export default function NewProjectPage() {
       body: JSON.stringify(data),
     })
 
+    console.log('Response status:', response.status)
+    console.log('Response headers:', response.headers)
+
     if (!response.ok) {
       const error = await response.json()
+      console.error('API Error Response:', error)
       throw new Error(error.error || 'Failed to create project')
     }
 
     const project = await response.json()
-    router.push(`/projects/${project.id}`)
+    console.log('Created project:', project)
+    router.push(`/projects/${project.data?.id || project.id}`)
   }
 
   const handleCancel = () => {

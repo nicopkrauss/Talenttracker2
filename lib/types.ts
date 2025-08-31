@@ -34,7 +34,7 @@ export interface TalentProfile {
     status: string
   }
   talent_status?: Array<{
-    talent_locations: {
+    project_locations: {
       name: string
     }
     updated_at: string
@@ -319,7 +319,7 @@ export const projectFormSchema = z.object({
 })
 
 export const projectRoleFormSchema = z.object({
-  role_name: z.enum(['admin', 'in_house', 'supervisor', 'talent_logistics_coordinator', 'talent_escort']),
+  role_name: z.enum(['supervisor', 'talent_logistics_coordinator', 'talent_escort']),
   base_pay_rate: z.number()
     .positive("Pay rate must be a positive number")
     .max(9999.99, "Pay rate cannot exceed $9,999.99")
@@ -512,7 +512,7 @@ export interface Project {
   description?: string
   production_company?: string
   hiring_contact?: string
-  project_location?: string
+  location?: string
   start_date: string // ISO date string
   end_date: string // ISO date string
   status: ProjectStatus
@@ -544,11 +544,9 @@ export interface ProjectSetupChecklist {
 export interface ProjectRoleConfig {
   id: string
   project_id: string
-  role_name: 'admin' | 'in_house' | 'supervisor' | 'talent_logistics_coordinator' | 'talent_escort'
-  base_pay_rate?: number
-  is_active: boolean
+  role: 'supervisor' | 'talent_logistics_coordinator' | 'talent_escort'
+  base_pay?: number
   created_at: string
-  updated_at: string
 }
 
 // Project Location interface
@@ -599,7 +597,7 @@ export interface ProjectFormData {
 
 // Project role form data
 export interface ProjectRoleFormData {
-  role_name: 'admin' | 'in_house' | 'supervisor' | 'talent_logistics_coordinator' | 'talent_escort'
+  role_name: 'supervisor' | 'talent_logistics_coordinator' | 'talent_escort'
   base_pay_rate?: number
 }
 

@@ -126,7 +126,7 @@ const talentWithAssignments = await prisma.talent.findMany({
     },
     talent_status: {
       include: {
-        talent_locations: true
+        project_locations: true
       }
     }
   }
