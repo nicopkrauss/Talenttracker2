@@ -25,7 +25,7 @@ export function ProjectDetailLayout({ projectId }: ProjectDetailLayoutProps) {
   const [error, setError] = useState<string | null>(null)
 
   // Check if user can edit project settings
-  const canEditProject = userProfile ? hasAdminAccess(userProfile.role) : false
+  const canEditProject = userProfile?.role ? hasAdminAccess(userProfile.role) : false
 
   useEffect(() => {
     fetchProject()
@@ -78,6 +78,10 @@ export function ProjectDetailLayout({ projectId }: ProjectDetailLayoutProps) {
 
   const handleEdit = () => {
     router.push(`/projects/${projectId}/edit`)
+  }
+
+  const handleBack = () => {
+    router.push('/projects')
   }
 
   const handleActivate = async () => {
@@ -140,20 +144,20 @@ export function ProjectDetailLayout({ projectId }: ProjectDetailLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Sticky Header */}
+      {/* Sticky Header - positioned at top of content area */}
       <ProjectHeader 
         project={project}
-        onEdit={handleEdit}
-        canEdit={canEditProject}
+        onBack={handleBack}
       />
       
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-6 space-y-6">
+      {/* Main Content - with top padding to account for sticky header */}
+      <div className="container mx-auto px-4 pt-[100px] pb-6 space-y-6">
         {/* Project Overview Card - Always Visible */}
         <ProjectOverviewCard 
           project={project}
           onActivate={handleActivate}
           onArchive={handleArchive}
+          onEdit={handleEdit}
           canEdit={canEditProject}
         />
         

@@ -3,16 +3,15 @@
 import React from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Edit } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { EnhancedProject } from '@/lib/types'
 
 interface ProjectHeaderProps {
   project: EnhancedProject
-  onEdit: () => void
-  canEdit: boolean
+  onBack: () => void
 }
 
-export function ProjectHeader({ project, onEdit, canEdit }: ProjectHeaderProps) {
+export function ProjectHeader({ project, onBack }: ProjectHeaderProps) {
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case 'active':
@@ -40,20 +39,19 @@ export function ProjectHeader({ project, onEdit, canEdit }: ProjectHeaderProps) 
   }
 
   return (
-    <div className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+    <div className="fixed top-0 md:top-[69px] left-0 right-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {canEdit && (
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={onEdit}
-                className="gap-2"
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-            )}
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={onBack}
+              className="gap-2 hover:bg-muted transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
             <h1 className="text-2xl font-bold text-foreground">
               {project.name}
             </h1>

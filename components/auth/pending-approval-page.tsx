@@ -8,17 +8,28 @@ import { Card, CardContent } from "@/components/ui/card"
 import { useAuth } from "@/lib/auth-context"
 
 export function PendingApprovalPage() {
-  const { signOut, loading } = useAuth()
+  const { signOut } = useAuth()
   const [isSigningOut, setIsSigningOut] = React.useState(false)
 
   const handleSignOut = async () => {
     setIsSigningOut(true)
+    
+    // Set a timeout to ensure the button doesn't get stuck
+    const timeout = setTimeout(() => {
+      setIsSigningOut(false)
+      window.location.href = '/login'
+    }, 5000) // 5 second timeout
+    
     try {
       await signOut()
+      clearTimeout(timeout)
       // Redirect will be handled by auth state change
       window.location.href = '/login'
     } catch (error) {
       console.error("Sign out error:", error)
+      clearTimeout(timeout)
+    } finally {
+      // Always reset the signing out state
       setIsSigningOut(false)
     }
   }
@@ -49,11 +60,11 @@ export function PendingApprovalPage() {
           <div className="animate-in slide-in-from-bottom-4 duration-700 delay-400">
             <Button
               onClick={handleSignOut}
-              disabled={isSigningOut || loading}
+              disabled={isSigningOut}
               variant="outline"
               className="w-full h-12 sm:h-11 font-semibold transition-all duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
             >
-              {isSigningOut || loading ? (
+              {isSigningOut ? (
                 <>
                   <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                   Signing out...

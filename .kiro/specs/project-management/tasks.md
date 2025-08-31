@@ -127,7 +127,12 @@
   - _Follow wireframe: project-details-wireframe.md_
   - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5_
 
-- [ ] 16. Add project statistics and KPI tracking
+- [x] 16. Add project statistics and KPI tracking
+
+
+
+
+
   - Add talent_expected field to projects table
   - Create API endpoints for project statistics (talent counts, staff counts)
   - Implement real-time KPI calculations for active projects
@@ -135,7 +140,12 @@
   - Create staff check-in status tracking
   - _Requirements: 9.5, 14.1, 14.5_
 
-- [ ] 17. Build Info tab with enhanced project details
+- [x] 17. Build Info tab with enhanced project details
+
+
+
+
+
   - Create editable description text block component
   - Build talent locations manager with default locations (House, Holding, Stage)
   - Add location creation with name, abbreviation, and color picker

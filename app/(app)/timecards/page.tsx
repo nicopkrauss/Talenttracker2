@@ -170,17 +170,32 @@ export default function TimecardsPage() {
       </div>
 
       <Tabs defaultValue="my-timecards" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="my-timecards">{isAdmin ? "All Timecards" : "My Timecards"}</TabsTrigger>
+        <TabsList className="bg-transparent border border-border rounded-lg p-1 gap-1">
+          <TabsTrigger 
+            value="my-timecards"
+            className="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ease-in-out data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:font-semibold data-[state=active]:shadow-sm hover:bg-muted/60 text-muted-foreground border-transparent"
+          >
+            {isAdmin ? "All Timecards" : "My Timecards"}
+          </TabsTrigger>
           {(isSupervisor || isAdmin) && (
-            <TabsTrigger value="approvals">
+            <TabsTrigger 
+              value="approvals"
+              className="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ease-in-out data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:font-semibold data-[state=active]:shadow-sm hover:bg-muted/60 text-muted-foreground border-transparent"
+            >
               Approvals
               {pendingTimecards.length > 0 && (
                 <Badge className="ml-2 bg-red-500 dark:bg-red-400 text-white">{pendingTimecards.length}</Badge>
               )}
             </TabsTrigger>
           )}
-          {isAdmin && <TabsTrigger value="summary">Summary</TabsTrigger>}
+          {isAdmin && (
+            <TabsTrigger 
+              value="summary"
+              className="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ease-in-out data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:font-semibold data-[state=active]:shadow-sm hover:bg-muted/60 text-muted-foreground border-transparent"
+            >
+              Summary
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="my-timecards" className="space-y-4">

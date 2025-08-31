@@ -21,11 +21,11 @@ export function useUserApproval() {
     setLoading(true)
     
     try {
-      // Update user statuses to approved
+      // Update user statuses to active
       const { error: updateError } = await supabase
         .from("profiles")
         .update({ 
-          status: "approved",
+          status: "active",
           updated_at: new Date().toISOString()
         })
         .in("id", userIds)

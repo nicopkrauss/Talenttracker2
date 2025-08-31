@@ -8,13 +8,13 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
-import { 
-  Calendar, 
-  MapPin, 
-  Building, 
-  User, 
-  Edit, 
-  Play, 
+import {
+  Calendar,
+  MapPin,
+  Building,
+  User,
+  Edit,
+  Play,
   Archive,
   AlertTriangle,
   Loader2,
@@ -55,16 +55,16 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
     try {
       setLoading(true)
       setError(null)
-      
+
       const response = await fetch(`/api/projects/${projectId}`)
-      
+
       if (!response.ok) {
         if (response.status === 404) {
           throw new Error('Project not found')
         }
         throw new Error('Failed to load project')
       }
-      
+
       const result = await response.json()
       setProject(result.data)
     } catch (err: any) {
@@ -82,15 +82,15 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
   const handleActivate = async () => {
     try {
       setActionLoading('activate')
-      
+
       const response = await fetch(`/api/projects/${projectId}/activate`, {
         method: 'POST'
       })
-      
+
       if (!response.ok) {
         throw new Error('Failed to activate project')
       }
-      
+
       // Refresh project data
       await fetchProject()
     } catch (err: any) {
@@ -104,15 +104,15 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
   const handleArchive = async () => {
     try {
       setActionLoading('archive')
-      
+
       const response = await fetch(`/api/projects/${projectId}/archive`, {
         method: 'POST'
       })
-      
+
       if (!response.ok) {
         throw new Error('Failed to archive project')
       }
-      
+
       // Redirect to projects list after archiving
       router.push('/projects')
     } catch (err: any) {
@@ -128,7 +128,7 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
 
     try {
       setChecklistLoading(true)
-      
+
       const updatedChecklist = {
         ...project.project_setup_checklist,
         [field]: value
@@ -158,7 +158,7 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
 
   const calculateSetupProgress = () => {
     if (!project?.project_setup_checklist) return 0
-    
+
     const checklist = project.project_setup_checklist
     const completedItems = [
       checklist.roles_and_pay_completed,
@@ -172,12 +172,12 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
 
   const isSetupComplete = () => {
     if (!project?.project_setup_checklist) return false
-    
+
     const checklist = project.project_setup_checklist
     return checklist.roles_and_pay_completed &&
-           checklist.talent_roster_completed &&
-           checklist.team_assignments_completed &&
-           checklist.locations_completed
+      checklist.talent_roster_completed &&
+      checklist.team_assignments_completed &&
+      checklist.locations_completed
   }
 
   const formatDate = (dateString: string) => {
@@ -247,7 +247,7 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
                   Edit
                 </Button>
                 {project.status === 'prep' && (
-                  <Button 
+                  <Button
                     onClick={handleActivate}
                     disabled={actionLoading === 'activate' || !isSetupComplete()}
                   >
@@ -260,7 +260,7 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
                   </Button>
                 )}
                 {project.status === 'active' && (
-                  <Button 
+                  <Button
                     variant="outline"
                     onClick={handleArchive}
                     disabled={actionLoading === 'archive'}
@@ -363,14 +363,14 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
                 <Checkbox
                   id="talent-roster"
                   checked={project.project_setup_checklist.talent_roster_completed}
-                  onCheckedChange={(checked) => 
+                  onCheckedChange={(checked) =>
                     handleChecklistUpdate('talent_roster_completed', checked as boolean)
                   }
                   disabled={checklistLoading || !canEditProject}
                 />
                 <div className="flex-1">
-                  <label 
-                    htmlFor="talent-roster" 
+                  <label
+                    htmlFor="talent-roster"
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                   >
                     Finalize Talent Roster
@@ -388,14 +388,14 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
                 <Checkbox
                   id="team-assignments"
                   checked={project.project_setup_checklist.team_assignments_completed}
-                  onCheckedChange={(checked) => 
+                  onCheckedChange={(checked) =>
                     handleChecklistUpdate('team_assignments_completed', checked as boolean)
                   }
                   disabled={checklistLoading || !canEditProject}
                 />
                 <div className="flex-1">
-                  <label 
-                    htmlFor="team-assignments" 
+                  <label
+                    htmlFor="team-assignments"
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                   >
                     Finalize Team Assignments
@@ -413,14 +413,14 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
                 <Checkbox
                   id="locations"
                   checked={project.project_setup_checklist.locations_completed}
-                  onCheckedChange={(checked) => 
+                  onCheckedChange={(checked) =>
                     handleChecklistUpdate('locations_completed', checked as boolean)
                   }
                   disabled={checklistLoading || !canEditProject}
                 />
                 <div className="flex-1">
-                  <label 
-                    htmlFor="locations" 
+                  <label
+                    htmlFor="locations"
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                   >
                     Define Talent Locations
@@ -489,8 +489,8 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
               <div>
                 <p className="font-medium">Setup Complete</p>
                 <p className="text-sm text-green-600 dark:text-green-400">
-                  Project was activated on {project.project_setup_checklist.completed_at ? 
-                    new Date(project.project_setup_checklist.completed_at).toLocaleDateString() : 
+                  Project was activated on {project.project_setup_checklist.completed_at ?
+                    new Date(project.project_setup_checklist.completed_at).toLocaleDateString() :
                     'Unknown date'
                   }
                 </p>

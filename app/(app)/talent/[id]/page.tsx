@@ -134,10 +134,25 @@ export default function TalentProfilePage() {
 
       {/* Tabs */}
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="projects">Projects</TabsTrigger>
-          <TabsTrigger value="profile">Profile</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 bg-transparent border border-border rounded-lg p-1 gap-1">
+          <TabsTrigger 
+            value="overview"
+            className="px-2 py-2 rounded-md text-sm font-medium transition-all duration-200 ease-in-out data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:font-semibold data-[state=active]:shadow-sm hover:bg-muted/60 text-muted-foreground border-transparent"
+          >
+            Overview
+          </TabsTrigger>
+          <TabsTrigger 
+            value="projects"
+            className="px-2 py-2 rounded-md text-sm font-medium transition-all duration-200 ease-in-out data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:font-semibold data-[state=active]:shadow-sm hover:bg-muted/60 text-muted-foreground border-transparent"
+          >
+            Projects
+          </TabsTrigger>
+          <TabsTrigger 
+            value="profile"
+            className="px-2 py-2 rounded-md text-sm font-medium transition-all duration-200 ease-in-out data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:font-semibold data-[state=active]:shadow-sm hover:bg-muted/60 text-muted-foreground border-transparent"
+          >
+            Profile
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">

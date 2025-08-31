@@ -50,7 +50,7 @@ export function NavigationLayout({ children }: NavigationLayoutProps) {
           className={cn(
             "min-h-screen transition-all duration-200",
             // Desktop: top padding for fixed top navigation
-            "md:pt-[73px]", // Navigation height + border + padding
+            "md:pt-[69px]", // Navigation height + border + padding
             // Mobile: bottom padding for fixed bottom navigation  
             "pb-[76px] md:pb-0" // Navigation height + safe area + padding
           )}

@@ -20,11 +20,21 @@ export function ProjectTabs({ project, onProjectUpdate }: ProjectTabsProps) {
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
       <TabsList className="grid w-full grid-cols-5">
-        <TabsTrigger value="info">Info</TabsTrigger>
-        <TabsTrigger value="roles-team">Roles & Team</TabsTrigger>
-        <TabsTrigger value="talent-roster">Talent Roster</TabsTrigger>
-        <TabsTrigger value="assignments">Assignments</TabsTrigger>
-        <TabsTrigger value="settings">Settings</TabsTrigger>
+        <TabsTrigger value="info">
+          Info
+        </TabsTrigger>
+        <TabsTrigger value="roles-team">
+          Roles & Team
+        </TabsTrigger>
+        <TabsTrigger value="talent-roster">
+          Talent Roster
+        </TabsTrigger>
+        <TabsTrigger value="assignments">
+          Assignments
+        </TabsTrigger>
+        <TabsTrigger value="settings">
+          Settings
+        </TabsTrigger>
       </TabsList>
       
       <TabsContent value="info" className="mt-6">

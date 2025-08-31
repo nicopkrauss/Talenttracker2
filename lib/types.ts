@@ -336,6 +336,15 @@ export const projectLocationFormSchema = z.object({
     .min(1, "Location name is required")
     .max(100, "Location name must be 100 characters or less"),
   
+  abbreviation: z.string()
+    .max(3, "Abbreviation must be 3 characters or less")
+    .optional(),
+  
+  color: z.string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, "Color must be a valid hex color")
+    .optional()
+    .default("#3b82f6"),
+  
   is_default: z.boolean().optional().default(false),
   
   sort_order: z.number()
@@ -560,10 +569,12 @@ export interface ProjectLocation {
   id: string
   project_id: string
   name: string
+  abbreviation?: string
+  color?: string
   is_default: boolean
   sort_order: number
   created_at: string
-  updated_at: string
+  updated_at?: string
 }
 
 // Project form data interfaces
@@ -611,6 +622,8 @@ export interface ProjectRoleFormData {
 // Project location form data
 export interface ProjectLocationFormData {
   name: string
+  abbreviation?: string
+  color?: string
   is_default?: boolean
   sort_order?: number
 }

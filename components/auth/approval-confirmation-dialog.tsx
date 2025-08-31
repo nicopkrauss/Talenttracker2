@@ -45,42 +45,43 @@ export function ApprovalConfirmationDialog({
           </AlertDialogTitle>
           <AlertDialogDescription>
             {isSingle ? (
-              <>
-                Are you sure you want to approve <strong>{users[0]?.full_name}</strong>'s account?
-                <br />
-                <br />
-                This will:
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>Grant them access to the Talent Tracker system</li>
-                  <li>Send them a welcome notification</li>
-                  <li>Allow them to log in and use the application</li>
-                </ul>
-              </>
+              `Are you sure you want to approve ${users[0]?.full_name}'s account?`
             ) : (
-              <>
-                Are you sure you want to approve <strong>{userCount} user accounts</strong>?
-                <br />
-                <br />
-                This will:
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>Grant all selected users access to the Talent Tracker system</li>
-                  <li>Send welcome notifications to all approved users</li>
-                  <li>Allow them to log in and use the application</li>
-                </ul>
-                <br />
-                <div className="bg-muted p-3 rounded-md">
-                  <p className="text-sm font-medium mb-2">Users to be approved:</p>
-                  <div className="space-y-1 max-h-32 overflow-y-auto">
-                    {users.map((user) => (
-                      <div key={user.id} className="text-sm">
-                        • {user.full_name} ({user.email})
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
+              `Are you sure you want to approve ${userCount} user accounts?`
             )}
           </AlertDialogDescription>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-medium mb-2">This will:</p>
+              <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                {isSingle ? (
+                  <>
+                    <li>Grant them access to the Talent Tracker system</li>
+                    <li>Send them a welcome notification</li>
+                    <li>Allow them to log in and use the application</li>
+                  </>
+                ) : (
+                  <>
+                    <li>Grant all selected users access to the Talent Tracker system</li>
+                    <li>Send welcome notifications to all approved users</li>
+                    <li>Allow them to log in and use the application</li>
+                  </>
+                )}
+              </ul>
+            </div>
+            {!isSingle && (
+              <div className="bg-muted/50 border border-border p-3 rounded-md">
+                <p className="text-sm font-medium mb-2 text-foreground">Users to be approved:</p>
+                <div className="space-y-1 max-h-32 overflow-y-auto">
+                  {users.map((user) => (
+                    <div key={user.id} className="text-sm text-muted-foreground">
+                      • {user.full_name} ({user.email})
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={loading}>

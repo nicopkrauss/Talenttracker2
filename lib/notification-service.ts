@@ -263,6 +263,13 @@ export class NotificationService {
   }
 
   /**
+   * Get approval notification content
+   */
+  private getApprovalNotificationContent(fullName: string): string {
+    return `Account approved for ${fullName}. Welcome to Talent Tracker! Your account has been approved and is now active.`
+  }
+
+  /**
    * Send notification email using templates
    */
   private async sendNotificationEmail(

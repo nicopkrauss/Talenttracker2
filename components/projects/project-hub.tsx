@@ -147,73 +147,79 @@ export function ProjectHub({
   // Don't render if user is not authenticated
   if (!isAuthenticated || !user) {
     return (
-      <div className="space-y-6">
+      <>
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Projects</h1>
           </div>
         </div>
         
-        <Card>
-          <CardContent className="p-8">
-            <div className="flex items-center justify-center space-x-2">
-              <span className="text-muted-foreground">Please sign in to view projects.</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        <div className="mt-6">
+          <Card>
+            <CardContent className="p-8">
+              <div className="flex items-center justify-center space-x-2">
+                <span className="text-muted-foreground">Please sign in to view projects.</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </>
     )
   }
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <>
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Projects</h1>
           </div>
         </div>
         
-        <Card>
-          <CardContent className="p-8">
-            <div className="flex items-center justify-center space-x-2">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              <span className="text-muted-foreground">Loading projects...</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        <div className="mt-6">
+          <Card>
+            <CardContent className="p-8">
+              <div className="flex items-center justify-center space-x-2">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <span className="text-muted-foreground">Loading projects...</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </>
     )
   }
 
   if (error) {
     return (
-      <div className="space-y-6">
+      <>
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Projects</h1>
           </div>
         </div>
         
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            {error}
-          </AlertDescription>
-        </Alert>
+        <div className="mt-6">
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              {error}
+            </AlertDescription>
+          </Alert>
+        </div>
         
-        <div className="text-center">
+        <div className="text-center mt-6">
           <Button onClick={handleRefresh} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
             Try Again
           </Button>
         </div>
-      </div>
+      </>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -242,125 +248,132 @@ export function ProjectHub({
 
       {/* Search and Filters */}
       {projects.length > 0 && (
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search projects by name, description, or production company..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+        <div className="mt-6">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search projects by name, description, or production company..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button
+                    variant={statusFilter === "all" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setStatusFilter("all")}
+                  >
+                    All ({projects.length})
+                  </Button>
+                  <Button
+                    variant={statusFilter === "prep" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setStatusFilter("prep")}
+                  >
+                    Prep ({projectsByStatus.prep.length})
+                  </Button>
+                  <Button
+                    variant={statusFilter === "active" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setStatusFilter("active")}
+                  >
+                    Active ({projectsByStatus.active.length})
+                  </Button>
+                  <Button
+                    variant={statusFilter === "archived" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setStatusFilter("archived")}
+                  >
+                    Archived ({projectsByStatus.archived.length})
+                  </Button>
                 </div>
               </div>
-              
-              <div className="flex gap-2">
-                <Button
-                  variant={statusFilter === "all" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setStatusFilter("all")}
-                >
-                  All ({projects.length})
-                </Button>
-                <Button
-                  variant={statusFilter === "prep" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setStatusFilter("prep")}
-                >
-                  Prep ({projectsByStatus.prep.length})
-                </Button>
-                <Button
-                  variant={statusFilter === "active" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setStatusFilter("active")}
-                >
-                  Active ({projectsByStatus.active.length})
-                </Button>
-                <Button
-                  variant={statusFilter === "archived" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setStatusFilter("archived")}
-                >
-                  Archived ({projectsByStatus.archived.length})
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Empty State */}
       {projects.length === 0 && (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <FolderOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">
-              No projects yet
-            </h3>
-            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-              {canCreateProjects 
-                ? "Get started by creating your first project. Projects help you organize talent, teams, and timecards for your productions."
-                : "You don't have access to any projects yet. Contact your administrator to get assigned to projects."
-              }
-            </p>
-            {canCreateProjects && (
-              <Button onClick={handleCreateProject}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Your First Project
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+        <div className="mt-6">
+          <Card>
+            <CardContent className="p-12 text-center">
+              <FolderOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">
+                No projects yet
+              </h3>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                {canCreateProjects 
+                  ? "Get started by creating your first project. Projects help you organize talent, teams, and timecards for your productions."
+                  : "You don't have access to any projects yet. Contact your administrator to get assigned to projects."
+                }
+              </p>
+              {canCreateProjects && (
+                <Button onClick={handleCreateProject}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Your First Project
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* No Results State */}
       {projects.length > 0 && filteredProjects.length === 0 && (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <Search className="h-8 w-8 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">
-              No projects found
-            </h3>
-            <p className="text-muted-foreground mb-4">
-              Try adjusting your search terms or filters to find what you're looking for.
-            </p>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSearchTerm("")
-                setStatusFilter("all")
-              }}
-            >
-              Clear Filters
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="mt-6">
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Search className="h-8 w-8 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">
+                No projects found
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Try adjusting your search terms or filters to find what you're looking for.
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchTerm("")
+                  setStatusFilter("all")
+                }}
+              >
+                Clear Filters
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Projects Grid */}
       {filteredProjects.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProjects.map((project) => (
-            <ProjectCard
-              key={project.id}
-              project={project}
-              userRole={userRole}
-              canAccessDetails={canAccessProjectDetails(project)}
-              hasTimecards={hasTimecardsForProject(project.id)}
-              onViewProject={onViewProject}
-              onEditProject={onEditProject}
-              onActivateProject={onActivateProject}
-              onArchiveProject={onArchiveProject}
-              onViewTimecard={onViewTimecard}
-            />
-          ))}
+        <div className="mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredProjects.map((project) => (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                userRole={userRole}
+                canAccessDetails={canAccessProjectDetails(project)}
+                hasTimecards={hasTimecardsForProject(project.id)}
+                onViewProject={onViewProject}
+                onEditProject={onEditProject}
+                onActivateProject={onActivateProject}
+                onArchiveProject={onArchiveProject}
+                onViewTimecard={onViewTimecard}
+              />
+            ))}
+          </div>
         </div>
       )}
 
-
-    </div>
+    </>
   )
 }

@@ -14,7 +14,8 @@ import {
   Archive,
   CheckCircle2,
   Circle,
-  Loader2
+  Loader2,
+  Edit
 } from 'lucide-react'
 import { EnhancedProject } from '@/lib/types'
 import { useState } from 'react'
@@ -23,6 +24,7 @@ interface ProjectOverviewCardProps {
   project: EnhancedProject
   onActivate: () => Promise<void>
   onArchive: () => Promise<void>
+  onEdit: () => void
   canEdit: boolean
 }
 
@@ -30,6 +32,7 @@ export function ProjectOverviewCard({
   project, 
   onActivate, 
   onArchive, 
+  onEdit,
   canEdit 
 }: ProjectOverviewCardProps) {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -87,7 +90,19 @@ export function ProjectOverviewCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Project Overview</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Project Overview</CardTitle>
+          {canEdit && (
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={onEdit}
+              className="gap-2"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Project Details Grid */}

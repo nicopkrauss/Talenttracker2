@@ -78,16 +78,18 @@ export default function ProjectsPage() {
   }
 
   return (
-    <Suspense fallback={<LoadingSpinner />}>
-      <ProjectHub 
-        userRole={userRole}
-        onCreateProject={handleCreateProject}
-        onViewProject={handleViewProject}
-        onEditProject={handleEditProject}
-        onActivateProject={handleActivateProject}
-        onArchiveProject={handleArchiveProject}
-        onViewTimecard={handleViewTimecard}
-      />
-    </Suspense>
+    <div className="p-6 space-y-6">
+      <Suspense fallback={<LoadingSpinner />}>
+        <ProjectHub 
+          userRole={userRole}
+          onCreateProject={handleCreateProject}
+          onViewProject={handleViewProject}
+          onEditProject={handleEditProject}
+          onActivateProject={handleActivateProject}
+          onArchiveProject={handleArchiveProject}
+          onViewTimecard={handleViewTimecard}
+        />
+      </Suspense>
+    </div>
   )
 }

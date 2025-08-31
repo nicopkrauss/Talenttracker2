@@ -282,16 +282,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
           city: data.city?.trim(),
           state: data.state?.trim(),
           status: 'pending', // New users start as pending
-          role: 'escort', // Default role
+          role: null, // Role will be assigned by admin during approval
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
 
       if (profileError) {
         console.error('Failed to create user profile:', profileError)
+        console.error('Profile error details:', {
+          message: profileError.message,
+          code: profileError.code,
+          details: profileError.details,
+          hint: profileError.hint
+        })
+        console.error('Profile data attempted:', {
+          id: authData.user.id,
+          full_name: `${data.firstName.trim()} ${data.lastName.trim()}`,
+          email: normalizedEmail,
+          phone: data.phone?.trim(),
+          city: data.city?.trim(),
+          state: data.state?.trim(),
+          status: 'pending',
+          role: null
+        })
+        
         // If profile creation fails, we should ideally clean up the auth user
         // For now, we'll throw an error with guidance
-        throw new Error('Account created but profile setup failed. Please contact support.')
+        throw new Error(`Account created but profile setup failed: ${profileError.message || 'Unknown error'}. Please contact support.`)
       }
 
       // Profile will be fetched automatically by auth state change handler
