@@ -1,0 +1,1145 @@
+{
+  "timestamp": "2025-08-31T07:15:50.297Z",
+  "summary": {
+    "productionIssues": 188,
+    "testFileIssues": 91,
+    "utilityFileIssues": 29,
+    "productionOptimized": false
+  },
+  "criticalIssues": [
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 35,
+      "class": "text-gray-900",
+      "context": "  {\r\n    hardcodedClass: 'text-gray-900',\r\n    themeAwareReplacement: 'text-foreground',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 42,
+      "class": "text-gray-800",
+      "context": "  {\r\n    hardcodedClass: 'text-gray-800',\r\n    themeAwareReplacement: 'text-foreground',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 49,
+      "class": "text-gray-700",
+      "context": "  {\r\n    hardcodedClass: 'text-gray-700',\r\n    themeAwareReplacement: 'text-foreground',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 56,
+      "class": "text-gray-600",
+      "context": "  {\r\n    hardcodedClass: 'text-gray-600',\r\n    themeAwareReplacement: 'text-muted-foreground',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 63,
+      "class": "text-gray-50",
+      "context": "  {\r\n    hardcodedClass: 'text-gray-500',\r\n    themeAwareReplacement: 'text-muted-foreground',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 70,
+      "class": "text-gray-400",
+      "context": "  {\r\n    hardcodedClass: 'text-gray-400',\r\n    themeAwareReplacement: 'text-muted-foreground',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 100,
+      "class": "bg-gray-50",
+      "context": "  {\r\n    hardcodedClass: 'bg-gray-50',\r\n    themeAwareReplacement: 'bg-muted',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 107,
+      "class": "bg-gray-100",
+      "context": "  {\r\n    hardcodedClass: 'bg-gray-100',\r\n    themeAwareReplacement: 'bg-muted',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 114,
+      "class": "bg-gray-200",
+      "context": "  {\r\n    hardcodedClass: 'bg-gray-200',\r\n    themeAwareReplacement: 'bg-border',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 121,
+      "class": "bg-gray-800",
+      "context": "  {\r\n    hardcodedClass: 'bg-gray-800',\r\n    themeAwareReplacement: 'bg-card',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 128,
+      "class": "bg-gray-900",
+      "context": "  {\r\n    hardcodedClass: 'bg-gray-900',\r\n    themeAwareReplacement: 'bg-background',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 137,
+      "class": "border-gray-200",
+      "context": "  {\r\n    hardcodedClass: 'border-gray-200',\r\n    themeAwareReplacement: 'border-border',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 144,
+      "class": "border-gray-300",
+      "context": "  {\r\n    hardcodedClass: 'border-gray-300',\r\n    themeAwareReplacement: 'border-border',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 151,
+      "class": "border-gray-400",
+      "context": "  {\r\n    hardcodedClass: 'border-gray-400',\r\n    themeAwareReplacement: 'border-input',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 165,
+      "class": "text-green-600",
+      "context": "    colorType: 'success',\r\n    lightClass: 'text-green-600',\r\n    darkClass: 'dark:text-green-400',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 173,
+      "class": "text-green-700",
+      "context": "    colorType: 'success',\r\n    lightClass: 'text-green-700',\r\n    darkClass: 'dark:text-green-300',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 181,
+      "class": "bg-green-50",
+      "context": "    colorType: 'success',\r\n    lightClass: 'bg-green-50',\r\n    darkClass: 'dark:bg-green-950/20',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 189,
+      "class": "text-amber-600",
+      "context": "    colorType: 'warning',\r\n    lightClass: 'text-amber-600',\r\n    darkClass: 'dark:text-amber-400',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 197,
+      "class": "text-amber-700",
+      "context": "    colorType: 'warning',\r\n    lightClass: 'text-amber-700',\r\n    darkClass: 'dark:text-amber-300',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 205,
+      "class": "bg-amber-50",
+      "context": "    colorType: 'warning',\r\n    lightClass: 'bg-amber-50',\r\n    darkClass: 'dark:bg-amber-950/20',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 213,
+      "class": "text-red-600",
+      "context": "    colorType: 'error',\r\n    lightClass: 'text-red-600',\r\n    darkClass: 'dark:text-red-400',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 221,
+      "class": "text-red-700",
+      "context": "    colorType: 'error',\r\n    lightClass: 'text-red-700',\r\n    darkClass: 'dark:text-red-300',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 229,
+      "class": "bg-red-50",
+      "context": "    colorType: 'error',\r\n    lightClass: 'bg-red-50',\r\n    darkClass: 'dark:bg-red-950/20',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 237,
+      "class": "text-blue-600",
+      "context": "    colorType: 'info',\r\n    lightClass: 'text-blue-600',\r\n    darkClass: 'dark:text-blue-400',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 245,
+      "class": "text-blue-700",
+      "context": "    colorType: 'info',\r\n    lightClass: 'text-blue-700',\r\n    darkClass: 'dark:text-blue-300',\r"
+    },
+    {
+      "file": "lib\\color-mapping-utils.ts",
+      "line": 253,
+      "class": "bg-blue-50",
+      "context": "    colorType: 'info',\r\n    lightClass: 'bg-blue-50',\r\n    darkClass: 'dark:bg-blue-950/20',\r"
+    },
+    {
+      "file": "lib\\__tests__\\page-theme-integration.test.tsx",
+      "line": 110,
+      "class": "bg-green-100",
+      "context": "        <div className=\"flex items-center space-x-2\">\r\n          <span className=\"inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400\">\r\n            5 Active Members\r"
+    },
+    {
+      "file": "lib\\__tests__\\page-theme-integration.test.tsx",
+      "line": 113,
+      "class": "bg-amber-100",
+      "context": "          </span>\r\n          <span className=\"inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400\">\r\n            2 Pending Approval\r"
+    },
+    {
+      "file": "lib\\__tests__\\page-theme-integration.test.tsx",
+      "line": 128,
+      "class": "bg-green-600",
+      "context": "            <div className=\"flex space-x-2\">\r\n              <button className=\"bg-green-600 dark:bg-green-700 text-white px-3 py-1 rounded text-sm hover:bg-green-700 dark:hover:bg-green-600\">\r\n                Approve\r"
+    },
+    {
+      "file": "lib\\__tests__\\page-theme-integration.test.tsx",
+      "line": 131,
+      "class": "bg-red-600",
+      "context": "              </button>\r\n              <button className=\"bg-red-600 dark:bg-red-700 text-white px-3 py-1 rounded text-sm hover:bg-red-700 dark:hover:bg-red-600\">\r\n                Reject\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 91,
+      "class": "text-gray-800",
+      "context": "    {/* Hardcoded colors (bad) */}\r\n    <div className=\"bg-gray-100 text-gray-800 border border-gray-300 p-4 mb-4\">\r\n      <h2 className=\"text-gray-900 text-xl font-semibold\">Hardcoded gray colors</h2>\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 92,
+      "class": "text-gray-900",
+      "context": "    <div className=\"bg-gray-100 text-gray-800 border border-gray-300 p-4 mb-4\">\r\n      <h2 className=\"text-gray-900 text-xl font-semibold\">Hardcoded gray colors</h2>\r\n      <p className=\"text-gray-600\">This uses hardcoded gray colors</p>\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 93,
+      "class": "text-gray-600",
+      "context": "      <h2 className=\"text-gray-900 text-xl font-semibold\">Hardcoded gray colors</h2>\r\n      <p className=\"text-gray-600\">This uses hardcoded gray colors</p>\r\n      <button className=\"bg-blue-500 text-white px-4 py-2 rounded\">\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 115,
+      "class": "text-slate-700",
+      "context": "      <div className=\"bg-slate-100 p-2 mt-2 rounded\">\r\n        <span className=\"text-slate-700\">Hardcoded slate in theme-aware container</span>\r\n      </div>\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 136,
+      "class": "text-gray-800",
+      "context": "      expect(analysis.hardcodedClasses).toContain('bg-gray-100')\r\n      expect(analysis.hardcodedClasses).toContain('text-gray-800')\r\n      expect(analysis.hardcodedClasses).toContain('border-gray-300')\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 138,
+      "class": "text-gray-900",
+      "context": "      expect(analysis.hardcodedClasses).toContain('border-gray-300')\r\n      expect(analysis.hardcodedClasses).toContain('text-gray-900')\r\n      expect(analysis.hardcodedClasses).toContain('text-gray-600')\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 139,
+      "class": "text-gray-600",
+      "context": "      expect(analysis.hardcodedClasses).toContain('text-gray-900')\r\n      expect(analysis.hardcodedClasses).toContain('text-gray-600')\r\n      expect(analysis.hardcodedClasses).toContain('bg-blue-500')\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 143,
+      "class": "text-slate-700",
+      "context": "      expect(analysis.hardcodedClasses).toContain('bg-slate-100')\r\n      expect(analysis.hardcodedClasses).toContain('text-slate-700')\r\n      \r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 198,
+      "class": "text-gray-900",
+      "context": "          <div className=\"flex items-center justify-between\">\r\n            <h1 className=\"text-gray-900 text-xl font-bold\">App Name</h1>\r\n            <div className=\"flex space-x-4\">\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 200,
+      "class": "text-gray-600",
+      "context": "            <div className=\"flex space-x-4\">\r\n              <a href=\"#\" className=\"text-gray-600 hover:text-gray-900\">Home</a>\r\n              <a href=\"#\" className=\"text-blue-600 hover:text-blue-800\">Projects</a>\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 200,
+      "class": "text-gray-900",
+      "context": "            <div className=\"flex space-x-4\">\r\n              <a href=\"#\" className=\"text-gray-600 hover:text-gray-900\">Home</a>\r\n              <a href=\"#\" className=\"text-blue-600 hover:text-blue-800\">Projects</a>\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 215,
+      "class": "text-gray-900",
+      "context": "      expect(analysis.hardcodedClasses).toContain('border-gray-200')\r\n      expect(analysis.hardcodedClasses).toContain('text-gray-900')\r\n      expect(analysis.hardcodedClasses).toContain('text-gray-600')\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 216,
+      "class": "text-gray-600",
+      "context": "      expect(analysis.hardcodedClasses).toContain('text-gray-900')\r\n      expect(analysis.hardcodedClasses).toContain('text-gray-600')\r\n      expect(analysis.hardcodedClasses).toContain('bg-blue-500')\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 225,
+      "class": "text-gray-700",
+      "context": "          <div className=\"mb-4\">\r\n            <label className=\"block text-gray-700 text-sm font-bold mb-2\">\r\n              Email\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 234,
+      "class": "text-gray-700",
+      "context": "          <div className=\"mb-6\">\r\n            <label className=\"block text-gray-700 text-sm font-bold mb-2\">\r\n              Password\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 261,
+      "class": "text-gray-700",
+      "context": "      expect(analysis.hardcodedClasses).toContain('border-gray-300')\r\n      expect(analysis.hardcodedClasses).toContain('text-gray-700')\r\n      expect(analysis.hardcodedClasses).toContain('bg-blue-500')\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 91,
+      "class": "bg-gray-100",
+      "context": "    {/* Hardcoded colors (bad) */}\r\n    <div className=\"bg-gray-100 text-gray-800 border border-gray-300 p-4 mb-4\">\r\n      <h2 className=\"text-gray-900 text-xl font-semibold\">Hardcoded gray colors</h2>\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 114,
+      "class": "bg-slate-100",
+      "context": "      <h3 className=\"text-foreground font-medium\">Mixed usage example</h3>\r\n      <div className=\"bg-slate-100 p-2 mt-2 rounded\">\r\n        <span className=\"text-slate-700\">Hardcoded slate in theme-aware container</span>\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 135,
+      "class": "bg-gray-100",
+      "context": "      // Should find hardcoded gray, blue, and slate colors\r\n      expect(analysis.hardcodedClasses).toContain('bg-gray-100')\r\n      expect(analysis.hardcodedClasses).toContain('text-gray-800')\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 142,
+      "class": "bg-slate-100",
+      "context": "      expect(analysis.hardcodedClasses).toContain('text-white')\r\n      expect(analysis.hardcodedClasses).toContain('bg-slate-100')\r\n      expect(analysis.hardcodedClasses).toContain('text-slate-700')\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 91,
+      "class": "border-gray-300",
+      "context": "    {/* Hardcoded colors (bad) */}\r\n    <div className=\"bg-gray-100 text-gray-800 border border-gray-300 p-4 mb-4\">\r\n      <h2 className=\"text-gray-900 text-xl font-semibold\">Hardcoded gray colors</h2>\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 137,
+      "class": "border-gray-300",
+      "context": "      expect(analysis.hardcodedClasses).toContain('text-gray-800')\r\n      expect(analysis.hardcodedClasses).toContain('border-gray-300')\r\n      expect(analysis.hardcodedClasses).toContain('text-gray-900')\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 196,
+      "class": "border-gray-200",
+      "context": "      const NavigationWithHardcodedColors = () => (\r\n        <nav className=\"bg-white border-b border-gray-200 px-4 py-2\">\r\n          <div className=\"flex items-center justify-between\">\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 214,
+      "class": "border-gray-200",
+      "context": "      expect(analysis.hardcodedClasses).toContain('bg-white')\r\n      expect(analysis.hardcodedClasses).toContain('border-gray-200')\r\n      expect(analysis.hardcodedClasses).toContain('text-gray-900')\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 223,
+      "class": "border-gray-300",
+      "context": "      const FormWithHardcodedColors = () => (\r\n        <form className=\"bg-white p-6 rounded-lg border border-gray-300\">\r\n          <div className=\"mb-4\">\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 230,
+      "class": "border-gray-300",
+      "context": "              type=\"email\"\r\n              className=\"w-full px-3 py-2 border border-gray-300 rounded focus:border-blue-500 focus:ring-blue-500\"\r\n            />\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 239,
+      "class": "border-gray-300",
+      "context": "              type=\"password\"\r\n              className=\"w-full px-3 py-2 border border-gray-300 rounded focus:border-blue-500 focus:ring-blue-500\"\r\n            />\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 260,
+      "class": "border-gray-300",
+      "context": "      expect(analysis.hardcodedClasses).toContain('bg-white')\r\n      expect(analysis.hardcodedClasses).toContain('border-gray-300')\r\n      expect(analysis.hardcodedClasses).toContain('text-gray-700')\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 94,
+      "class": "bg-blue-50",
+      "context": "      <p className=\"text-gray-600\">This uses hardcoded gray colors</p>\r\n      <button className=\"bg-blue-500 text-white px-4 py-2 rounded\">\r\n        Hardcoded blue button\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 106,
+      "class": "bg-red-50",
+      "context": "    {/* Semantic colors without dark variants (bad) */}\r\n    <div className=\"bg-red-50 border border-red-200 p-4 mb-4\">\r\n      <p className=\"text-red-600 font-medium\">Error without dark variant</p>\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 107,
+      "class": "text-red-600",
+      "context": "    <div className=\"bg-red-50 border border-red-200 p-4 mb-4\">\r\n      <p className=\"text-red-600 font-medium\">Error without dark variant</p>\r\n      <p className=\"text-red-700 text-sm\">Missing dark theme support</p>\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 108,
+      "class": "text-red-700",
+      "context": "      <p className=\"text-red-600 font-medium\">Error without dark variant</p>\r\n      <p className=\"text-red-700 text-sm\">Missing dark theme support</p>\r\n    </div>\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 140,
+      "class": "bg-blue-50",
+      "context": "      expect(analysis.hardcodedClasses).toContain('text-gray-600')\r\n      expect(analysis.hardcodedClasses).toContain('bg-blue-500')\r\n      expect(analysis.hardcodedClasses).toContain('text-white')\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 153,
+      "class": "bg-red-50",
+      "context": "      // Should find red colors without dark variants\r\n      expect(analysis.missingDarkVariants).toContain('bg-red-50')\r\n      expect(analysis.missingDarkVariants).toContain('border-red-200')\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 155,
+      "class": "text-red-600",
+      "context": "      expect(analysis.missingDarkVariants).toContain('border-red-200')\r\n      expect(analysis.missingDarkVariants).toContain('text-red-600')\r\n      expect(analysis.missingDarkVariants).toContain('text-red-700')\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 156,
+      "class": "text-red-700",
+      "context": "      expect(analysis.missingDarkVariants).toContain('text-red-600')\r\n      expect(analysis.missingDarkVariants).toContain('text-red-700')\r\n      \r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 201,
+      "class": "text-blue-600",
+      "context": "              <a href=\"#\" className=\"text-gray-600 hover:text-gray-900\">Home</a>\r\n              <a href=\"#\" className=\"text-blue-600 hover:text-blue-800\">Projects</a>\r\n              <button className=\"bg-blue-500 text-white px-3 py-1 rounded\">\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 201,
+      "class": "text-blue-800",
+      "context": "              <a href=\"#\" className=\"text-gray-600 hover:text-gray-900\">Home</a>\r\n              <a href=\"#\" className=\"text-blue-600 hover:text-blue-800\">Projects</a>\r\n              <button className=\"bg-blue-500 text-white px-3 py-1 rounded\">\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 202,
+      "class": "bg-blue-50",
+      "context": "              <a href=\"#\" className=\"text-blue-600 hover:text-blue-800\">Projects</a>\r\n              <button className=\"bg-blue-500 text-white px-3 py-1 rounded\">\r\n                Sign In\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 217,
+      "class": "bg-blue-50",
+      "context": "      expect(analysis.hardcodedClasses).toContain('text-gray-600')\r\n      expect(analysis.hardcodedClasses).toContain('bg-blue-500')\r\n      expect(analysis.hardcodedClasses).toContain('text-white')\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 244,
+      "class": "bg-blue-50",
+      "context": "            type=\"submit\"\r\n            className=\"w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded\"\r\n          >\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 244,
+      "class": "bg-blue-700",
+      "context": "            type=\"submit\"\r\n            className=\"w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded\"\r\n          >\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 248,
+      "class": "bg-red-100",
+      "context": "          </button>\r\n          <div className=\"mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded\">\r\n            Error message\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 248,
+      "class": "text-red-700",
+      "context": "          </button>\r\n          <div className=\"mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded\">\r\n            Error message\r"
+    },
+    {
+      "file": "lib\\__tests__\\hardcoded-color-detection.test.tsx",
+      "line": 262,
+      "class": "bg-blue-50",
+      "context": "      expect(analysis.hardcodedClasses).toContain('text-gray-700')\r\n      expect(analysis.hardcodedClasses).toContain('bg-blue-500')\r\n      expect(analysis.hardcodedClasses).toContain('text-white')\r"
+    },
+    {
+      "file": "lib\\__tests__\\comprehensive-theme-switching.test.tsx",
+      "line": 319,
+      "class": "text-gray-600",
+      "context": "        {/* These should be flagged as hardcoded colors */}\r\n        <div className=\"text-gray-600 bg-gray-100\">Hardcoded gray text</div>\r\n        <div className=\"text-slate-700 bg-slate-50\">Hardcoded slate text</div>\r"
+    },
+    {
+      "file": "lib\\__tests__\\comprehensive-theme-switching.test.tsx",
+      "line": 320,
+      "class": "text-slate-700",
+      "context": "        <div className=\"text-gray-600 bg-gray-100\">Hardcoded gray text</div>\r\n        <div className=\"text-slate-700 bg-slate-50\">Hardcoded slate text</div>\r\n        <div className=\"border-zinc-300\">Hardcoded zinc border</div>\r"
+    },
+    {
+      "file": "lib\\__tests__\\comprehensive-theme-switching.test.tsx",
+      "line": 319,
+      "class": "bg-gray-100",
+      "context": "        {/* These should be flagged as hardcoded colors */}\r\n        <div className=\"text-gray-600 bg-gray-100\">Hardcoded gray text</div>\r\n        <div className=\"text-slate-700 bg-slate-50\">Hardcoded slate text</div>\r"
+    },
+    {
+      "file": "lib\\__tests__\\comprehensive-theme-switching.test.tsx",
+      "line": 320,
+      "class": "bg-slate-50",
+      "context": "        <div className=\"text-gray-600 bg-gray-100\">Hardcoded gray text</div>\r\n        <div className=\"text-slate-700 bg-slate-50\">Hardcoded slate text</div>\r\n        <div className=\"border-zinc-300\">Hardcoded zinc border</div>\r"
+    },
+    {
+      "file": "lib\\__tests__\\comprehensive-theme-switching.test.tsx",
+      "line": 321,
+      "class": "border-zinc-300",
+      "context": "        <div className=\"text-slate-700 bg-slate-50\">Hardcoded slate text</div>\r\n        <div className=\"border-zinc-300\">Hardcoded zinc border</div>\r\n        \r"
+    },
+    {
+      "file": "lib\\__tests__\\comprehensive-theme-switching.test.tsx",
+      "line": 162,
+      "class": "bg-green-100",
+      "context": "        <div className=\"flex items-center gap-4 mt-2\">\r\n          <span className=\"inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400\">\r\n            Active\r"
+    },
+    {
+      "file": "lib\\__tests__\\comprehensive-theme-switching.test.tsx",
+      "line": 385,
+      "class": "text-red-600",
+      "context": "          {/* Missing dark variants - should be flagged */}\r\n          <div className=\"text-red-600\">Error without dark variant</div>\r\n          <div className=\"text-green-600\">Success without dark variant</div>\r"
+    },
+    {
+      "file": "lib\\__tests__\\comprehensive-theme-switching.test.tsx",
+      "line": 386,
+      "class": "text-green-600",
+      "context": "          <div className=\"text-red-600\">Error without dark variant</div>\r\n          <div className=\"text-green-600\">Success without dark variant</div>\r\n          <div className=\"text-blue-600\">Info without dark variant</div>\r"
+    },
+    {
+      "file": "lib\\__tests__\\comprehensive-theme-switching.test.tsx",
+      "line": 387,
+      "class": "text-blue-600",
+      "context": "          <div className=\"text-green-600\">Success without dark variant</div>\r\n          <div className=\"text-blue-600\">Info without dark variant</div>\r\n          \r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 16,
+      "class": "text-gray-600",
+      "context": "    it('should find replacement for hardcoded text colors', () => {\r\n      const replacement = findColorReplacement('text-gray-600');\r\n      expect(replacement).toEqual({\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 18,
+      "class": "text-gray-600",
+      "context": "      expect(replacement).toEqual({\r\n        hardcodedClass: 'text-gray-600',\r\n        themeAwareReplacement: 'text-muted-foreground',\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 78,
+      "class": "text-gray-600",
+      "context": "    it('should identify hardcoded colors as not theme-aware', () => {\r\n      expect(isThemeAware('text-gray-600')).toBe(false);\r\n      expect(isThemeAware('bg-gray-100')).toBe(false);\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 87,
+      "class": "text-gray-800",
+      "context": "      const code = `\r\n        <div className=\"bg-gray-100 text-gray-800\">\r\n          <h1 className=\"text-gray-900\">Title</h1>\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 88,
+      "class": "text-gray-900",
+      "context": "        <div className=\"bg-gray-100 text-gray-800\">\r\n          <h1 className=\"text-gray-900\">Title</h1>\r\n          <p className=\"text-green-600\">Success</p>\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 95,
+      "class": "text-gray-800",
+      "context": "      expect(colors).toContain('bg-gray-100');\r\n      expect(colors).toContain('text-gray-800');\r\n      expect(colors).toContain('text-gray-900');\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 96,
+      "class": "text-gray-900",
+      "context": "      expect(colors).toContain('text-gray-800');\r\n      expect(colors).toContain('text-gray-900');\r\n      expect(colors).toContain('text-green-600');\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 102,
+      "class": "text-gray-600",
+      "context": "      const code = `\r\n        <div className=\"text-gray-600\">\r\n          <p className=\"text-gray-600\">Duplicate color</p>\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 103,
+      "class": "text-gray-600",
+      "context": "        <div className=\"text-gray-600\">\r\n          <p className=\"text-gray-600\">Duplicate color</p>\r\n        </div>\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 108,
+      "class": "text-gray-600",
+      "context": "      const colors = extractColorClasses(code);\r\n      expect(colors.filter(c => c === 'text-gray-600')).toHaveLength(1);\r\n    });\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 115,
+      "class": "text-gray-600",
+      "context": "      const code = `\r\n        <div className=\"bg-gray-100 text-gray-600\">\r\n          <h1 className=\"text-gray-900\">Title</h1>\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 116,
+      "class": "text-gray-900",
+      "context": "        <div className=\"bg-gray-100 text-gray-600\">\r\n          <h1 className=\"text-gray-900\">Title</h1>\r\n        </div>\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 127,
+      "class": "text-gray-600",
+      "context": "      expect(originals).toContain('bg-gray-100');\r\n      expect(originals).toContain('text-gray-600');\r\n      expect(originals).toContain('text-gray-900');\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 128,
+      "class": "text-gray-900",
+      "context": "      expect(originals).toContain('text-gray-600');\r\n      expect(originals).toContain('text-gray-900');\r\n      \r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 143,
+      "class": "text-gray-600",
+      "context": "      const code = `Line 1\r\n<div className=\"text-gray-600\">Line 2</div>\r\n<p className=\"bg-gray-50\">Line 3</p>`;\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 79,
+      "class": "bg-gray-100",
+      "context": "      expect(isThemeAware('text-gray-600')).toBe(false);\r\n      expect(isThemeAware('bg-gray-100')).toBe(false);\r\n      expect(isThemeAware('border-gray-300')).toBe(false);\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 87,
+      "class": "bg-gray-100",
+      "context": "      const code = `\r\n        <div className=\"bg-gray-100 text-gray-800\">\r\n          <h1 className=\"text-gray-900\">Title</h1>\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 94,
+      "class": "bg-gray-100",
+      "context": "      const colors = extractColorClasses(code);\r\n      expect(colors).toContain('bg-gray-100');\r\n      expect(colors).toContain('text-gray-800');\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 115,
+      "class": "bg-gray-100",
+      "context": "      const code = `\r\n        <div className=\"bg-gray-100 text-gray-600\">\r\n          <h1 className=\"text-gray-900\">Title</h1>\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 126,
+      "class": "bg-gray-100",
+      "context": "      const originals = suggestions.map(s => s.original);\r\n      expect(originals).toContain('bg-gray-100');\r\n      expect(originals).toContain('text-gray-600');\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 131,
+      "class": "bg-gray-100",
+      "context": "      // Check specific suggestion\r\n      const bgSuggestion = suggestions.find(s => s.original === 'bg-gray-100');\r\n      expect(bgSuggestion).toEqual({\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 133,
+      "class": "bg-gray-100",
+      "context": "      expect(bgSuggestion).toEqual({\r\n        original: 'bg-gray-100',\r\n        suggestion: 'bg-muted',\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 144,
+      "class": "bg-gray-50",
+      "context": "<div className=\"text-gray-600\">Line 2</div>\r\n<p className=\"bg-gray-50\">Line 3</p>`;\r\n      \r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 80,
+      "class": "border-gray-300",
+      "context": "      expect(isThemeAware('bg-gray-100')).toBe(false);\r\n      expect(isThemeAware('border-gray-300')).toBe(false);\r\n    });\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 38,
+      "class": "text-purple-50",
+      "context": "    it('should return null for unknown colors', () => {\r\n      const replacement = findColorReplacement('text-purple-500');\r\n      expect(replacement).toBeNull();\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 45,
+      "class": "text-green-600",
+      "context": "    it('should find semantic color replacement for success colors', () => {\r\n      const replacement = findSemanticColorReplacement('success', 'text-green-600');\r\n      expect(replacement).toBeDefined();\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 52,
+      "class": "text-red-600",
+      "context": "    it('should find semantic color replacement for error colors', () => {\r\n      const replacement = findSemanticColorReplacement('error', 'text-red-600');\r\n      expect(replacement).toBeDefined();\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 59,
+      "class": "text-purple-600",
+      "context": "    it('should return null for unknown semantic colors', () => {\r\n      const replacement = findSemanticColorReplacement('success', 'text-purple-600');\r\n      expect(replacement).toBeNull();\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 89,
+      "class": "text-green-600",
+      "context": "          <h1 className=\"text-gray-900\">Title</h1>\r\n          <p className=\"text-green-600\">Success</p>\r\n        </div>\r"
+    },
+    {
+      "file": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "line": 97,
+      "class": "text-green-600",
+      "context": "      expect(colors).toContain('text-gray-900');\r\n      expect(colors).toContain('text-green-600');\r\n    });\r"
+    },
+    {
+      "file": "components\\ui\\form-validation-example.tsx",
+      "line": 286,
+      "class": "bg-red-50",
+      "context": "                              \"h-full transition-all duration-300 ease-in-out\",\r\n                              passwordStrength.color === 'red' && \"bg-red-500 dark:bg-red-600 w-1/3\",\r\n                              passwordStrength.color === 'amber' && \"bg-amber-500 dark:bg-amber-600 w-2/3\",\r"
+    },
+    {
+      "file": "components\\ui\\form-validation-example.tsx",
+      "line": 287,
+      "class": "bg-amber-50",
+      "context": "                              passwordStrength.color === 'red' && \"bg-red-500 dark:bg-red-600 w-1/3\",\r\n                              passwordStrength.color === 'amber' && \"bg-amber-500 dark:bg-amber-600 w-2/3\",\r\n                              passwordStrength.color === 'green' && \"bg-green-500 dark:bg-green-600 w-full\"\r"
+    },
+    {
+      "file": "components\\ui\\form-validation-example.tsx",
+      "line": 288,
+      "class": "bg-green-50",
+      "context": "                              passwordStrength.color === 'amber' && \"bg-amber-500 dark:bg-amber-600 w-2/3\",\r\n                              passwordStrength.color === 'green' && \"bg-green-500 dark:bg-green-600 w-full\"\r\n                            )}\r"
+    },
+    {
+      "file": "components\\timecards\\timecard-list.tsx",
+      "line": 51,
+      "class": "bg-blue-50",
+      "context": "      case \"submitted\":\n        return \"bg-blue-500 dark:bg-blue-600\"\n      case \"approved\":"
+    },
+    {
+      "file": "components\\timecards\\timecard-list.tsx",
+      "line": 53,
+      "class": "bg-green-50",
+      "context": "      case \"approved\":\n        return \"bg-green-500 dark:bg-green-600\"\n      case \"rejected\":"
+    },
+    {
+      "file": "components\\timecards\\timecard-list.tsx",
+      "line": 55,
+      "class": "bg-red-50",
+      "context": "      case \"rejected\":\n        return \"bg-red-500 dark:bg-red-600\"\n      default:"
+    },
+    {
+      "file": "components\\timecards\\supervisor-approval-queue.tsx",
+      "line": 127,
+      "class": "text-green-50",
+      "context": "        <CardContent className=\"p-8 text-center\">\n          <Check className=\"w-12 h-12 text-green-500 dark:text-green-400 mx-auto mb-4\" />\n          <p className=\"text-muted-foreground\">No timecards pending approval.</p>"
+    },
+    {
+      "file": "components\\timecards\\supervisor-approval-queue.tsx",
+      "line": 150,
+      "class": "bg-green-600",
+      "context": "                disabled={processing === \"bulk\"}\n                className=\"bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700\"\n              >"
+    },
+    {
+      "file": "components\\timecards\\supervisor-approval-queue.tsx",
+      "line": 150,
+      "class": "bg-green-700",
+      "context": "                disabled={processing === \"bulk\"}\n                className=\"bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700\"\n              >"
+    },
+    {
+      "file": "components\\timecards\\supervisor-approval-queue.tsx",
+      "line": 187,
+      "class": "bg-blue-50",
+      "context": "                )}\n                <Badge className=\"bg-blue-500 text-white dark:bg-blue-600 dark:text-blue-50\">Pending Review</Badge>\n              </div>"
+    },
+    {
+      "file": "components\\timecards\\supervisor-approval-queue.tsx",
+      "line": 260,
+      "class": "text-red-600",
+      "context": "                  disabled={processing === timecard.id}\n                  className=\"text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950/20\"\n                >"
+    },
+    {
+      "file": "components\\timecards\\supervisor-approval-queue.tsx",
+      "line": 269,
+      "class": "bg-green-600",
+      "context": "                  disabled={processing === timecard.id}\n                  className=\"bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700\"\n                >"
+    },
+    {
+      "file": "components\\timecards\\supervisor-approval-queue.tsx",
+      "line": 269,
+      "class": "bg-green-700",
+      "context": "                  disabled={processing === timecard.id}\n                  className=\"bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700\"\n                >"
+    },
+    {
+      "file": "components\\projects\\project-card.tsx",
+      "line": 67,
+      "class": "bg-amber-50",
+      "context": "      case 'prep':\r\n        return <Badge variant=\"secondary\" className=\"bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-300\">Prep</Badge>\r\n      case 'active':\r"
+    },
+    {
+      "file": "components\\projects\\project-card.tsx",
+      "line": 69,
+      "class": "bg-green-50",
+      "context": "      case 'active':\r\n        return <Badge variant=\"default\" className=\"bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-300\">Active</Badge>\r\n      case 'archived':\r"
+    },
+    {
+      "file": "components\\projects\\project-card.tsx",
+      "line": 221,
+      "class": "bg-green-600",
+      "context": "              onClick={handleActivateProject}\r\n              className=\"bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700\"\r\n            >\r"
+    },
+    {
+      "file": "components\\projects\\project-card.tsx",
+      "line": 221,
+      "class": "bg-green-700",
+      "context": "              onClick={handleActivateProject}\r\n              className=\"bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700\"\r\n            >\r"
+    },
+    {
+      "file": "components\\auth\\approval-confirmation-dialog.tsx",
+      "line": 92,
+      "class": "bg-green-600",
+      "context": "            disabled={loading}\r\n            className=\"bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700\"\r\n          >\r"
+    },
+    {
+      "file": "components\\auth\\approval-confirmation-dialog.tsx",
+      "line": 92,
+      "class": "bg-green-700",
+      "context": "            disabled={loading}\r\n            className=\"bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700\"\r\n          >\r"
+    },
+    {
+      "file": "components\\debug\\session-debug.tsx",
+      "line": 73,
+      "class": "text-red-600",
+      "context": "        {error && (\r\n          <div className=\"text-red-600\"><strong>Error:</strong> {error}</div>\r\n        )}\r"
+    },
+    {
+      "file": "app\\(app)\\timecards\\page.tsx",
+      "line": 122,
+      "class": "bg-gray-50",
+      "context": "      case \"draft\":\n        return \"bg-gray-500 dark:bg-gray-400\"\n      case \"submitted\":"
+    },
+    {
+      "file": "app\\(app)\\timecards\\page.tsx",
+      "line": 122,
+      "class": "bg-gray-400",
+      "context": "      case \"draft\":\n        return \"bg-gray-500 dark:bg-gray-400\"\n      case \"submitted\":"
+    },
+    {
+      "file": "app\\(app)\\timecards\\page.tsx",
+      "line": 130,
+      "class": "bg-gray-50",
+      "context": "      default:\n        return \"bg-gray-500 dark:bg-gray-400\"\n    }"
+    },
+    {
+      "file": "app\\(app)\\timecards\\page.tsx",
+      "line": 130,
+      "class": "bg-gray-400",
+      "context": "      default:\n        return \"bg-gray-500 dark:bg-gray-400\"\n    }"
+    },
+    {
+      "file": "app\\(app)\\timecards\\page.tsx",
+      "line": 124,
+      "class": "bg-blue-50",
+      "context": "      case \"submitted\":\n        return \"bg-blue-500 dark:bg-blue-400\"\n      case \"approved\":"
+    },
+    {
+      "file": "app\\(app)\\timecards\\page.tsx",
+      "line": 126,
+      "class": "bg-green-50",
+      "context": "      case \"approved\":\n        return \"bg-green-500 dark:bg-green-400\"\n      case \"rejected\":"
+    },
+    {
+      "file": "app\\(app)\\timecards\\page.tsx",
+      "line": 128,
+      "class": "bg-red-50",
+      "context": "      case \"rejected\":\n        return \"bg-red-500 dark:bg-red-400\"\n      default:"
+    },
+    {
+      "file": "app\\(app)\\timecards\\page.tsx",
+      "line": 179,
+      "class": "bg-red-50",
+      "context": "              {pendingTimecards.length > 0 && (\n                <Badge className=\"ml-2 bg-red-500 dark:bg-red-400 text-white\">{pendingTimecards.length}</Badge>\n              )}"
+    },
+    {
+      "file": "app\\(app)\\talent\\page.tsx",
+      "line": 123,
+      "class": "text-gray-400",
+      "context": "            <div className=\"relative flex-1\">\n              <Search className=\"absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4\" />\n              <Input"
+    },
+    {
+      "file": "app\\(app)\\talent\\page.tsx",
+      "line": 168,
+      "class": "text-gray-600",
+      "context": "            <CardContent className=\"space-y-3\">\n              <div className=\"flex items-center text-sm text-gray-600\">\n                <MapPin className=\"w-4 h-4 mr-2\" />"
+    },
+    {
+      "file": "app\\(app)\\talent\\page.tsx",
+      "line": 207,
+      "class": "text-gray-50",
+      "context": "          <CardContent className=\"p-8 text-center\">\n            <p className=\"text-gray-500\">No talent found matching your criteria.</p>\n          </CardContent>"
+    },
+    {
+      "file": "app\\(app)\\talent\\page.tsx",
+      "line": 94,
+      "class": "bg-gray-200",
+      "context": "        <div className=\"animate-pulse space-y-4\">\n          <div className=\"h-8 bg-gray-200 rounded w-1/4\"></div>\n          <div className=\"h-10 bg-gray-200 rounded\"></div>"
+    },
+    {
+      "file": "app\\(app)\\talent\\page.tsx",
+      "line": 95,
+      "class": "bg-gray-200",
+      "context": "          <div className=\"h-8 bg-gray-200 rounded w-1/4\"></div>\n          <div className=\"h-10 bg-gray-200 rounded\"></div>\n          <div className=\"space-y-3\">"
+    },
+    {
+      "file": "app\\(app)\\talent\\page.tsx",
+      "line": 98,
+      "class": "bg-gray-200",
+      "context": "            {[...Array(5)].map((_, i) => (\n              <div key={i} className=\"h-24 bg-gray-200 rounded\"></div>\n            ))}"
+    },
+    {
+      "file": "app\\(app)\\talent\\page.tsx",
+      "line": 164,
+      "class": "bg-blue-50",
+      "context": "                </div>\n                <Badge className=\"bg-blue-500 dark:bg-blue-400 text-white\">Active</Badge>\n              </div>"
+    },
+    {
+      "file": "components\\talent\\__tests__\\theme-migration.test.tsx",
+      "line": 67,
+      "class": "bg-green-50",
+      "context": "    // Check for theme-aware success badge\r\n    const badge = container.querySelector('.bg-green-50')\r\n    expect(badge?.className).toContain('dark:bg-green-950/20')\r"
+    },
+    {
+      "file": "components\\auth\\__tests__\\approval-confirmation-dialog.test.tsx",
+      "line": 269,
+      "class": "bg-green-600",
+      "context": "    const confirmButton = screen.getByText('Approve User')\r\n    expect(confirmButton).toHaveClass('bg-green-600', 'hover:bg-green-700')\r\n  })\r"
+    },
+    {
+      "file": "components\\auth\\__tests__\\approval-confirmation-dialog.test.tsx",
+      "line": 269,
+      "class": "bg-green-700",
+      "context": "    const confirmButton = screen.getByText('Approve User')\r\n    expect(confirmButton).toHaveClass('bg-green-600', 'hover:bg-green-700')\r\n  })\r"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 108,
+      "class": "text-gray-50",
+      "context": "          <CardContent className=\"p-8 text-center\">\n            <p className=\"text-gray-500\">Timecard not found.</p>\n          </CardContent>"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 121,
+      "class": "text-gray-600",
+      "context": "          <h1 className=\"text-2xl font-bold\">Timecard Details</h1>\n          <p className=\"text-gray-600\">{format(new Date(timecard.date), \"EEEE, MMMM d, yyyy\")}</p>\n        </div>"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 147,
+      "class": "text-gray-600",
+      "context": "                <div>\n                  <label className=\"text-sm font-medium text-gray-600\">Name</label>\n                  <p>"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 153,
+      "class": "text-gray-600",
+      "context": "                <div>\n                  <label className=\"text-sm font-medium text-gray-600\">Email</label>\n                  <p>{timecard.users.email}</p>"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 160,
+      "class": "text-gray-600",
+      "context": "              <div>\n                <label className=\"text-sm font-medium text-gray-600\">Project</label>\n                <p>{timecard.projects.name}</p>"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 177,
+      "class": "text-gray-600",
+      "context": "            <div>\n              <label className=\"text-sm font-medium text-gray-600\">Total Hours</label>\n              <p className=\"text-2xl font-bold\">{timecard.total_hours.toFixed(1)}</p>"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 181,
+      "class": "text-gray-600",
+      "context": "            <div>\n              <label className=\"text-sm font-medium text-gray-600\">Break Duration</label>\n              <p>{Math.round(timecard.break_duration)} minutes</p>"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 185,
+      "class": "text-gray-600",
+      "context": "            <div>\n              <label className=\"text-sm font-medium text-gray-600\">Pay Rate</label>\n              <p>${timecard.pay_rate.toFixed(2)}/hour</p>"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 189,
+      "class": "text-gray-600",
+      "context": "            <div>\n              <label className=\"text-sm font-medium text-gray-600\">Total Pay</label>\n              <p className=\"text-2xl font-bold text-green-600\">${timecard.total_pay.toFixed(2)}</p>"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 207,
+      "class": "text-gray-600",
+      "context": "                <div>\n                  <label className=\"text-sm font-medium text-gray-600\">Check In</label>\n                  <p className=\"text-lg font-medium\">{format(new Date(timecard.check_in_time), \"h:mm:ss a\")}</p>"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 211,
+      "class": "text-gray-600",
+      "context": "                <div>\n                  <label className=\"text-sm font-medium text-gray-600\">Check Out</label>\n                  <p className=\"text-lg font-medium\">{format(new Date(timecard.check_out_time), \"h:mm:ss a\")}</p>"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 219,
+      "class": "text-gray-600",
+      "context": "                  <div>\n                    <label className=\"text-sm font-medium text-gray-600\">Break Start</label>\n                    <p className=\"text-lg font-medium\">{format(new Date(timecard.break_start_time), \"h:mm:ss a\")}</p>"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 223,
+      "class": "text-gray-600",
+      "context": "                  <div>\n                    <label className=\"text-sm font-medium text-gray-600\">Break End</label>\n                    <p className=\"text-lg font-medium\">{format(new Date(timecard.break_end_time), \"h:mm:ss a\")}</p>"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 239,
+      "class": "text-gray-700",
+      "context": "            <CardContent>\n              <p className=\"text-gray-700\">{timecard.supervisor_comments}</p>\n            </CardContent>"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 253,
+      "class": "text-gray-600",
+      "context": "                <div>\n                  <label className=\"text-sm font-medium text-gray-600\">Submitted</label>\n                  <p>{format(new Date(timecard.submitted_at), \"MMMM d, yyyy 'at' h:mm a\")}</p>"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 259,
+      "class": "text-gray-600",
+      "context": "                <div>\n                  <label className=\"text-sm font-medium text-gray-600\">\n                    {timecard.status === \"approved\" ? \"Approved\" : \"Processed\"}"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 264,
+      "class": "text-gray-50",
+      "context": "                  {timecard.approver && (\n                    <p className=\"text-sm text-gray-500\">\n                      by {timecard.approver.first_name} {timecard.approver.last_name}"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 64,
+      "class": "bg-gray-50",
+      "context": "      case \"draft\":\n        return \"bg-gray-500 dark:bg-gray-400\"\n      case \"submitted\":"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 64,
+      "class": "bg-gray-400",
+      "context": "      case \"draft\":\n        return \"bg-gray-500 dark:bg-gray-400\"\n      case \"submitted\":"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 72,
+      "class": "bg-gray-50",
+      "context": "      default:\n        return \"bg-gray-500 dark:bg-gray-400\"\n    }"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 72,
+      "class": "bg-gray-400",
+      "context": "      default:\n        return \"bg-gray-500 dark:bg-gray-400\"\n    }"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 95,
+      "class": "bg-gray-200",
+      "context": "        <div className=\"animate-pulse space-y-4\">\n          <div className=\"h-8 bg-gray-200 rounded w-1/4\"></div>\n          <div className=\"h-32 bg-gray-200 rounded\"></div>"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 96,
+      "class": "bg-gray-200",
+      "context": "          <div className=\"h-8 bg-gray-200 rounded w-1/4\"></div>\n          <div className=\"h-32 bg-gray-200 rounded\"></div>\n          <div className=\"h-64 bg-gray-200 rounded\"></div>"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 97,
+      "class": "bg-gray-200",
+      "context": "          <div className=\"h-32 bg-gray-200 rounded\"></div>\n          <div className=\"h-64 bg-gray-200 rounded\"></div>\n        </div>"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 66,
+      "class": "bg-blue-50",
+      "context": "      case \"submitted\":\n        return \"bg-blue-500 dark:bg-blue-400\"\n      case \"approved\":"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 68,
+      "class": "bg-green-50",
+      "context": "      case \"approved\":\n        return \"bg-green-500 dark:bg-green-400\"\n      case \"rejected\":"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 70,
+      "class": "bg-red-50",
+      "context": "      case \"rejected\":\n        return \"bg-red-500 dark:bg-red-400\"\n      default:"
+    },
+    {
+      "file": "app\\(app)\\timecards\\[id]\\page.tsx",
+      "line": 190,
+      "class": "text-green-600",
+      "context": "              <label className=\"text-sm font-medium text-gray-600\">Total Pay</label>\n              <p className=\"text-2xl font-bold text-green-600\">${timecard.total_pay.toFixed(2)}</p>\n            </div>"
+    },
+    {
+      "file": "app\\(app)\\talent\\[id]\\page.tsx",
+      "line": 79,
+      "class": "text-gray-50",
+      "context": "          <CardContent className=\"p-8 text-center\">\n            <p className=\"text-gray-500\">Talent profile not found.</p>\n          </CardContent>"
+    },
+    {
+      "file": "app\\(app)\\talent\\[id]\\page.tsx",
+      "line": 167,
+      "class": "text-gray-50",
+      "context": "                {!talent.contact_info?.phone && !talent.contact_info?.email && (\n                  <p className=\"text-gray-500 text-sm\">No direct contact information available</p>\n                )}"
+    },
+    {
+      "file": "app\\(app)\\talent\\[id]\\page.tsx",
+      "line": 66,
+      "class": "bg-gray-200",
+      "context": "        <div className=\"animate-pulse space-y-4\">\n          <div className=\"h-8 bg-gray-200 rounded w-1/4\"></div>\n          <div className=\"h-32 bg-gray-200 rounded\"></div>"
+    },
+    {
+      "file": "app\\(app)\\talent\\[id]\\page.tsx",
+      "line": 67,
+      "class": "bg-gray-200",
+      "context": "          <div className=\"h-8 bg-gray-200 rounded w-1/4\"></div>\n          <div className=\"h-32 bg-gray-200 rounded\"></div>\n          <div className=\"h-64 bg-gray-200 rounded\"></div>"
+    },
+    {
+      "file": "app\\(app)\\talent\\[id]\\page.tsx",
+      "line": 68,
+      "class": "bg-gray-200",
+      "context": "          <div className=\"h-32 bg-gray-200 rounded\"></div>\n          <div className=\"h-64 bg-gray-200 rounded\"></div>\n        </div>"
+    },
+    {
+      "file": "app\\(app)\\talent\\[id]\\page.tsx",
+      "line": 105,
+      "class": "bg-blue-50",
+      "context": "                <div className=\"flex items-center space-x-2 mt-2\">\n                  <Badge className=\"bg-blue-500 dark:bg-blue-400 text-white\">\n                    Active"
+    },
+    {
+      "file": "app\\(app)\\talent\\[id]\\page.tsx",
+      "line": 190,
+      "class": "text-blue-600",
+      "context": "                      href={`mailto:${talent.rep_email}`}\n                      className=\"text-blue-600 hover:underline\"\n                    >"
+    },
+    {
+      "file": "app\\(app)\\talent\\[id]\\page.tsx",
+      "line": 201,
+      "class": "text-blue-600",
+      "context": "                      href={`tel:${talent.rep_phone}`}\n                      className=\"text-blue-600 hover:underline\"\n                    >"
+    }
+  ],
+  "recommendations": [
+    "Fix remaining hardcoded colors in production code",
+    "Test theme switching after fixes",
+    "Verify no layout shifts occur",
+    "Re-run optimization analysis"
+  ]
+}

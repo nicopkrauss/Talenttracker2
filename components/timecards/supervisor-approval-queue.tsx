@@ -124,8 +124,8 @@ export function SupervisorApprovalQueue({ timecards, onUpdate }: SupervisorAppro
     return (
       <Card>
         <CardContent className="p-8 text-center">
-          <Check className="w-12 h-12 text-green-500 mx-auto mb-4" />
-          <p className="text-gray-500">No timecards pending approval.</p>
+          <Check className="w-12 h-12 text-green-500 dark:text-green-400 mx-auto mb-4" />
+          <p className="text-muted-foreground">No timecards pending approval.</p>
         </CardContent>
       </Card>
     )
@@ -147,7 +147,7 @@ export function SupervisorApprovalQueue({ timecards, onUpdate }: SupervisorAppro
               <Button
                 onClick={bulkApprove}
                 disabled={processing === "bulk"}
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700"
               >
                 {processing === "bulk" ? "Approving..." : `Approve ${selectedTimecards.length} Timecards`}
               </Button>
@@ -166,55 +166,55 @@ export function SupervisorApprovalQueue({ timecards, onUpdate }: SupervisorAppro
                   checked={selectedTimecards.includes(timecard.id)}
                   onCheckedChange={(checked) => handleTimecardSelection(timecard.id, checked as boolean)}
                 />
-                <Calendar className="w-5 h-5 text-gray-400" />
+                <Calendar className="w-5 h-5 text-muted-foreground" />
                 <div>
                   <CardTitle className="text-lg">{format(new Date(timecard.date), "EEEE, MMMM d, yyyy")}</CardTitle>
                   {timecard.profiles && (
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       {timecard.profiles.full_name}
                     </p>
                   )}
-                  {timecard.projects && <p className="text-sm text-gray-600">{timecard.projects.name}</p>}
+                  {timecard.projects && <p className="text-sm text-muted-foreground">{timecard.projects.name}</p>}
                 </div>
               </div>
               <div className="flex items-center space-x-2">
                 {timecard.manually_edited && (
-                  <Badge variant="outline" className="text-yellow-600 border-yellow-200">
+                  <Badge variant="outline" className="text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800">
                     <AlertTriangle className="w-3 h-3 mr-1" />
                     Manually Edited
                   </Badge>
                 )}
-                <Badge className="bg-blue-500 text-white">Pending Review</Badge>
+                <Badge className="bg-blue-500 text-white dark:bg-blue-600 dark:text-blue-50">Pending Review</Badge>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-3">
               <div className="flex items-center space-x-2">
-                <Clock className="w-4 h-4 text-gray-400" />
+                <Clock className="w-4 h-4 text-muted-foreground" />
                 <div>
-                  <p className="text-sm text-gray-600">Hours Worked</p>
+                  <p className="text-sm text-muted-foreground">Hours Worked</p>
                   <p className="font-medium">{timecard.total_hours.toFixed(1)} hours</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <Clock className="w-4 h-4 text-gray-400" />
+                <Clock className="w-4 h-4 text-muted-foreground" />
                 <div>
-                  <p className="text-sm text-gray-600">Break Duration</p>
+                  <p className="text-sm text-muted-foreground">Break Duration</p>
                   <p className="font-medium">{Math.round(timecard.break_duration)} minutes</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <DollarSign className="w-4 h-4 text-gray-400" />
+                <DollarSign className="w-4 h-4 text-muted-foreground" />
                 <div>
-                  <p className="text-sm text-gray-600">Total Pay</p>
+                  <p className="text-sm text-muted-foreground">Total Pay</p>
                   <p className="font-medium">${timecard.total_pay.toFixed(2)}</p>
                 </div>
               </div>
             </div>
 
             {timecard.check_in_time && timecard.check_out_time && (
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-muted-foreground">
                 <p>
                   {format(new Date(timecard.check_in_time), "h:mm a")} -{" "}
                   {format(new Date(timecard.check_out_time), "h:mm a")}
@@ -229,19 +229,19 @@ export function SupervisorApprovalQueue({ timecards, onUpdate }: SupervisorAppro
             )}
 
             {timecard.manually_edited && (
-              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                 <div className="flex items-center space-x-2 mb-2">
-                  <AlertTriangle className="w-4 h-4 text-yellow-600" />
-                  <p className="text-sm font-medium text-yellow-800">Manual Edit Flag</p>
+                  <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <p className="text-sm font-medium text-amber-800 dark:text-amber-300">Manual Edit Flag</p>
                 </div>
-                <p className="text-sm text-yellow-700">
+                <p className="text-sm text-amber-700 dark:text-amber-300">
                   This timecard has been manually edited and requires supervisor review.
                 </p>
               </div>
             )}
 
             <div>
-              <label className="text-sm font-medium text-gray-700">Supervisor Comments (Optional)</label>
+              <label className="text-sm font-medium text-foreground">Supervisor Comments (Optional)</label>
               <Textarea
                 placeholder="Add comments for this timecard..."
                 value={comments[timecard.id] || ""}
@@ -257,7 +257,7 @@ export function SupervisorApprovalQueue({ timecards, onUpdate }: SupervisorAppro
                   size="sm"
                   onClick={() => rejectTimecard(timecard.id)}
                   disabled={processing === timecard.id}
-                  className="text-red-600 border-red-200 hover:bg-red-50"
+                  className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950/20"
                 >
                   <X className="w-4 h-4 mr-1" />
                   {processing === timecard.id ? "Processing..." : "Reject"}
@@ -266,14 +266,14 @@ export function SupervisorApprovalQueue({ timecards, onUpdate }: SupervisorAppro
                   size="sm"
                   onClick={() => approveTimecard(timecard.id)}
                   disabled={processing === timecard.id}
-                  className="bg-green-600 hover:bg-green-700"
+                  className="bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700"
                 >
                   <Check className="w-4 h-4 mr-1" />
                   {processing === timecard.id ? "Processing..." : "Approve"}
                 </Button>
               </div>
               {timecard.submitted_at && (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Submitted {format(new Date(timecard.submitted_at), "MMM d, h:mm a")}
                 </p>
               )}

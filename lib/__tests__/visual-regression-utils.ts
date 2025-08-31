@@ -75,7 +75,11 @@ export function compareSnapshots(
     const value1 = snapshot1.computedColors[key1]
     const value2 = snapshot2.computedColors[key1]
     
-    if (value1 !== value2) {
+    // Normalize color values for comparison
+    const normalizedValue1 = normalizeColorValue(value1)
+    const normalizedValue2 = normalizeColorValue(value2)
+    
+    if (normalizedValue1 !== normalizedValue2) {
       differences.push({
         property: `computedColors.${key}`,
         theme1Value: value1,
@@ -84,10 +88,63 @@ export function compareSnapshots(
     }
   })
   
+  // Also compare element styles for more comprehensive detection
+  const elementKeys1 = Object.keys(snapshot1.elementStyles)
+  const elementKeys2 = Object.keys(snapshot2.elementStyles)
+  
+  // Compare common elements
+  const commonKeys = elementKeys1.filter(key => elementKeys2.includes(key))
+  
+  commonKeys.slice(0, 5).forEach(key => { // Limit to first 5 elements to avoid noise
+    const styles1 = snapshot1.elementStyles[key]
+    const styles2 = snapshot2.elementStyles[key]
+    
+    // Compare key color properties
+    const colorProperties = ['color', 'backgroundColor', 'borderColor']
+    
+    colorProperties.forEach(prop => {
+      const value1 = styles1[prop as keyof CSSStyleDeclaration] as string
+      const value2 = styles2[prop as keyof CSSStyleDeclaration] as string
+      
+      if (value1 && value2) {
+        const normalizedValue1 = normalizeColorValue(value1)
+        const normalizedValue2 = normalizeColorValue(value2)
+        
+        if (normalizedValue1 !== normalizedValue2 && 
+            normalizedValue1 !== 'transparent' && 
+            normalizedValue2 !== 'transparent') {
+          differences.push({
+            property: `${key}.${prop}`,
+            theme1Value: value1,
+            theme2Value: value2
+          })
+        }
+      }
+    })
+  })
+  
   return {
     hasDifferences: differences.length > 0,
     differences
   }
+}
+
+/**
+ * Normalize color values for comparison
+ */
+function normalizeColorValue(color: string): string {
+  if (!color || color === 'transparent' || color === 'inherit' || color === 'initial') {
+    return color
+  }
+  
+  // Convert rgb/rgba to normalized format
+  const rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/)
+  if (rgbMatch) {
+    const [, r, g, b, a] = rgbMatch
+    return a ? `rgba(${r}, ${g}, ${b}, ${a})` : `rgb(${r}, ${g}, ${b})`
+  }
+  
+  return color.toLowerCase()
 }
 
 /**

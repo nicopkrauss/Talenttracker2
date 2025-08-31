@@ -91,11 +91,11 @@ export default function TalentPage() {
     return (
       <div className="p-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="h-10 bg-gray-200 rounded"></div>
+          <div className="h-8 bg-muted rounded w-1/4"></div>
+          <div className="h-10 bg-muted rounded"></div>
           <div className="space-y-3">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-24 bg-gray-200 rounded"></div>
+              <div key={i} className="h-24 bg-muted rounded"></div>
             ))}
           </div>
         </div>
@@ -120,7 +120,7 @@ export default function TalentPage() {
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
                 placeholder="Search talent by name or email..."
                 value={searchQuery}
@@ -161,11 +161,11 @@ export default function TalentPage() {
                     <p className="text-sm text-muted-foreground">{person.rep_email || 'No email'}</p>
                   </div>
                 </div>
-                <Badge className="bg-blue-500 text-white">Active</Badge>
+                <Badge variant="secondary">Active</Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center text-sm text-gray-600">
+              <div className="flex items-center text-sm text-muted-foreground">
                 <MapPin className="w-4 h-4 mr-2" />
                 {getCurrentLocation(person)}
               </div>
@@ -186,7 +186,7 @@ export default function TalentPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => window.open(`tel:${person.rep_phone}`)}
-                    className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                    className="text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950/20"
                   >
                     <Phone className="w-4 h-4 mr-1" />
                     Call Rep
@@ -204,7 +204,7 @@ export default function TalentPage() {
       {filteredTalent.length === 0 && (
         <Card>
           <CardContent className="p-8 text-center">
-            <p className="text-gray-500">No talent found matching your criteria.</p>
+            <p className="text-muted-foreground">No talent found matching your criteria.</p>
           </CardContent>
         </Card>
       )}

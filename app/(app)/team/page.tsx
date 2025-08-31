@@ -80,10 +80,10 @@ export default function TeamPage() {
     return (
       <div className="p-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-8 bg-muted rounded w-1/4"></div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-32 bg-gray-200 rounded"></div>
+              <div key={i} className="h-32 bg-muted rounded"></div>
             ))}
           </div>
         </div>
@@ -97,7 +97,7 @@ export default function TeamPage() {
       <div className="p-6">
         <Card>
           <CardContent className="p-8 text-center">
-            <Shield className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+            <Shield className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
             <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
             <p className="text-muted-foreground">
               You don't have permission to access the Team management page.
@@ -186,7 +186,7 @@ export default function TeamPage() {
             </div>
           ) : (
             <div className="text-center py-8">
-              <Users className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+              <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">No active team members found.</p>
             </div>
           )}

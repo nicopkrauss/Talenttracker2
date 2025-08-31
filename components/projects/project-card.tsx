@@ -64,9 +64,9 @@ export function ProjectCard({
   const getStatusBadge = () => {
     switch (project.status) {
       case 'prep':
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">Prep</Badge>
+        return <Badge variant="secondary" className="bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-300">Prep</Badge>
       case 'active':
-        return <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">Active</Badge>
+        return <Badge variant="default" className="bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-300">Active</Badge>
       case 'archived':
         return <Badge variant="outline" className="bg-muted text-muted-foreground">Archived</Badge>
       default:
@@ -218,7 +218,7 @@ export function ProjectCard({
               variant="default"
               size="sm"
               onClick={handleActivateProject}
-              className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600"
+              className="bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700"
             >
               <Play className="h-4 w-4 mr-1" />
               Activate

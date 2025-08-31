@@ -1,23 +1,391 @@
 {
-  "timestamp": "2025-08-30T22:25:01.755Z",
+  "timestamp": "2025-08-30T23:02:06.284Z",
   "summary": {
-    "totalFiles": 167,
-    "filesWithIssues": 34,
-    "totalIssues": 254,
+    "totalFiles": 177,
+    "filesWithIssues": 35,
+    "totalIssues": 320,
     "priorityBreakdown": {
       "high": 0,
       "medium": 32,
-      "low": 2
+      "low": 3
     },
     "colorTypeBreakdown": {
-      "text": 80,
-      "background": 35,
-      "border": 1,
-      "semantic": 125,
-      "absolute": 13
+      "text": 91,
+      "background": 47,
+      "border": 5,
+      "semantic": 159,
+      "absolute": 18
     }
   },
   "results": [
+    {
+      "filePath": "lib\\color-mapping-utils.ts",
+      "hardcodedColors": [
+        {
+          "lineNumber": 35,
+          "currentClass": "text-gray-900",
+          "suggestedReplacement": "text-foreground",
+          "colorType": "text",
+          "context": "hardcodedClass: 'text-gray-900',",
+          "column": 22
+        },
+        {
+          "lineNumber": 42,
+          "currentClass": "text-gray-800",
+          "suggestedReplacement": "text-foreground",
+          "colorType": "text",
+          "context": "hardcodedClass: 'text-gray-800',",
+          "column": 22
+        },
+        {
+          "lineNumber": 49,
+          "currentClass": "text-gray-700",
+          "suggestedReplacement": "text-foreground",
+          "colorType": "text",
+          "context": "hardcodedClass: 'text-gray-700',",
+          "column": 22
+        },
+        {
+          "lineNumber": 56,
+          "currentClass": "text-gray-600",
+          "suggestedReplacement": "text-muted-foreground",
+          "colorType": "text",
+          "context": "hardcodedClass: 'text-gray-600',",
+          "column": 22
+        },
+        {
+          "lineNumber": 63,
+          "currentClass": "text-gray-500",
+          "suggestedReplacement": "text-muted-foreground",
+          "colorType": "text",
+          "context": "hardcodedClass: 'text-gray-500',",
+          "column": 22
+        },
+        {
+          "lineNumber": 70,
+          "currentClass": "text-gray-400",
+          "suggestedReplacement": "text-muted-foreground",
+          "colorType": "text",
+          "context": "hardcodedClass: 'text-gray-400',",
+          "column": 22
+        },
+        {
+          "lineNumber": 77,
+          "currentClass": "text-white",
+          "suggestedReplacement": "text-primary-foreground (on colored backgrounds)",
+          "colorType": "absolute",
+          "context": "hardcodedClass: 'text-white',",
+          "column": 22
+        },
+        {
+          "lineNumber": 84,
+          "currentClass": "text-black",
+          "suggestedReplacement": "text-foreground",
+          "colorType": "absolute",
+          "context": "hardcodedClass: 'text-black',",
+          "column": 22
+        },
+        {
+          "lineNumber": 93,
+          "currentClass": "bg-white",
+          "suggestedReplacement": "bg-background or bg-card",
+          "colorType": "absolute",
+          "context": "hardcodedClass: 'bg-white',",
+          "column": 22
+        },
+        {
+          "lineNumber": 100,
+          "currentClass": "bg-gray-50",
+          "suggestedReplacement": "bg-muted",
+          "colorType": "background",
+          "context": "hardcodedClass: 'bg-gray-50',",
+          "column": 22
+        },
+        {
+          "lineNumber": 107,
+          "currentClass": "bg-gray-100",
+          "suggestedReplacement": "bg-muted",
+          "colorType": "background",
+          "context": "hardcodedClass: 'bg-gray-100',",
+          "column": 22
+        },
+        {
+          "lineNumber": 114,
+          "currentClass": "bg-gray-200",
+          "suggestedReplacement": "bg-border",
+          "colorType": "background",
+          "context": "hardcodedClass: 'bg-gray-200',",
+          "column": 22
+        },
+        {
+          "lineNumber": 121,
+          "currentClass": "bg-gray-800",
+          "suggestedReplacement": "bg-card (dark context)",
+          "colorType": "background",
+          "context": "hardcodedClass: 'bg-gray-800',",
+          "column": 22
+        },
+        {
+          "lineNumber": 128,
+          "currentClass": "bg-gray-900",
+          "suggestedReplacement": "bg-background (dark context)",
+          "colorType": "background",
+          "context": "hardcodedClass: 'bg-gray-900',",
+          "column": 22
+        },
+        {
+          "lineNumber": 137,
+          "currentClass": "border-gray-200",
+          "suggestedReplacement": "border-border",
+          "colorType": "border",
+          "context": "hardcodedClass: 'border-gray-200',",
+          "column": 22
+        },
+        {
+          "lineNumber": 144,
+          "currentClass": "border-gray-300",
+          "suggestedReplacement": "border-border",
+          "colorType": "border",
+          "context": "hardcodedClass: 'border-gray-300',",
+          "column": 22
+        },
+        {
+          "lineNumber": 151,
+          "currentClass": "border-gray-400",
+          "suggestedReplacement": "border-gray-400 (needs manual review)",
+          "colorType": "border",
+          "context": "hardcodedClass: 'border-gray-400',",
+          "column": 22
+        },
+        {
+          "lineNumber": 165,
+          "currentClass": "text-green-600",
+          "suggestedReplacement": "text-green-600 dark:text-green-400",
+          "colorType": "semantic",
+          "context": "lightClass: 'text-green-600',",
+          "column": 18
+        },
+        {
+          "lineNumber": 166,
+          "currentClass": "text-green-400",
+          "suggestedReplacement": "text-green-400 (needs manual review)",
+          "colorType": "semantic",
+          "context": "darkClass: 'dark:text-green-400',",
+          "column": 22
+        },
+        {
+          "lineNumber": 167,
+          "currentClass": "text-green-400",
+          "suggestedReplacement": "text-green-400 (needs manual review)",
+          "colorType": "semantic",
+          "context": "text-green-600 dark:text-green-400',",
+          "column": 36
+        },
+        {
+          "lineNumber": 173,
+          "currentClass": "text-green-700",
+          "suggestedReplacement": "text-green-700 (needs manual review)",
+          "colorType": "semantic",
+          "context": "lightClass: 'text-green-700',",
+          "column": 18
+        },
+        {
+          "lineNumber": 174,
+          "currentClass": "text-green-300",
+          "suggestedReplacement": "text-green-300 (needs manual review)",
+          "colorType": "semantic",
+          "context": "darkClass: 'dark:text-green-300',",
+          "column": 22
+        },
+        {
+          "lineNumber": 175,
+          "currentClass": "text-green-300",
+          "suggestedReplacement": "text-green-300 (needs manual review)",
+          "colorType": "semantic",
+          "context": "text-green-700 dark:text-green-300',",
+          "column": 36
+        },
+        {
+          "lineNumber": 181,
+          "currentClass": "bg-green-50",
+          "suggestedReplacement": "bg-green-50 (needs manual review)",
+          "colorType": "semantic",
+          "context": "lightClass: 'bg-green-50',",
+          "column": 18
+        },
+        {
+          "lineNumber": 189,
+          "currentClass": "text-amber-600",
+          "suggestedReplacement": "text-amber-600 dark:text-amber-400",
+          "colorType": "semantic",
+          "context": "lightClass: 'text-amber-600',",
+          "column": 18
+        },
+        {
+          "lineNumber": 190,
+          "currentClass": "text-amber-400",
+          "suggestedReplacement": "text-amber-400 (needs manual review)",
+          "colorType": "semantic",
+          "context": "darkClass: 'dark:text-amber-400',",
+          "column": 22
+        },
+        {
+          "lineNumber": 191,
+          "currentClass": "text-amber-400",
+          "suggestedReplacement": "text-amber-400 (needs manual review)",
+          "colorType": "semantic",
+          "context": "text-amber-600 dark:text-amber-400',",
+          "column": 36
+        },
+        {
+          "lineNumber": 197,
+          "currentClass": "text-amber-700",
+          "suggestedReplacement": "text-amber-700 (needs manual review)",
+          "colorType": "semantic",
+          "context": "lightClass: 'text-amber-700',",
+          "column": 18
+        },
+        {
+          "lineNumber": 198,
+          "currentClass": "text-amber-300",
+          "suggestedReplacement": "text-amber-300 (needs manual review)",
+          "colorType": "semantic",
+          "context": "darkClass: 'dark:text-amber-300',",
+          "column": 22
+        },
+        {
+          "lineNumber": 199,
+          "currentClass": "text-amber-300",
+          "suggestedReplacement": "text-amber-300 (needs manual review)",
+          "colorType": "semantic",
+          "context": "text-amber-700 dark:text-amber-300',",
+          "column": 36
+        },
+        {
+          "lineNumber": 205,
+          "currentClass": "bg-amber-50",
+          "suggestedReplacement": "bg-amber-50 (needs manual review)",
+          "colorType": "semantic",
+          "context": "lightClass: 'bg-amber-50',",
+          "column": 18
+        },
+        {
+          "lineNumber": 213,
+          "currentClass": "text-red-600",
+          "suggestedReplacement": "text-red-600 dark:text-red-400",
+          "colorType": "semantic",
+          "context": "lightClass: 'text-red-600',",
+          "column": 18
+        },
+        {
+          "lineNumber": 214,
+          "currentClass": "text-red-400",
+          "suggestedReplacement": "text-red-400 (needs manual review)",
+          "colorType": "semantic",
+          "context": "darkClass: 'dark:text-red-400',",
+          "column": 22
+        },
+        {
+          "lineNumber": 215,
+          "currentClass": "text-red-400",
+          "suggestedReplacement": "text-red-400 (needs manual review)",
+          "colorType": "semantic",
+          "context": "'text-red-600 dark:text-red-400',",
+          "column": 34
+        },
+        {
+          "lineNumber": 221,
+          "currentClass": "text-red-700",
+          "suggestedReplacement": "text-red-700 (needs manual review)",
+          "colorType": "semantic",
+          "context": "lightClass: 'text-red-700',",
+          "column": 18
+        },
+        {
+          "lineNumber": 222,
+          "currentClass": "text-red-300",
+          "suggestedReplacement": "text-red-300 (needs manual review)",
+          "colorType": "semantic",
+          "context": "darkClass: 'dark:text-red-300',",
+          "column": 22
+        },
+        {
+          "lineNumber": 223,
+          "currentClass": "text-red-300",
+          "suggestedReplacement": "text-red-300 (needs manual review)",
+          "colorType": "semantic",
+          "context": "'text-red-700 dark:text-red-300',",
+          "column": 34
+        },
+        {
+          "lineNumber": 229,
+          "currentClass": "bg-red-50",
+          "suggestedReplacement": "bg-red-50 (needs manual review)",
+          "colorType": "semantic",
+          "context": "lightClass: 'bg-red-50',",
+          "column": 18
+        },
+        {
+          "lineNumber": 237,
+          "currentClass": "text-blue-600",
+          "suggestedReplacement": "text-blue-600 dark:text-blue-400",
+          "colorType": "semantic",
+          "context": "lightClass: 'text-blue-600',",
+          "column": 18
+        },
+        {
+          "lineNumber": 238,
+          "currentClass": "text-blue-400",
+          "suggestedReplacement": "text-blue-400 (needs manual review)",
+          "colorType": "semantic",
+          "context": "darkClass: 'dark:text-blue-400',",
+          "column": 22
+        },
+        {
+          "lineNumber": 239,
+          "currentClass": "text-blue-400",
+          "suggestedReplacement": "text-blue-400 (needs manual review)",
+          "colorType": "semantic",
+          "context": "'text-blue-600 dark:text-blue-400',",
+          "column": 35
+        },
+        {
+          "lineNumber": 245,
+          "currentClass": "text-blue-700",
+          "suggestedReplacement": "text-blue-700 (needs manual review)",
+          "colorType": "semantic",
+          "context": "lightClass: 'text-blue-700',",
+          "column": 18
+        },
+        {
+          "lineNumber": 246,
+          "currentClass": "text-blue-300",
+          "suggestedReplacement": "text-blue-300 (needs manual review)",
+          "colorType": "semantic",
+          "context": "darkClass: 'dark:text-blue-300',",
+          "column": 22
+        },
+        {
+          "lineNumber": 247,
+          "currentClass": "text-blue-300",
+          "suggestedReplacement": "text-blue-300 (needs manual review)",
+          "colorType": "semantic",
+          "context": "'text-blue-700 dark:text-blue-300',",
+          "column": 35
+        },
+        {
+          "lineNumber": 253,
+          "currentClass": "bg-blue-50",
+          "suggestedReplacement": "bg-blue-50 (needs manual review)",
+          "colorType": "semantic",
+          "context": "lightClass: 'bg-blue-50',",
+          "column": 18
+        }
+      ],
+      "priority": "medium",
+      "estimatedEffort": 4.5,
+      "totalIssues": 45
+    },
     {
       "filePath": "components\\timecards\\supervisor-approval-queue.tsx",
       "hardcodedColors": [
@@ -1459,102 +1827,6 @@
       "totalIssues": 11
     },
     {
-      "filePath": "components\\projects\\project-card.tsx",
-      "hardcodedColors": [
-        {
-          "lineNumber": 67,
-          "currentClass": "bg-yellow-100",
-          "suggestedReplacement": "bg-yellow-100 (needs manual review)",
-          "colorType": "semantic",
-          "context": "condary\" className=\"bg-yellow-100 text-yellow-800\">Prep</Badge>",
-          "column": 54
-        },
-        {
-          "lineNumber": 67,
-          "currentClass": "text-yellow-800",
-          "suggestedReplacement": "text-yellow-800 (needs manual review)",
-          "colorType": "semantic",
-          "context": "Name=\"bg-yellow-100 text-yellow-800\">Prep</Badge>",
-          "column": 68
-        },
-        {
-          "lineNumber": 69,
-          "currentClass": "bg-green-100",
-          "suggestedReplacement": "bg-green-100 (needs manual review)",
-          "colorType": "semantic",
-          "context": "default\" className=\"bg-green-100 text-green-800\">Active</Badge>",
-          "column": 52
-        },
-        {
-          "lineNumber": 69,
-          "currentClass": "text-green-800",
-          "suggestedReplacement": "text-green-800 (needs manual review)",
-          "colorType": "semantic",
-          "context": "sName=\"bg-green-100 text-green-800\">Active</Badge>",
-          "column": 65
-        },
-        {
-          "lineNumber": 71,
-          "currentClass": "text-gray-600",
-          "suggestedReplacement": "text-muted-foreground",
-          "colorType": "text",
-          "context": "ssName=\"bg-gray-100 text-gray-600\">Archived</Badge>",
-          "column": 64
-        },
-        {
-          "lineNumber": 71,
-          "currentClass": "bg-gray-100",
-          "suggestedReplacement": "bg-muted",
-          "colorType": "background",
-          "context": "outline\" className=\"bg-gray-100 text-gray-600\">Archived</Badge>",
-          "column": 52
-        },
-        {
-          "lineNumber": 79,
-          "currentClass": "text-blue-600",
-          "suggestedReplacement": "text-blue-600 dark:text-blue-400",
-          "colorType": "semantic",
-          "context": "rn <span className=\"text-blue-600 text-sm\">Starts {format(startDate, '",
-          "column": 31
-        },
-        {
-          "lineNumber": 82,
-          "currentClass": "text-green-600",
-          "suggestedReplacement": "text-green-600 dark:text-green-400",
-          "colorType": "semantic",
-          "context": "rn <span className=\"text-green-600 text-sm\">Ends {format(endDate, 'MMM",
-          "column": 31
-        },
-        {
-          "lineNumber": 85,
-          "currentClass": "text-gray-500",
-          "suggestedReplacement": "text-muted-foreground",
-          "colorType": "text",
-          "context": "rn <span className=\"text-gray-500 text-sm\">Ended {format(endDate, 'MMM",
-          "column": 31
-        },
-        {
-          "lineNumber": 221,
-          "currentClass": "bg-green-600",
-          "suggestedReplacement": "bg-green-600 (needs manual review)",
-          "colorType": "semantic",
-          "context": "className=\"bg-green-600 hover:bg-green-700\"",
-          "column": 26
-        },
-        {
-          "lineNumber": 221,
-          "currentClass": "bg-green-700",
-          "suggestedReplacement": "bg-green-700 (needs manual review)",
-          "colorType": "semantic",
-          "context": "\"bg-green-600 hover:bg-green-700\"",
-          "column": 45
-        }
-      ],
-      "priority": "medium",
-      "estimatedEffort": 1,
-      "totalIssues": 11
-    },
-    {
       "filePath": "app\\(app)\\talent\\[id]\\page.tsx",
       "hardcodedColors": [
         {
@@ -1795,76 +2067,52 @@
       "totalIssues": 9
     },
     {
-      "filePath": "components\\projects\\project-hub.tsx",
+      "filePath": "components\\projects\\project-card.tsx",
       "hardcodedColors": [
         {
-          "lineNumber": 150,
-          "currentClass": "text-gray-400",
-          "suggestedReplacement": "text-muted-foreground",
-          "colorType": "text",
-          "context": "-6 w-6 animate-spin text-gray-400\" />",
-          "column": 56
+          "lineNumber": 67,
+          "currentClass": "text-yellow-300",
+          "suggestedReplacement": "text-yellow-300 (needs manual review)",
+          "colorType": "semantic",
+          "context": "-yellow-900/30 dark:text-yellow-300\">Prep</Badge>",
+          "column": 111
         },
         {
-          "lineNumber": 220,
-          "currentClass": "text-gray-400",
-          "suggestedReplacement": "text-muted-foreground",
-          "colorType": "text",
-          "context": "slate-y-1/2 h-4 w-4 text-gray-400\" />",
-          "column": 97
+          "lineNumber": 69,
+          "currentClass": "text-green-300",
+          "suggestedReplacement": "text-green-300 (needs manual review)",
+          "colorType": "semantic",
+          "context": "g-green-900/30 dark:text-green-300\">Active</Badge>",
+          "column": 106
         },
         {
-          "lineNumber": 269,
-          "currentClass": "text-gray-400",
-          "suggestedReplacement": "text-muted-foreground",
-          "colorType": "text",
-          "context": "lassName=\"h-12 w-12 text-gray-400 mx-auto mb-4\" />",
-          "column": 46
+          "lineNumber": 79,
+          "currentClass": "text-blue-400",
+          "suggestedReplacement": "text-blue-400 (needs manual review)",
+          "colorType": "semantic",
+          "context": "\"text-blue-600 dark:text-blue-400 text-sm\">Starts {format(startDate, '",
+          "column": 50
         },
         {
-          "lineNumber": 270,
-          "currentClass": "text-gray-900",
-          "suggestedReplacement": "text-foreground",
-          "colorType": "text",
-          "context": "text-lg font-medium text-gray-900 mb-2\">",
-          "column": 48
+          "lineNumber": 82,
+          "currentClass": "text-green-400",
+          "suggestedReplacement": "text-green-400 (needs manual review)",
+          "colorType": "semantic",
+          "context": "text-green-600 dark:text-green-400 text-sm\">Ends {format(endDate, 'MMM",
+          "column": 51
         },
         {
-          "lineNumber": 273,
-          "currentClass": "text-gray-600",
-          "suggestedReplacement": "text-muted-foreground",
-          "colorType": "text",
-          "context": "<p className=\"text-gray-600 mb-6 max-w-md mx-auto\">",
-          "column": 27
-        },
-        {
-          "lineNumber": 293,
-          "currentClass": "text-gray-400",
-          "suggestedReplacement": "text-muted-foreground",
-          "colorType": "text",
-          "context": "className=\"h-8 w-8 text-gray-400 mx-auto mb-4\" />",
-          "column": 40
-        },
-        {
-          "lineNumber": 294,
-          "currentClass": "text-gray-900",
-          "suggestedReplacement": "text-foreground",
-          "colorType": "text",
-          "context": "text-lg font-medium text-gray-900 mb-2\">",
-          "column": 48
-        },
-        {
-          "lineNumber": 297,
-          "currentClass": "text-gray-600",
-          "suggestedReplacement": "text-muted-foreground",
-          "colorType": "text",
-          "context": "<p className=\"text-gray-600 mb-4\">",
-          "column": 27
+          "lineNumber": 221,
+          "currentClass": "bg-green-600",
+          "suggestedReplacement": "bg-green-600 (needs manual review)",
+          "colorType": "semantic",
+          "context": "reen-700 dark:hover:bg-green-600\"",
+          "column": 87
         }
       ],
       "priority": "medium",
-      "estimatedEffort": 0.75,
-      "totalIssues": 8
+      "estimatedEffort": 0.5,
+      "totalIssues": 5
     },
     {
       "filePath": "app\\(app)\\team\\page.tsx",
@@ -2265,6 +2513,294 @@
       "priority": "medium",
       "estimatedEffort": 0.25,
       "totalIssues": 1
+    },
+    {
+      "filePath": "lib\\__tests__\\color-mapping-utils.test.ts",
+      "hardcodedColors": [
+        {
+          "lineNumber": 16,
+          "currentClass": "text-gray-600",
+          "suggestedReplacement": "text-muted-foreground",
+          "colorType": "text",
+          "context": "ndColorReplacement('text-gray-600');",
+          "column": 49
+        },
+        {
+          "lineNumber": 18,
+          "currentClass": "text-gray-600",
+          "suggestedReplacement": "text-muted-foreground",
+          "colorType": "text",
+          "context": "hardcodedClass: 'text-gray-600',",
+          "column": 26
+        },
+        {
+          "lineNumber": 27,
+          "currentClass": "bg-white",
+          "suggestedReplacement": "bg-background or bg-card",
+          "colorType": "absolute",
+          "context": "ndColorReplacement('bg-white');",
+          "column": 49
+        },
+        {
+          "lineNumber": 29,
+          "currentClass": "bg-white",
+          "suggestedReplacement": "bg-background or bg-card",
+          "colorType": "absolute",
+          "context": "hardcodedClass: 'bg-white',",
+          "column": 26
+        },
+        {
+          "lineNumber": 38,
+          "currentClass": "text-purple-50",
+          "suggestedReplacement": "text-purple-50 (needs manual review)",
+          "colorType": "semantic",
+          "context": "ndColorReplacement('text-purple-500');",
+          "column": 49
+        },
+        {
+          "lineNumber": 45,
+          "currentClass": "text-green-600",
+          "suggestedReplacement": "text-green-600 dark:text-green-400",
+          "colorType": "semantic",
+          "context": "acement('success', 'text-green-600');",
+          "column": 68
+        },
+        {
+          "lineNumber": 48,
+          "currentClass": "text-green-400",
+          "suggestedReplacement": "text-green-400 (needs manual review)",
+          "colorType": "semantic",
+          "context": "text-green-600 dark:text-green-400');",
+          "column": 63
+        },
+        {
+          "lineNumber": 52,
+          "currentClass": "text-red-600",
+          "suggestedReplacement": "text-red-600 dark:text-red-400",
+          "colorType": "semantic",
+          "context": "placement('error', 'text-red-600');",
+          "column": 66
+        },
+        {
+          "lineNumber": 55,
+          "currentClass": "text-red-400",
+          "suggestedReplacement": "text-red-400 (needs manual review)",
+          "colorType": "semantic",
+          "context": "('text-red-600 dark:text-red-400');",
+          "column": 61
+        },
+        {
+          "lineNumber": 59,
+          "currentClass": "text-purple-600",
+          "suggestedReplacement": "text-purple-600 (needs manual review)",
+          "colorType": "semantic",
+          "context": "acement('success', 'text-purple-600');",
+          "column": 68
+        },
+        {
+          "lineNumber": 73,
+          "currentClass": "text-green-400",
+          "suggestedReplacement": "text-green-400 (needs manual review)",
+          "colorType": "semantic",
+          "context": "text-green-600 dark:text-green-400')).toBe(true);",
+          "column": 48
+        },
+        {
+          "lineNumber": 78,
+          "currentClass": "text-gray-600",
+          "suggestedReplacement": "text-muted-foreground",
+          "colorType": "text",
+          "context": "xpect(isThemeAware('text-gray-600')).toBe(false);",
+          "column": 28
+        },
+        {
+          "lineNumber": 79,
+          "currentClass": "bg-gray-100",
+          "suggestedReplacement": "bg-muted",
+          "colorType": "background",
+          "context": "xpect(isThemeAware('bg-gray-100')).toBe(false);",
+          "column": 28
+        },
+        {
+          "lineNumber": 80,
+          "currentClass": "border-gray-300",
+          "suggestedReplacement": "border-border",
+          "colorType": "border",
+          "context": "xpect(isThemeAware('border-gray-300')).toBe(false);",
+          "column": 28
+        },
+        {
+          "lineNumber": 87,
+          "currentClass": "text-gray-800",
+          "suggestedReplacement": "text-foreground",
+          "colorType": "text",
+          "context": "ssName=\"bg-gray-100 text-gray-800\">",
+          "column": 37
+        },
+        {
+          "lineNumber": 87,
+          "currentClass": "bg-gray-100",
+          "suggestedReplacement": "bg-muted",
+          "colorType": "background",
+          "context": "<div className=\"bg-gray-100 text-gray-800\">",
+          "column": 25
+        },
+        {
+          "lineNumber": 88,
+          "currentClass": "text-gray-900",
+          "suggestedReplacement": "text-foreground",
+          "colorType": "text",
+          "context": "<h1 className=\"text-gray-900\">Title</h1>",
+          "column": 26
+        },
+        {
+          "lineNumber": 89,
+          "currentClass": "text-green-600",
+          "suggestedReplacement": "text-green-600 dark:text-green-400",
+          "colorType": "semantic",
+          "context": "<p className=\"text-green-600\">Success</p>",
+          "column": 25
+        },
+        {
+          "lineNumber": 94,
+          "currentClass": "bg-gray-100",
+          "suggestedReplacement": "bg-muted",
+          "colorType": "background",
+          "context": "(colors).toContain('bg-gray-100');",
+          "column": 33
+        },
+        {
+          "lineNumber": 95,
+          "currentClass": "text-gray-800",
+          "suggestedReplacement": "text-foreground",
+          "colorType": "text",
+          "context": "(colors).toContain('text-gray-800');",
+          "column": 33
+        },
+        {
+          "lineNumber": 96,
+          "currentClass": "text-gray-900",
+          "suggestedReplacement": "text-foreground",
+          "colorType": "text",
+          "context": "(colors).toContain('text-gray-900');",
+          "column": 33
+        },
+        {
+          "lineNumber": 97,
+          "currentClass": "text-green-600",
+          "suggestedReplacement": "text-green-600 dark:text-green-400",
+          "colorType": "semantic",
+          "context": "(colors).toContain('text-green-600');",
+          "column": 33
+        },
+        {
+          "lineNumber": 102,
+          "currentClass": "text-gray-600",
+          "suggestedReplacement": "text-muted-foreground",
+          "colorType": "text",
+          "context": "<div className=\"text-gray-600\">",
+          "column": 25
+        },
+        {
+          "lineNumber": 103,
+          "currentClass": "text-gray-600",
+          "suggestedReplacement": "text-muted-foreground",
+          "colorType": "text",
+          "context": "<p className=\"text-gray-600\">Duplicate color</p>",
+          "column": 25
+        },
+        {
+          "lineNumber": 108,
+          "currentClass": "text-gray-600",
+          "suggestedReplacement": "text-muted-foreground",
+          "colorType": "text",
+          "context": ".filter(c => c === 'text-gray-600')).toHaveLength(1);",
+          "column": 40
+        },
+        {
+          "lineNumber": 115,
+          "currentClass": "text-gray-600",
+          "suggestedReplacement": "text-muted-foreground",
+          "colorType": "text",
+          "context": "ssName=\"bg-gray-100 text-gray-600\">",
+          "column": 37
+        },
+        {
+          "lineNumber": 115,
+          "currentClass": "bg-gray-100",
+          "suggestedReplacement": "bg-muted",
+          "colorType": "background",
+          "context": "<div className=\"bg-gray-100 text-gray-600\">",
+          "column": 25
+        },
+        {
+          "lineNumber": 116,
+          "currentClass": "text-gray-900",
+          "suggestedReplacement": "text-foreground",
+          "colorType": "text",
+          "context": "<h1 className=\"text-gray-900\">Title</h1>",
+          "column": 26
+        },
+        {
+          "lineNumber": 126,
+          "currentClass": "bg-gray-100",
+          "suggestedReplacement": "bg-muted",
+          "colorType": "background",
+          "context": "iginals).toContain('bg-gray-100');",
+          "column": 36
+        },
+        {
+          "lineNumber": 127,
+          "currentClass": "text-gray-600",
+          "suggestedReplacement": "text-muted-foreground",
+          "colorType": "text",
+          "context": "iginals).toContain('text-gray-600');",
+          "column": 36
+        },
+        {
+          "lineNumber": 128,
+          "currentClass": "text-gray-900",
+          "suggestedReplacement": "text-foreground",
+          "colorType": "text",
+          "context": "iginals).toContain('text-gray-900');",
+          "column": 36
+        },
+        {
+          "lineNumber": 131,
+          "currentClass": "bg-gray-100",
+          "suggestedReplacement": "bg-muted",
+          "colorType": "background",
+          "context": "=> s.original === 'bg-gray-100');",
+          "column": 66
+        },
+        {
+          "lineNumber": 133,
+          "currentClass": "bg-gray-100",
+          "suggestedReplacement": "bg-muted",
+          "colorType": "background",
+          "context": "original: 'bg-gray-100',",
+          "column": 20
+        },
+        {
+          "lineNumber": 143,
+          "currentClass": "text-gray-600",
+          "suggestedReplacement": "text-muted-foreground",
+          "colorType": "text",
+          "context": "<div className=\"text-gray-600\">Line 2</div>",
+          "column": 17
+        },
+        {
+          "lineNumber": 144,
+          "currentClass": "bg-gray-50",
+          "suggestedReplacement": "bg-muted",
+          "colorType": "background",
+          "context": "<p className=\"bg-gray-50\">Line 3</p>`;",
+          "column": 15
+        }
+      ],
+      "priority": "low",
+      "estimatedEffort": 2.75,
+      "totalIssues": 35
     },
     {
       "filePath": "components\\projects\\__tests__\\project-input.test.tsx",

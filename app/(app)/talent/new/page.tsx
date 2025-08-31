@@ -152,10 +152,10 @@ export default function NewTalentPage() {
                     id="first_name"
                     value={formData.first_name}
                     onChange={(e) => handleChange("first_name", e.target.value)}
-                    className={errors.first_name ? "border-red-500" : ""}
+                    className={errors.first_name ? "border-destructive" : ""}
                   />
                   {errors.first_name && (
-                    <p className="text-sm text-red-500 mt-1">{errors.first_name}</p>
+                    <p className="text-sm text-destructive mt-1">{errors.first_name}</p>
                   )}
                 </div>
                 <div>
@@ -164,10 +164,10 @@ export default function NewTalentPage() {
                     id="last_name"
                     value={formData.last_name}
                     onChange={(e) => handleChange("last_name", e.target.value)}
-                    className={errors.last_name ? "border-red-500" : ""}
+                    className={errors.last_name ? "border-destructive" : ""}
                   />
                   {errors.last_name && (
-                    <p className="text-sm text-red-500 mt-1">{errors.last_name}</p>
+                    <p className="text-sm text-destructive mt-1">{errors.last_name}</p>
                   )}
                 </div>
               </div>
@@ -184,10 +184,10 @@ export default function NewTalentPage() {
                     value={formData.rep_name}
                     onChange={(e) => handleChange("rep_name", e.target.value)}
                     placeholder="Full name of talent representative"
-                    className={errors.rep_name ? "border-red-500" : ""}
+                    className={errors.rep_name ? "border-destructive" : ""}
                   />
                   {errors.rep_name && (
-                    <p className="text-sm text-red-500 mt-1">{errors.rep_name}</p>
+                    <p className="text-sm text-destructive mt-1">{errors.rep_name}</p>
                   )}
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
@@ -199,10 +199,10 @@ export default function NewTalentPage() {
                       value={formData.rep_email}
                       onChange={(e) => handleChange("rep_email", e.target.value)}
                       placeholder="representative@example.com"
-                      className={errors.rep_email ? "border-red-500" : ""}
+                      className={errors.rep_email ? "border-destructive" : ""}
                     />
                     {errors.rep_email && (
-                      <p className="text-sm text-red-500 mt-1">{errors.rep_email}</p>
+                      <p className="text-sm text-destructive mt-1">{errors.rep_email}</p>
                     )}
                   </div>
                   <div>
@@ -213,10 +213,10 @@ export default function NewTalentPage() {
                       value={formData.rep_phone}
                       onChange={(e) => handleChange("rep_phone", e.target.value)}
                       placeholder="(555) 123-4567"
-                      className={errors.rep_phone ? "border-red-500" : ""}
+                      className={errors.rep_phone ? "border-destructive" : ""}
                     />
                     {errors.rep_phone && (
-                      <p className="text-sm text-red-500 mt-1">{errors.rep_phone}</p>
+                      <p className="text-sm text-destructive mt-1">{errors.rep_phone}</p>
                     )}
                   </div>
                 </div>
@@ -235,14 +235,14 @@ export default function NewTalentPage() {
                   value={formData.notes}
                   onChange={(e) => handleChange("notes", e.target.value)}
                   placeholder="Any additional notes, special requirements, dietary restrictions, or other important information about this talent..."
-                  className={`min-h-[120px] ${errors.notes ? "border-red-500" : ""}`}
+                  className={`min-h-[120px] ${errors.notes ? "border-destructive" : ""}`}
                   maxLength={1000}
                 />
                 <div className="flex justify-between items-center mt-1">
                   {errors.notes && (
-                    <p className="text-sm text-red-500">{errors.notes}</p>
+                    <p className="text-sm text-destructive">{errors.notes}</p>
                   )}
-                  <p className="text-sm text-gray-500 ml-auto">
+                  <p className="text-sm text-muted-foreground ml-auto">
                     {formData.notes.length}/1000 characters
                   </p>
                 </div>

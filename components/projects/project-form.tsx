@@ -100,12 +100,12 @@ export function ProjectForm({
         </CardHeader>
         <CardContent>
           <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-            <div className="h-10 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-            <div className="h-10 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-            <div className="h-20 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-muted rounded w-1/4"></div>
+            <div className="h-10 bg-muted rounded"></div>
+            <div className="h-4 bg-muted rounded w-1/4"></div>
+            <div className="h-10 bg-muted rounded"></div>
+            <div className="h-4 bg-muted rounded w-1/4"></div>
+            <div className="h-20 bg-muted rounded"></div>
           </div>
         </CardContent>
       </Card>
@@ -124,9 +124,9 @@ export function ProjectForm({
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             {/* Success Message */}
             {submitSuccess && (
-              <Alert className="border-green-200 bg-green-50">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <AlertDescription className="text-green-800">
+              <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/20">
+                <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                <AlertDescription className="text-green-800 dark:text-green-300">
                   {submitSuccess}
                 </AlertDescription>
               </Alert>
@@ -144,10 +144,10 @@ export function ProjectForm({
 
             {/* Required Fields Section */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">
+              <h3 className="text-lg font-medium text-foreground">
                 Project Information
               </h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 Fields marked with * are required.
               </p>
 
@@ -225,10 +225,10 @@ export function ProjectForm({
 
             {/* Optional Fields Section */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">
+              <h3 className="text-lg font-medium text-foreground">
                 Additional Details
               </h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 These fields are optional but help provide more context about the project.
               </p>
 

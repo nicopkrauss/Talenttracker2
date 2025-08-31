@@ -54,9 +54,11 @@ export function FormErrorDisplay({
       className={cn(
         "border-l-4 shadow-sm transition-all duration-300 ease-in-out",
         "animate-in slide-in-from-top-2 duration-300",
-        error.type === 'network' && "border-l-blue-500",
-        error.type === 'validation' && "border-l-red-500",
-        error.type === 'auth' && "border-l-red-500",
+        error.type === 'network' && "border-l-blue-600 dark:border-l-blue-400",
+        error.type === 'validation' && "border-l-red-600 dark:border-l-red-400", 
+        error.type === 'auth' && "border-l-red-600 dark:border-l-red-400",
+        error.type === 'server' && "border-l-amber-600 dark:border-l-amber-400",
+        error.type === 'unknown' && "border-l-gray-600 dark:border-l-gray-400",
         className
       )}
     >

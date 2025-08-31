@@ -18,10 +18,10 @@ export function TestComponent() {
     <div className="bg-white border-gray-200">
       <h1 className="text-gray-900 text-2xl">Title</h1>
       <p className="text-gray-600 mb-4">Description text</p>
-      <button className="bg-blue-600 text-white px-4 py-2">
+      <button className="bg-blue-600 dark:bg-blue-400 text-white px-4 py-2">
         Click me
       </button>
-      <div className="text-green-600">Success message</div>
+      <div className="text-green-600 dark:text-green-400">Success message</div>
       <div className="text-red-600 dark:text-red-400">Error with dark variant</div>
     </div>
   );

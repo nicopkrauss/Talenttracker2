@@ -8,10 +8,17 @@ This directory contains comprehensive documentation and utilities for migrating 
 - **[color-mapping-guide.md](./color-mapping-guide.md)** - Complete developer guide with detailed explanations, patterns, and migration workflow
 - **[color-cheat-sheet.md](./color-cheat-sheet.md)** - Quick reference for common color replacements and patterns
 - **[color-usage-examples.tsx](./color-usage-examples.tsx)** - Comprehensive React component examples showing proper theme-aware color usage
+- **[theme-color-developer-guidelines.md](./theme-color-developer-guidelines.md)** - Comprehensive developer guidelines for theme-aware color development
+- **[component-theme-examples.md](./component-theme-examples.md)** - Detailed component examples with theme-aware implementations
+
+### Maintenance Documentation
+- **[color-audit-maintenance-guide.md](./color-audit-maintenance-guide.md)** - Complete guide for maintaining the color audit system
+- **[../scripts/color-audit-README.md](../scripts/color-audit-README.md)** - Color audit system documentation and usage instructions
 
 ### Utilities
 - **[../lib/color-mapping-utils.ts](../lib/color-mapping-utils.ts)** - TypeScript utilities for finding color replacements and validating theme awareness
 - **[../scripts/color-migration-helper.js](../scripts/color-migration-helper.js)** - Command-line tool for analyzing components and generating migration suggestions
+- **[../scripts/color-audit.js](../scripts/color-audit.js)** - Automated color audit system for codebase-wide analysis
 
 ## 🎯 Quick Start Guide
 

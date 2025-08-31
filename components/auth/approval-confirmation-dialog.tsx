@@ -68,7 +68,7 @@ export function ApprovalConfirmationDialog({
                   <li>Allow them to log in and use the application</li>
                 </ul>
                 <br />
-                <div className="bg-gray-50 p-3 rounded-md">
+                <div className="bg-muted p-3 rounded-md">
                   <p className="text-sm font-medium mb-2">Users to be approved:</p>
                   <div className="space-y-1 max-h-32 overflow-y-auto">
                     {users.map((user) => (
@@ -89,7 +89,7 @@ export function ApprovalConfirmationDialog({
           <AlertDialogAction 
             onClick={onConfirm}
             disabled={loading}
-            className="bg-green-600 hover:bg-green-700"
+            className="bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700"
           >
             {loading ? (
               <>

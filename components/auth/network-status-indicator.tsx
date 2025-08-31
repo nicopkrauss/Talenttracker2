@@ -61,22 +61,22 @@ export function NetworkStatusIndicator({
       className={cn(
         "border-l-4 shadow-sm transition-all duration-300 ease-in-out",
         "animate-in slide-in-from-top-2 duration-300",
-        isOnline ? "border-l-green-500" : "border-l-red-500",
+        isOnline ? "border-l-green-500 dark:border-l-green-400" : "border-l-red-500 dark:border-l-red-400",
         className
       )}
     >
       {isOnline ? (
         wasOffline ? (
           <>
-            <Wifi className="h-4 w-4 text-green-600" />
-            <AlertDescription className="font-medium text-green-700">
+            <Wifi className="h-4 w-4 text-green-600 dark:text-green-400" />
+            <AlertDescription className="font-medium text-green-700 dark:text-green-300">
               Connection restored. You're back online.
             </AlertDescription>
           </>
         ) : (
           <>
-            <Wifi className="h-4 w-4 text-green-600" />
-            <AlertDescription className="font-medium text-green-700">
+            <Wifi className="h-4 w-4 text-green-600 dark:text-green-400" />
+            <AlertDescription className="font-medium text-green-700 dark:text-green-300">
               Connected
             </AlertDescription>
           </>

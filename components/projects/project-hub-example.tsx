@@ -52,7 +52,7 @@ export function ProjectHubExample({ userRole = 'admin' }: ProjectHubExampleProps
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-muted p-4">
       <div className="max-w-7xl mx-auto">
         <ProjectHub
           userRole={userRole}

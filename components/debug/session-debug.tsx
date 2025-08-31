@@ -70,7 +70,7 @@ export function SessionDebug() {
         </div>
         
         {error && (
-          <div className="text-red-600"><strong>Error:</strong> {error}</div>
+          <div className="text-red-600 dark:text-red-400"><strong>Error:</strong> {error}</div>
         )}
       </CardContent>
     </Card>

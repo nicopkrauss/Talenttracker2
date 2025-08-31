@@ -46,15 +46,15 @@ export function TimecardList({ timecards, onUpdate, showUserColumn = false }: Ti
   const getStatusColor = (status: string) => {
     switch (status) {
       case "draft":
-        return "bg-gray-500"
+        return "bg-muted-foreground dark:bg-muted-foreground"
       case "submitted":
-        return "bg-blue-500"
+        return "bg-blue-500 dark:bg-blue-600"
       case "approved":
-        return "bg-green-500"
+        return "bg-green-500 dark:bg-green-600"
       case "rejected":
-        return "bg-red-500"
+        return "bg-red-500 dark:bg-red-600"
       default:
-        return "bg-gray-500"
+        return "bg-muted-foreground dark:bg-muted-foreground"
     }
   }
 
@@ -77,7 +77,7 @@ export function TimecardList({ timecards, onUpdate, showUserColumn = false }: Ti
     return (
       <Card>
         <CardContent className="p-8 text-center">
-          <p className="text-gray-500">No timecards found.</p>
+          <p className="text-muted-foreground">No timecards found.</p>
         </CardContent>
       </Card>
     )
@@ -90,20 +90,20 @@ export function TimecardList({ timecards, onUpdate, showUserColumn = false }: Ti
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <Calendar className="w-5 h-5 text-gray-400" />
+                <Calendar className="w-5 h-5 text-muted-foreground" />
                 <div>
                   <CardTitle className="text-lg">{format(new Date(timecard.date), "EEEE, MMMM d, yyyy")}</CardTitle>
                   {showUserColumn && timecard.profiles && (
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       {timecard.profiles.full_name}
                     </p>
                   )}
-                  {timecard.projects && <p className="text-sm text-gray-600">{timecard.projects.name}</p>}
+                  {timecard.projects && <p className="text-sm text-muted-foreground">{timecard.projects.name}</p>}
                 </div>
               </div>
               <div className="flex items-center space-x-2">
                 {timecard.manually_edited && (
-                  <Badge variant="outline" className="text-yellow-600 border-yellow-200">
+                  <Badge variant="outline" className="text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800">
                     <AlertTriangle className="w-3 h-3 mr-1" />
                     Edited
                   </Badge>
@@ -117,30 +117,30 @@ export function TimecardList({ timecards, onUpdate, showUserColumn = false }: Ti
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-3">
               <div className="flex items-center space-x-2">
-                <Clock className="w-4 h-4 text-gray-400" />
+                <Clock className="w-4 h-4 text-muted-foreground" />
                 <div>
-                  <p className="text-sm text-gray-600">Hours Worked</p>
+                  <p className="text-sm text-muted-foreground">Hours Worked</p>
                   <p className="font-medium">{timecard.total_hours.toFixed(1)} hours</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <Clock className="w-4 h-4 text-gray-400" />
+                <Clock className="w-4 h-4 text-muted-foreground" />
                 <div>
-                  <p className="text-sm text-gray-600">Break Duration</p>
+                  <p className="text-sm text-muted-foreground">Break Duration</p>
                   <p className="font-medium">{Math.round(timecard.break_duration)} minutes</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <DollarSign className="w-4 h-4 text-gray-400" />
+                <DollarSign className="w-4 h-4 text-muted-foreground" />
                 <div>
-                  <p className="text-sm text-gray-600">Total Pay</p>
+                  <p className="text-sm text-muted-foreground">Total Pay</p>
                   <p className="font-medium">${timecard.total_pay.toFixed(2)}</p>
                 </div>
               </div>
             </div>
 
             {timecard.check_in_time && timecard.check_out_time && (
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-muted-foreground">
                 <p>
                   {format(new Date(timecard.check_in_time), "h:mm a")} -{" "}
                   {format(new Date(timecard.check_out_time), "h:mm a")}
@@ -155,9 +155,9 @@ export function TimecardList({ timecards, onUpdate, showUserColumn = false }: Ti
             )}
 
             {timecard.supervisor_comments && (
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <p className="text-sm font-medium text-gray-700">Supervisor Comments:</p>
-                <p className="text-sm text-gray-600">{timecard.supervisor_comments}</p>
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm font-medium text-foreground">Supervisor Comments:</p>
+                <p className="text-sm text-muted-foreground">{timecard.supervisor_comments}</p>
               </div>
             )}
 
@@ -181,7 +181,7 @@ export function TimecardList({ timecards, onUpdate, showUserColumn = false }: Ti
                 </Button>
               </div>
               {timecard.submitted_at && (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Submitted {format(new Date(timecard.submitted_at), "MMM d, h:mm a")}
                 </p>
               )}

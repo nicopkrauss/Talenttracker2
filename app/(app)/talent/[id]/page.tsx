@@ -102,7 +102,7 @@ export default function TalentProfilePage() {
                 </h1>
                 <p className="text-muted-foreground">{talent.rep_email}</p>
                 <div className="flex items-center space-x-2 mt-2">
-                  <Badge className="bg-blue-500 text-white">
+                  <Badge className="bg-blue-500 dark:bg-blue-400 text-white">
                     Active
                   </Badge>
                   <div className="flex items-center text-sm text-muted-foreground">

@@ -25,8 +25,10 @@ describe('ProjectInput', () => {
     render(<ProjectInput success={true} data-testid="test-input" />)
     
     const input = screen.getByTestId('test-input')
-    expect(input).toHaveClass('border-green-500')
-    expect(input).toHaveClass('focus-visible:ring-green-500')
+    expect(input).toHaveClass('border-green-600')
+    expect(input).toHaveClass('focus-visible:ring-green-600')
+    expect(input).toHaveClass('dark:border-green-400')
+    expect(input).toHaveClass('dark:focus-visible:ring-green-400')
   })
 
   it('handles user input correctly', async () => {
@@ -83,8 +85,10 @@ describe('ProjectTextarea', () => {
     render(<ProjectTextarea success={true} data-testid="test-textarea" />)
     
     const textarea = screen.getByTestId('test-textarea')
-    expect(textarea).toHaveClass('border-green-500')
-    expect(textarea).toHaveClass('focus-visible:ring-green-500')
+    expect(textarea).toHaveClass('border-green-600')
+    expect(textarea).toHaveClass('focus-visible:ring-green-600')
+    expect(textarea).toHaveClass('dark:border-green-400')
+    expect(textarea).toHaveClass('dark:focus-visible:ring-green-400')
   })
 
   it('handles user input correctly', async () => {
@@ -134,8 +138,10 @@ describe('ProjectDateInput', () => {
     render(<ProjectDateInput success={true} data-testid="test-date-input" />)
     
     const input = screen.getByTestId('test-date-input')
-    expect(input).toHaveClass('border-green-500')
-    expect(input).toHaveClass('focus-visible:ring-green-500')
+    expect(input).toHaveClass('border-green-600')
+    expect(input).toHaveClass('focus-visible:ring-green-600')
+    expect(input).toHaveClass('dark:border-green-400')
+    expect(input).toHaveClass('dark:focus-visible:ring-green-400')
   })
 
   it('handles date input correctly', async () => {

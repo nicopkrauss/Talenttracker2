@@ -29,8 +29,8 @@ export function PendingApprovalPage() {
         <div className="space-y-8 text-center">
           {/* Enhanced Icon */}
           <div className="flex justify-center animate-in zoom-in-50 duration-500">
-            <div className="rounded-full bg-gradient-to-br from-orange-100 to-orange-200 p-4 shadow-lg dark:from-orange-900/30 dark:to-orange-800/20 transition-all duration-300 ease-in-out">
-              <Clock className="h-10 w-10 text-orange-600 dark:text-orange-400 animate-pulse" />
+            <div className="rounded-full bg-gradient-to-br from-amber-100 to-amber-200 dark:from-amber-900/30 dark:to-amber-800/20 p-4 shadow-lg transition-all duration-300 ease-in-out">
+              <Clock className="h-10 w-10 text-amber-600 dark:text-amber-400 animate-pulse" />
             </div>
           </div>
 

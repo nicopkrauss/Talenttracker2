@@ -1,29 +1,259 @@
 # Color Audit Report
 
-**Generated:** 2025-08-30T22:25:01.753Z
+**Generated:** 2025-08-30T23:02:06.282Z
 
 ## Executive Summary
 
-- **Total Files Scanned:** 167
-- **Files with Issues:** 34
-- **Total Hardcoded Colors:** 254
-- **Estimated Total Effort:** 27.5 hours
+- **Total Files Scanned:** 177
+- **Files with Issues:** 35
+- **Total Hardcoded Colors:** 320
+- **Estimated Total Effort:** 33.5 hours
 
 ## Priority Breakdown
 
 - **High Priority:** 0 files (0.0%)
-- **Medium Priority:** 32 files (94.1%)
-- **Low Priority:** 2 files (5.9%)
+- **Medium Priority:** 32 files (91.4%)
+- **Low Priority:** 3 files (8.6%)
 
 ## Color Type Breakdown
 
-- **Text Colors:** 80 instances (31.5%)
-- **Background Colors:** 35 instances (13.8%)
-- **Border Colors:** 1 instances (0.4%)
-- **Semantic Colors:** 125 instances (49.2%)
-- **Absolute Colors:** 13 instances (5.1%)
+- **Text Colors:** 91 instances (28.4%)
+- **Background Colors:** 47 instances (14.7%)
+- **Border Colors:** 5 instances (1.6%)
+- **Semantic Colors:** 159 instances (49.7%)
+- **Absolute Colors:** 18 instances (5.6%)
 
 ## Medium Priority Components
+
+### lib\color-mapping-utils.ts
+
+- **Issues:** 45
+- **Estimated Effort:** 4.5 hours
+
+**Line 35:** `text-gray-900`
+- **Suggested:** `text-foreground`
+- **Type:** text
+- **Context:** `hardcodedClass: 'text-gray-900',`
+
+**Line 42:** `text-gray-800`
+- **Suggested:** `text-foreground`
+- **Type:** text
+- **Context:** `hardcodedClass: 'text-gray-800',`
+
+**Line 49:** `text-gray-700`
+- **Suggested:** `text-foreground`
+- **Type:** text
+- **Context:** `hardcodedClass: 'text-gray-700',`
+
+**Line 56:** `text-gray-600`
+- **Suggested:** `text-muted-foreground`
+- **Type:** text
+- **Context:** `hardcodedClass: 'text-gray-600',`
+
+**Line 63:** `text-gray-500`
+- **Suggested:** `text-muted-foreground`
+- **Type:** text
+- **Context:** `hardcodedClass: 'text-gray-500',`
+
+**Line 70:** `text-gray-400`
+- **Suggested:** `text-muted-foreground`
+- **Type:** text
+- **Context:** `hardcodedClass: 'text-gray-400',`
+
+**Line 77:** `text-white`
+- **Suggested:** `text-primary-foreground (on colored backgrounds)`
+- **Type:** absolute
+- **Context:** `hardcodedClass: 'text-white',`
+
+**Line 84:** `text-black`
+- **Suggested:** `text-foreground`
+- **Type:** absolute
+- **Context:** `hardcodedClass: 'text-black',`
+
+**Line 93:** `bg-white`
+- **Suggested:** `bg-background or bg-card`
+- **Type:** absolute
+- **Context:** `hardcodedClass: 'bg-white',`
+
+**Line 100:** `bg-gray-50`
+- **Suggested:** `bg-muted`
+- **Type:** background
+- **Context:** `hardcodedClass: 'bg-gray-50',`
+
+**Line 107:** `bg-gray-100`
+- **Suggested:** `bg-muted`
+- **Type:** background
+- **Context:** `hardcodedClass: 'bg-gray-100',`
+
+**Line 114:** `bg-gray-200`
+- **Suggested:** `bg-border`
+- **Type:** background
+- **Context:** `hardcodedClass: 'bg-gray-200',`
+
+**Line 121:** `bg-gray-800`
+- **Suggested:** `bg-card (dark context)`
+- **Type:** background
+- **Context:** `hardcodedClass: 'bg-gray-800',`
+
+**Line 128:** `bg-gray-900`
+- **Suggested:** `bg-background (dark context)`
+- **Type:** background
+- **Context:** `hardcodedClass: 'bg-gray-900',`
+
+**Line 137:** `border-gray-200`
+- **Suggested:** `border-border`
+- **Type:** border
+- **Context:** `hardcodedClass: 'border-gray-200',`
+
+**Line 144:** `border-gray-300`
+- **Suggested:** `border-border`
+- **Type:** border
+- **Context:** `hardcodedClass: 'border-gray-300',`
+
+**Line 151:** `border-gray-400`
+- **Suggested:** `border-gray-400 (needs manual review)`
+- **Type:** border
+- **Context:** `hardcodedClass: 'border-gray-400',`
+
+**Line 165:** `text-green-600`
+- **Suggested:** `text-green-600 dark:text-green-400`
+- **Type:** semantic
+- **Context:** `lightClass: 'text-green-600',`
+
+**Line 166:** `text-green-400`
+- **Suggested:** `text-green-400 (needs manual review)`
+- **Type:** semantic
+- **Context:** `darkClass: 'dark:text-green-400',`
+
+**Line 167:** `text-green-400`
+- **Suggested:** `text-green-400 (needs manual review)`
+- **Type:** semantic
+- **Context:** `text-green-600 dark:text-green-400',`
+
+**Line 173:** `text-green-700`
+- **Suggested:** `text-green-700 (needs manual review)`
+- **Type:** semantic
+- **Context:** `lightClass: 'text-green-700',`
+
+**Line 174:** `text-green-300`
+- **Suggested:** `text-green-300 (needs manual review)`
+- **Type:** semantic
+- **Context:** `darkClass: 'dark:text-green-300',`
+
+**Line 175:** `text-green-300`
+- **Suggested:** `text-green-300 (needs manual review)`
+- **Type:** semantic
+- **Context:** `text-green-700 dark:text-green-300',`
+
+**Line 181:** `bg-green-50`
+- **Suggested:** `bg-green-50 (needs manual review)`
+- **Type:** semantic
+- **Context:** `lightClass: 'bg-green-50',`
+
+**Line 189:** `text-amber-600`
+- **Suggested:** `text-amber-600 dark:text-amber-400`
+- **Type:** semantic
+- **Context:** `lightClass: 'text-amber-600',`
+
+**Line 190:** `text-amber-400`
+- **Suggested:** `text-amber-400 (needs manual review)`
+- **Type:** semantic
+- **Context:** `darkClass: 'dark:text-amber-400',`
+
+**Line 191:** `text-amber-400`
+- **Suggested:** `text-amber-400 (needs manual review)`
+- **Type:** semantic
+- **Context:** `text-amber-600 dark:text-amber-400',`
+
+**Line 197:** `text-amber-700`
+- **Suggested:** `text-amber-700 (needs manual review)`
+- **Type:** semantic
+- **Context:** `lightClass: 'text-amber-700',`
+
+**Line 198:** `text-amber-300`
+- **Suggested:** `text-amber-300 (needs manual review)`
+- **Type:** semantic
+- **Context:** `darkClass: 'dark:text-amber-300',`
+
+**Line 199:** `text-amber-300`
+- **Suggested:** `text-amber-300 (needs manual review)`
+- **Type:** semantic
+- **Context:** `text-amber-700 dark:text-amber-300',`
+
+**Line 205:** `bg-amber-50`
+- **Suggested:** `bg-amber-50 (needs manual review)`
+- **Type:** semantic
+- **Context:** `lightClass: 'bg-amber-50',`
+
+**Line 213:** `text-red-600`
+- **Suggested:** `text-red-600 dark:text-red-400`
+- **Type:** semantic
+- **Context:** `lightClass: 'text-red-600',`
+
+**Line 214:** `text-red-400`
+- **Suggested:** `text-red-400 (needs manual review)`
+- **Type:** semantic
+- **Context:** `darkClass: 'dark:text-red-400',`
+
+**Line 215:** `text-red-400`
+- **Suggested:** `text-red-400 (needs manual review)`
+- **Type:** semantic
+- **Context:** `'text-red-600 dark:text-red-400',`
+
+**Line 221:** `text-red-700`
+- **Suggested:** `text-red-700 (needs manual review)`
+- **Type:** semantic
+- **Context:** `lightClass: 'text-red-700',`
+
+**Line 222:** `text-red-300`
+- **Suggested:** `text-red-300 (needs manual review)`
+- **Type:** semantic
+- **Context:** `darkClass: 'dark:text-red-300',`
+
+**Line 223:** `text-red-300`
+- **Suggested:** `text-red-300 (needs manual review)`
+- **Type:** semantic
+- **Context:** `'text-red-700 dark:text-red-300',`
+
+**Line 229:** `bg-red-50`
+- **Suggested:** `bg-red-50 (needs manual review)`
+- **Type:** semantic
+- **Context:** `lightClass: 'bg-red-50',`
+
+**Line 237:** `text-blue-600`
+- **Suggested:** `text-blue-600 dark:text-blue-400`
+- **Type:** semantic
+- **Context:** `lightClass: 'text-blue-600',`
+
+**Line 238:** `text-blue-400`
+- **Suggested:** `text-blue-400 (needs manual review)`
+- **Type:** semantic
+- **Context:** `darkClass: 'dark:text-blue-400',`
+
+**Line 239:** `text-blue-400`
+- **Suggested:** `text-blue-400 (needs manual review)`
+- **Type:** semantic
+- **Context:** `'text-blue-600 dark:text-blue-400',`
+
+**Line 245:** `text-blue-700`
+- **Suggested:** `text-blue-700 (needs manual review)`
+- **Type:** semantic
+- **Context:** `lightClass: 'text-blue-700',`
+
+**Line 246:** `text-blue-300`
+- **Suggested:** `text-blue-300 (needs manual review)`
+- **Type:** semantic
+- **Context:** `darkClass: 'dark:text-blue-300',`
+
+**Line 247:** `text-blue-300`
+- **Suggested:** `text-blue-300 (needs manual review)`
+- **Type:** semantic
+- **Context:** `'text-blue-700 dark:text-blue-300',`
+
+**Line 253:** `bg-blue-50`
+- **Suggested:** `bg-blue-50 (needs manual review)`
+- **Type:** semantic
+- **Context:** `lightClass: 'bg-blue-50',`
 
 ### components\timecards\supervisor-approval-queue.tsx
 
@@ -925,66 +1155,6 @@
 - **Type:** semantic
 - **Context:** `text-green-600 dark:text-green-400">`
 
-### components\projects\project-card.tsx
-
-- **Issues:** 11
-- **Estimated Effort:** 1 hours
-
-**Line 67:** `bg-yellow-100`
-- **Suggested:** `bg-yellow-100 (needs manual review)`
-- **Type:** semantic
-- **Context:** `condary" className="bg-yellow-100 text-yellow-800">Prep</Badge>`
-
-**Line 67:** `text-yellow-800`
-- **Suggested:** `text-yellow-800 (needs manual review)`
-- **Type:** semantic
-- **Context:** `Name="bg-yellow-100 text-yellow-800">Prep</Badge>`
-
-**Line 69:** `bg-green-100`
-- **Suggested:** `bg-green-100 (needs manual review)`
-- **Type:** semantic
-- **Context:** `default" className="bg-green-100 text-green-800">Active</Badge>`
-
-**Line 69:** `text-green-800`
-- **Suggested:** `text-green-800 (needs manual review)`
-- **Type:** semantic
-- **Context:** `sName="bg-green-100 text-green-800">Active</Badge>`
-
-**Line 71:** `text-gray-600`
-- **Suggested:** `text-muted-foreground`
-- **Type:** text
-- **Context:** `ssName="bg-gray-100 text-gray-600">Archived</Badge>`
-
-**Line 71:** `bg-gray-100`
-- **Suggested:** `bg-muted`
-- **Type:** background
-- **Context:** `outline" className="bg-gray-100 text-gray-600">Archived</Badge>`
-
-**Line 79:** `text-blue-600`
-- **Suggested:** `text-blue-600 dark:text-blue-400`
-- **Type:** semantic
-- **Context:** `rn <span className="text-blue-600 text-sm">Starts {format(startDate, '`
-
-**Line 82:** `text-green-600`
-- **Suggested:** `text-green-600 dark:text-green-400`
-- **Type:** semantic
-- **Context:** `rn <span className="text-green-600 text-sm">Ends {format(endDate, 'MMM`
-
-**Line 85:** `text-gray-500`
-- **Suggested:** `text-muted-foreground`
-- **Type:** text
-- **Context:** `rn <span className="text-gray-500 text-sm">Ended {format(endDate, 'MMM`
-
-**Line 221:** `bg-green-600`
-- **Suggested:** `bg-green-600 (needs manual review)`
-- **Type:** semantic
-- **Context:** `className="bg-green-600 hover:bg-green-700"`
-
-**Line 221:** `bg-green-700`
-- **Suggested:** `bg-green-700 (needs manual review)`
-- **Type:** semantic
-- **Context:** `"bg-green-600 hover:bg-green-700"`
-
 ### app\(app)\talent\[id]\page.tsx
 
 - **Issues:** 9
@@ -1135,50 +1305,35 @@
 - **Type:** semantic
 - **Context:** `met ? "text-green-600" : "text-muted-foreground"`
 
-### components\projects\project-hub.tsx
+### components\projects\project-card.tsx
 
-- **Issues:** 8
-- **Estimated Effort:** 0.75 hours
+- **Issues:** 5
+- **Estimated Effort:** 0.5 hours
 
-**Line 150:** `text-gray-400`
-- **Suggested:** `text-muted-foreground`
-- **Type:** text
-- **Context:** `-6 w-6 animate-spin text-gray-400" />`
+**Line 67:** `text-yellow-300`
+- **Suggested:** `text-yellow-300 (needs manual review)`
+- **Type:** semantic
+- **Context:** `-yellow-900/30 dark:text-yellow-300">Prep</Badge>`
 
-**Line 220:** `text-gray-400`
-- **Suggested:** `text-muted-foreground`
-- **Type:** text
-- **Context:** `slate-y-1/2 h-4 w-4 text-gray-400" />`
+**Line 69:** `text-green-300`
+- **Suggested:** `text-green-300 (needs manual review)`
+- **Type:** semantic
+- **Context:** `g-green-900/30 dark:text-green-300">Active</Badge>`
 
-**Line 269:** `text-gray-400`
-- **Suggested:** `text-muted-foreground`
-- **Type:** text
-- **Context:** `lassName="h-12 w-12 text-gray-400 mx-auto mb-4" />`
+**Line 79:** `text-blue-400`
+- **Suggested:** `text-blue-400 (needs manual review)`
+- **Type:** semantic
+- **Context:** `"text-blue-600 dark:text-blue-400 text-sm">Starts {format(startDate, '`
 
-**Line 270:** `text-gray-900`
-- **Suggested:** `text-foreground`
-- **Type:** text
-- **Context:** `text-lg font-medium text-gray-900 mb-2">`
+**Line 82:** `text-green-400`
+- **Suggested:** `text-green-400 (needs manual review)`
+- **Type:** semantic
+- **Context:** `text-green-600 dark:text-green-400 text-sm">Ends {format(endDate, 'MMM`
 
-**Line 273:** `text-gray-600`
-- **Suggested:** `text-muted-foreground`
-- **Type:** text
-- **Context:** `<p className="text-gray-600 mb-6 max-w-md mx-auto">`
-
-**Line 293:** `text-gray-400`
-- **Suggested:** `text-muted-foreground`
-- **Type:** text
-- **Context:** `className="h-8 w-8 text-gray-400 mx-auto mb-4" />`
-
-**Line 294:** `text-gray-900`
-- **Suggested:** `text-foreground`
-- **Type:** text
-- **Context:** `text-lg font-medium text-gray-900 mb-2">`
-
-**Line 297:** `text-gray-600`
-- **Suggested:** `text-muted-foreground`
-- **Type:** text
-- **Context:** `<p className="text-gray-600 mb-4">`
+**Line 221:** `bg-green-600`
+- **Suggested:** `bg-green-600 (needs manual review)`
+- **Type:** semantic
+- **Context:** `reen-700 dark:hover:bg-green-600"`
 
 ### app\(app)\team\page.tsx
 
@@ -1432,6 +1587,186 @@
 
 ## Low Priority Components
 
+### lib\__tests__\color-mapping-utils.test.ts
+
+- **Issues:** 35
+- **Estimated Effort:** 2.75 hours
+
+**Line 16:** `text-gray-600`
+- **Suggested:** `text-muted-foreground`
+- **Type:** text
+- **Context:** `ndColorReplacement('text-gray-600');`
+
+**Line 18:** `text-gray-600`
+- **Suggested:** `text-muted-foreground`
+- **Type:** text
+- **Context:** `hardcodedClass: 'text-gray-600',`
+
+**Line 27:** `bg-white`
+- **Suggested:** `bg-background or bg-card`
+- **Type:** absolute
+- **Context:** `ndColorReplacement('bg-white');`
+
+**Line 29:** `bg-white`
+- **Suggested:** `bg-background or bg-card`
+- **Type:** absolute
+- **Context:** `hardcodedClass: 'bg-white',`
+
+**Line 38:** `text-purple-50`
+- **Suggested:** `text-purple-50 (needs manual review)`
+- **Type:** semantic
+- **Context:** `ndColorReplacement('text-purple-500');`
+
+**Line 45:** `text-green-600`
+- **Suggested:** `text-green-600 dark:text-green-400`
+- **Type:** semantic
+- **Context:** `acement('success', 'text-green-600');`
+
+**Line 48:** `text-green-400`
+- **Suggested:** `text-green-400 (needs manual review)`
+- **Type:** semantic
+- **Context:** `text-green-600 dark:text-green-400');`
+
+**Line 52:** `text-red-600`
+- **Suggested:** `text-red-600 dark:text-red-400`
+- **Type:** semantic
+- **Context:** `placement('error', 'text-red-600');`
+
+**Line 55:** `text-red-400`
+- **Suggested:** `text-red-400 (needs manual review)`
+- **Type:** semantic
+- **Context:** `('text-red-600 dark:text-red-400');`
+
+**Line 59:** `text-purple-600`
+- **Suggested:** `text-purple-600 (needs manual review)`
+- **Type:** semantic
+- **Context:** `acement('success', 'text-purple-600');`
+
+**Line 73:** `text-green-400`
+- **Suggested:** `text-green-400 (needs manual review)`
+- **Type:** semantic
+- **Context:** `text-green-600 dark:text-green-400')).toBe(true);`
+
+**Line 78:** `text-gray-600`
+- **Suggested:** `text-muted-foreground`
+- **Type:** text
+- **Context:** `xpect(isThemeAware('text-gray-600')).toBe(false);`
+
+**Line 79:** `bg-gray-100`
+- **Suggested:** `bg-muted`
+- **Type:** background
+- **Context:** `xpect(isThemeAware('bg-gray-100')).toBe(false);`
+
+**Line 80:** `border-gray-300`
+- **Suggested:** `border-border`
+- **Type:** border
+- **Context:** `xpect(isThemeAware('border-gray-300')).toBe(false);`
+
+**Line 87:** `text-gray-800`
+- **Suggested:** `text-foreground`
+- **Type:** text
+- **Context:** `ssName="bg-gray-100 text-gray-800">`
+
+**Line 87:** `bg-gray-100`
+- **Suggested:** `bg-muted`
+- **Type:** background
+- **Context:** `<div className="bg-gray-100 text-gray-800">`
+
+**Line 88:** `text-gray-900`
+- **Suggested:** `text-foreground`
+- **Type:** text
+- **Context:** `<h1 className="text-gray-900">Title</h1>`
+
+**Line 89:** `text-green-600`
+- **Suggested:** `text-green-600 dark:text-green-400`
+- **Type:** semantic
+- **Context:** `<p className="text-green-600">Success</p>`
+
+**Line 94:** `bg-gray-100`
+- **Suggested:** `bg-muted`
+- **Type:** background
+- **Context:** `(colors).toContain('bg-gray-100');`
+
+**Line 95:** `text-gray-800`
+- **Suggested:** `text-foreground`
+- **Type:** text
+- **Context:** `(colors).toContain('text-gray-800');`
+
+**Line 96:** `text-gray-900`
+- **Suggested:** `text-foreground`
+- **Type:** text
+- **Context:** `(colors).toContain('text-gray-900');`
+
+**Line 97:** `text-green-600`
+- **Suggested:** `text-green-600 dark:text-green-400`
+- **Type:** semantic
+- **Context:** `(colors).toContain('text-green-600');`
+
+**Line 102:** `text-gray-600`
+- **Suggested:** `text-muted-foreground`
+- **Type:** text
+- **Context:** `<div className="text-gray-600">`
+
+**Line 103:** `text-gray-600`
+- **Suggested:** `text-muted-foreground`
+- **Type:** text
+- **Context:** `<p className="text-gray-600">Duplicate color</p>`
+
+**Line 108:** `text-gray-600`
+- **Suggested:** `text-muted-foreground`
+- **Type:** text
+- **Context:** `.filter(c => c === 'text-gray-600')).toHaveLength(1);`
+
+**Line 115:** `text-gray-600`
+- **Suggested:** `text-muted-foreground`
+- **Type:** text
+- **Context:** `ssName="bg-gray-100 text-gray-600">`
+
+**Line 115:** `bg-gray-100`
+- **Suggested:** `bg-muted`
+- **Type:** background
+- **Context:** `<div className="bg-gray-100 text-gray-600">`
+
+**Line 116:** `text-gray-900`
+- **Suggested:** `text-foreground`
+- **Type:** text
+- **Context:** `<h1 className="text-gray-900">Title</h1>`
+
+**Line 126:** `bg-gray-100`
+- **Suggested:** `bg-muted`
+- **Type:** background
+- **Context:** `iginals).toContain('bg-gray-100');`
+
+**Line 127:** `text-gray-600`
+- **Suggested:** `text-muted-foreground`
+- **Type:** text
+- **Context:** `iginals).toContain('text-gray-600');`
+
+**Line 128:** `text-gray-900`
+- **Suggested:** `text-foreground`
+- **Type:** text
+- **Context:** `iginals).toContain('text-gray-900');`
+
+**Line 131:** `bg-gray-100`
+- **Suggested:** `bg-muted`
+- **Type:** background
+- **Context:** `=> s.original === 'bg-gray-100');`
+
+**Line 133:** `bg-gray-100`
+- **Suggested:** `bg-muted`
+- **Type:** background
+- **Context:** `original: 'bg-gray-100',`
+
+**Line 143:** `text-gray-600`
+- **Suggested:** `text-muted-foreground`
+- **Type:** text
+- **Context:** `<div className="text-gray-600">Line 2</div>`
+
+**Line 144:** `bg-gray-50`
+- **Suggested:** `bg-muted`
+- **Type:** background
+- **Context:** `<p className="bg-gray-50">Line 3</p>`;`
+
 ### components\projects\__tests__\project-input.test.tsx
 
 - **Issues:** 3
@@ -1469,6 +1804,7 @@
 
 ## Migration Checklist
 
+- [ ] **lib\color-mapping-utils.ts** (medium priority, 45 issues, ~4.5h)
 - [ ] **components\timecards\supervisor-approval-queue.tsx** (medium priority, 30 issues, ~3h)
 - [ ] **app\(app)\timecards\[id]\page.tsx** (medium priority, 29 issues, ~3h)
 - [ ] **components\timecards\timecard-list.tsx** (medium priority, 23 issues, ~2.25h)
@@ -1479,11 +1815,10 @@
 - [ ] **components\talent\talent-project-manager.tsx** (medium priority, 12 issues, ~1.25h)
 - [ ] **app\(app)\talent\page.tsx** (medium priority, 11 issues, ~1h)
 - [ ] **components\projects\project-detail-view.tsx** (medium priority, 11 issues, ~1h)
-- [ ] **components\projects\project-card.tsx** (medium priority, 11 issues, ~1h)
 - [ ] **app\(app)\talent\[id]\page.tsx** (medium priority, 9 issues, ~1h)
 - [ ] **components\talent\talent-location-tracker.tsx** (medium priority, 9 issues, ~1h)
 - [ ] **components\auth\password-strength-indicator.tsx** (medium priority, 9 issues, ~1h)
-- [ ] **components\projects\project-hub.tsx** (medium priority, 8 issues, ~0.75h)
+- [ ] **components\projects\project-card.tsx** (medium priority, 5 issues, ~0.5h)
 - [ ] **app\(app)\team\page.tsx** (medium priority, 4 issues, ~0.5h)
 - [ ] **components\auth\pending-users-table.tsx** (medium priority, 4 issues, ~0.5h)
 - [ ] **components\auth\network-status-indicator.tsx** (medium priority, 4 issues, ~0.5h)
@@ -1501,5 +1836,6 @@
 - [ ] **components\projects\project-hub-example.tsx** (medium priority, 1 issues, ~0.25h)
 - [ ] **components\debug\session-debug.tsx** (medium priority, 1 issues, ~0.25h)
 - [ ] **components\auth\pending-approval-page.tsx** (medium priority, 1 issues, ~0.25h)
+- [ ] **lib\__tests__\color-mapping-utils.test.ts** (low priority, 35 issues, ~2.75h)
 - [ ] **components\projects\__tests__\project-input.test.tsx** (low priority, 3 issues, ~0.25h)
 - [ ] **components\auth\__tests__\approval-confirmation-dialog.test.tsx** (low priority, 2 issues, ~0.25h)

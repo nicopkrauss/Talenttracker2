@@ -61,15 +61,15 @@ export default function TimecardDetailPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "draft":
-        return "bg-gray-500"
+        return "bg-gray-500 dark:bg-gray-400"
       case "submitted":
-        return "bg-blue-500"
+        return "bg-blue-500 dark:bg-blue-400"
       case "approved":
-        return "bg-green-500"
+        return "bg-green-500 dark:bg-green-400"
       case "rejected":
-        return "bg-red-500"
+        return "bg-red-500 dark:bg-red-400"
       default:
-        return "bg-gray-500"
+        return "bg-gray-500 dark:bg-gray-400"
     }
   }
 
@@ -122,7 +122,7 @@ export default function TimecardDetailPage() {
         </div>
         <div className="flex items-center space-x-2">
           {timecard.manually_edited && (
-            <Badge variant="outline" className="text-yellow-600 border-yellow-200">
+            <Badge variant="outline" className="text-yellow-600 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800">
               <AlertTriangle className="w-3 h-3 mr-1" />
               Manually Edited
             </Badge>

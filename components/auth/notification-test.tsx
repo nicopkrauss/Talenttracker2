@@ -86,13 +86,13 @@ export function NotificationTest() {
         </Button>
 
         {error && (
-          <div className="flex items-center text-red-600 text-sm">
+          <div className="flex items-center text-red-600 dark:text-red-400 text-sm">
             <XCircle className="w-4 h-4 mr-1" />
             {error}
           </div>
         )}
 
-        <div className="text-xs text-gray-500 space-y-1">
+        <div className="text-xs text-muted-foreground space-y-1">
           <p>• This will test the approval notification system</p>
           <p>• Check the console for email content (development mode)</p>
           <p>• In production, configure a real email service</p>

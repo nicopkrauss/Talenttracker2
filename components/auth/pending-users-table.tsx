@@ -105,7 +105,7 @@ export function PendingUsersTable({
     return (
       <Card>
         <CardContent className="p-8 text-center">
-          <UserCheck className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+          <UserCheck className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">No Pending Approvals</h3>
           <p className="text-muted-foreground">
             All user registrations have been processed. New registrations will appear here for approval.
@@ -186,7 +186,7 @@ export function PendingUsersTable({
                       </Avatar>
                       <div>
                         <div className="font-medium">{user.full_name}</div>
-                        <div className="text-sm text-gray-500 flex items-center">
+                        <div className="text-sm text-muted-foreground flex items-center">
                           <Mail className="w-3 h-3 mr-1" />
                           {user.email}
                         </div>
@@ -237,9 +237,9 @@ export function PendingUsersTable({
         
         {/* Bulk Actions Footer */}
         {users.length > 1 && (
-          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+          <div className="mt-4 p-4 bg-muted rounded-lg">
             <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-muted-foreground">
                 Select users above to perform bulk actions
               </div>
               <div className="flex items-center space-x-2">

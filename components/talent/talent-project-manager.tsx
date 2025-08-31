@@ -183,9 +183,9 @@ export function TalentProjectManager({ talent, onUpdate }: TalentProjectManagerP
         </CardHeader>
         <CardContent>
           <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-            <div className="h-8 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+            <div className="h-4 bg-muted rounded w-3/4"></div>
+            <div className="h-8 bg-muted rounded"></div>
+            <div className="h-4 bg-muted rounded w-1/2"></div>
           </div>
         </CardContent>
       </Card>
@@ -200,9 +200,9 @@ export function TalentProjectManager({ talent, onUpdate }: TalentProjectManagerP
       <CardContent className="space-y-6">
         {/* Success Message */}
         {successMessage && (
-          <Alert className="border-green-200 bg-green-50">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-800">
+          <Alert className="border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/20">
+            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+            <AlertDescription className="text-green-800 dark:text-green-300">
               {successMessage}
             </AlertDescription>
           </Alert>
@@ -223,7 +223,7 @@ export function TalentProjectManager({ talent, onUpdate }: TalentProjectManagerP
           <h3 className="text-lg font-medium">Current Project Assignments</h3>
           
           {currentAssignments.length === 0 ? (
-            <div className="text-center py-6 text-gray-500">
+            <div className="text-center py-6 text-muted-foreground">
               <p>No active project assignments</p>
               <p className="text-sm">Use the section below to assign this talent to projects.</p>
             </div>
@@ -244,7 +244,7 @@ export function TalentProjectManager({ talent, onUpdate }: TalentProjectManagerP
                     size="sm"
                     onClick={() => removeFromProject(assignment.id, assignment.projects?.name || "Unknown Project")}
                     disabled={removing === assignment.id}
-                    className="text-red-600 border-red-200 hover:bg-red-50"
+                    className="text-destructive border-destructive/20 hover:bg-destructive/10"
                   >
                     {removing === assignment.id ? (
                       "Removing..."
@@ -268,7 +268,7 @@ export function TalentProjectManager({ talent, onUpdate }: TalentProjectManagerP
           <h3 className="text-lg font-medium">Assign to Additional Projects</h3>
           
           {availableProjects.length === 0 ? (
-            <div className="text-center py-6 text-gray-500">
+            <div className="text-center py-6 text-muted-foreground">
               <p>No additional projects available</p>
               <p className="text-sm">This talent is already assigned to all available projects.</p>
             </div>

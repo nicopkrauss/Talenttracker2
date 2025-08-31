@@ -86,14 +86,14 @@ export function TalentLocationTracker({
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">{currentLocation}</p>
-                <p className="text-sm text-gray-500">Last updated {formatDistanceToNow(new Date())} ago</p>
+                <p className="text-sm text-muted-foreground">Last updated {formatDistanceToNow(new Date())} ago</p>
               </div>
-              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+              <Badge variant="outline" className="bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
                 Current
               </Badge>
             </div>
           ) : (
-            <p className="text-gray-500">No location recorded</p>
+            <p className="text-muted-foreground">No location recorded</p>
           )}
         </CardContent>
       </Card>
@@ -130,13 +130,13 @@ export function TalentLocationTracker({
           {locationHistory.length > 0 ? (
             <div className="space-y-3">
               {locationHistory.map((update) => (
-                <div key={update.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div key={update.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                   <div>
                     <p className="font-medium">{update.location}</p>
-                    <p className="text-sm text-gray-500">{formatDistanceToNow(new Date(update.timestamp))} ago</p>
+                    <p className="text-sm text-muted-foreground">{formatDistanceToNow(new Date(update.timestamp))} ago</p>
                   </div>
                   <div className="text-right">
-                    <div className="flex items-center text-sm text-gray-500">
+                    <div className="flex items-center text-sm text-muted-foreground">
                       <User className="w-4 h-4 mr-1" />
                       Updated by staff
                     </div>
@@ -145,7 +145,7 @@ export function TalentLocationTracker({
               ))}
             </div>
           ) : (
-            <p className="text-gray-500">No location history available</p>
+            <p className="text-muted-foreground">No location history available</p>
           )}
         </CardContent>
       </Card>

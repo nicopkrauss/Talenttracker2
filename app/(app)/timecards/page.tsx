@@ -119,15 +119,15 @@ export default function TimecardsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "draft":
-        return "bg-gray-500"
+        return "bg-gray-500 dark:bg-gray-400"
       case "submitted":
-        return "bg-blue-500"
+        return "bg-blue-500 dark:bg-blue-400"
       case "approved":
-        return "bg-green-500"
+        return "bg-green-500 dark:bg-green-400"
       case "rejected":
-        return "bg-red-500"
+        return "bg-red-500 dark:bg-red-400"
       default:
-        return "bg-gray-500"
+        return "bg-gray-500 dark:bg-gray-400"
     }
   }
 
@@ -150,11 +150,11 @@ export default function TimecardsPage() {
     return (
       <div className="p-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="h-10 bg-gray-200 rounded"></div>
+          <div className="h-8 bg-muted rounded w-1/4"></div>
+          <div className="h-10 bg-muted rounded"></div>
           <div className="space-y-3">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-24 bg-gray-200 rounded"></div>
+              <div key={i} className="h-24 bg-muted rounded"></div>
             ))}
           </div>
         </div>
@@ -176,7 +176,7 @@ export default function TimecardsPage() {
             <TabsTrigger value="approvals">
               Approvals
               {pendingTimecards.length > 0 && (
-                <Badge className="ml-2 bg-red-500 text-white">{pendingTimecards.length}</Badge>
+                <Badge className="ml-2 bg-red-500 dark:bg-red-400 text-white">{pendingTimecards.length}</Badge>
               )}
             </TabsTrigger>
           )}
@@ -275,15 +275,15 @@ export default function TimecardsPage() {
                     <div key={item.user_id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div>
                         <p className="font-medium">{item.user_name}</p>
-                        <p className="text-sm text-gray-500">{item.project_name}</p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-muted-foreground">{item.project_name}</p>
+                        <p className="text-sm text-muted-foreground">
                           {item.timecard_count} timecards • {item.total_hours} hours
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-lg font-bold">${item.total_pay.toFixed(2)}</p>
                         {item.pending_count > 0 && (
-                          <Badge variant="outline" className="text-yellow-600 border-yellow-200">
+                          <Badge variant="outline" className="text-yellow-600 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800">
                             {item.pending_count} pending
                           </Badge>
                         )}

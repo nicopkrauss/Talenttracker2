@@ -23,9 +23,9 @@ export function PasswordStrengthIndicator({
   }
 
   const strengthColors: Record<string, string> = {
-    weak: "bg-red-500",
-    medium: "bg-yellow-500", 
-    strong: "bg-green-500"
+    weak: "bg-red-600 dark:bg-red-400",
+    medium: "bg-amber-600 dark:bg-amber-400", 
+    strong: "bg-green-600 dark:bg-green-400"
   }
 
   const strengthLabels: Record<string, string> = {
@@ -49,9 +49,9 @@ export function PasswordStrengthIndicator({
           <span className="text-muted-foreground font-medium">Password strength</span>
           <span className={cn(
             "font-semibold transition-colors duration-200 ease-in-out",
-            strength === "weak" && "text-red-600",
-            strength === "medium" && "text-yellow-600", 
-            strength === "strong" && "text-green-600"
+            strength === "weak" && "text-red-600 dark:text-red-400",
+            strength === "medium" && "text-amber-600 dark:text-amber-400", 
+            strength === "strong" && "text-green-600 dark:text-green-400"
           )}>
             {strengthLabels[strength]}
           </span>
@@ -107,13 +107,13 @@ function RequirementItem({ met, text }: RequirementItemProps) {
       "hover:bg-muted/50 rounded px-1 py-0.5"
     )}>
       {met ? (
-        <Check className="h-3 w-3 text-green-600 transition-colors duration-200 ease-in-out" />
+        <Check className="h-3 w-3 text-green-600 dark:text-green-400 transition-colors duration-200 ease-in-out" />
       ) : (
-        <X className="h-3 w-3 text-red-500 transition-colors duration-200 ease-in-out" />
+        <X className="h-3 w-3 text-red-600 dark:text-red-400 transition-colors duration-200 ease-in-out" />
       )}
       <span className={cn(
         "transition-colors duration-200 ease-in-out font-medium",
-        met ? "text-green-600" : "text-muted-foreground"
+        met ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
       )}>
         {text}
       </span>
