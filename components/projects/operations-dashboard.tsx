@@ -42,14 +42,14 @@ export function OperationsDashboard({ project, onProjectUpdate }: OperationsDash
     switch (status) {
       case 'present':
       case 'active':
-        return <CheckCircle2 className="h-4 w-4 text-green-600" />
+        return <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
       case 'break':
-        return <Coffee className="h-4 w-4 text-yellow-600" />
+        return <Coffee className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
       case 'not_arrived':
       case 'out':
-        return <Circle className="h-4 w-4 text-gray-400" />
+        return <Circle className="h-4 w-4 text-muted-foreground" />
       default:
-        return <Circle className="h-4 w-4 text-gray-400" />
+        return <Circle className="h-4 w-4 text-muted-foreground" />
     }
   }
 
@@ -58,15 +58,15 @@ export function OperationsDashboard({ project, onProjectUpdate }: OperationsDash
       return <Badge variant="destructive" className="text-xs">🔴 Over 12hrs</Badge>
     }
     if (overtime === 'warning') {
-      return <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800">⚠ Over 8hrs</Badge>
+      return <Badge variant="secondary" className="text-xs bg-yellow-50 dark:bg-yellow-950/20 text-yellow-700 dark:text-yellow-300">⚠ Over 8hrs</Badge>
     }
     
     switch (status) {
       case 'present':
       case 'active':
-        return <Badge variant="default" className="text-xs bg-green-100 text-green-800">✓ Active</Badge>
+        return <Badge variant="default" className="text-xs bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-300">✓ Active</Badge>
       case 'break':
-        return <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800">🟡 Break</Badge>
+        return <Badge variant="secondary" className="text-xs bg-yellow-50 dark:bg-yellow-950/20 text-yellow-700 dark:text-yellow-300">🟡 Break</Badge>
       case 'not_arrived':
         return <Badge variant="outline" className="text-xs">⚠ Not Arr.</Badge>
       case 'out':
@@ -113,11 +113,11 @@ export function OperationsDashboard({ project, onProjectUpdate }: OperationsDash
           {/* Overtime Alerts */}
           <div className="flex gap-4 mt-4 pt-4 border-t">
             <div className="flex items-center gap-2 text-sm">
-              <AlertTriangle className="h-4 w-4 text-yellow-600" />
+              <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
               <span>2 Staff over 8hrs</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
               <span>1 Staff over 12hrs</span>
             </div>
           </div>

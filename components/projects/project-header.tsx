@@ -29,11 +29,11 @@ export function ProjectHeader({ project, onEdit, canEdit }: ProjectHeaderProps) 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case 'active':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+        return 'bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
       case 'prep':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+        return 'bg-muted text-muted-foreground border-border'
       case 'archived':
-        return 'bg-gray-50 text-gray-600 dark:bg-gray-900 dark:text-gray-400 border-gray-300'
+        return 'bg-muted/50 text-muted-foreground border-border'
       default:
         return ''
     }
