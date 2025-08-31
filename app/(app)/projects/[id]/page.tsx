@@ -1,4 +1,4 @@
-import { Suspense } from 'react'
+import { Suspense, use } from 'react'
 import { notFound } from 'next/navigation'
 import { ProjectDetailView } from '@/components/projects/project-detail-view'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
@@ -7,16 +7,18 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
 interface ProjectDetailPageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
+  const resolvedParams = use(params)
+  
   // Validate that the ID is a valid UUID format
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
   
-  if (!uuidRegex.test(params.id)) {
+  if (!uuidRegex.test(resolvedParams.id)) {
     notFound()
   }
 
@@ -33,7 +35,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
       </div>
       
       <Suspense fallback={<LoadingSpinner />}>
-        <ProjectDetailView projectId={params.id} />
+        <ProjectDetailView projectId={resolvedParams.id} />
       </Suspense>
     </div>
   )

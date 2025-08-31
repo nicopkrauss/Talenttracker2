@@ -10,15 +10,17 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertTriangle } from 'lucide-react'
 import { ProjectFormData, Project } from '@/lib/types'
+import { use } from 'react'
 
 interface EditProjectPageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export default function EditProjectPage({ params }: EditProjectPageProps) {
   const router = useRouter()
+  const resolvedParams = use(params)
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -26,20 +28,20 @@ export default function EditProjectPage({ params }: EditProjectPageProps) {
   // Validate that the ID is a valid UUID format
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
   
-  if (!uuidRegex.test(params.id)) {
+  if (!uuidRegex.test(resolvedParams.id)) {
     notFound()
   }
 
   useEffect(() => {
     fetchProject()
-  }, [params.id])
+  }, [resolvedParams.id])
 
   const fetchProject = async () => {
     try {
       setLoading(true)
       setError(null)
       
-      const response = await fetch(`/api/projects/${params.id}`)
+      const response = await fetch(`/api/projects/${resolvedParams.id}`)
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -48,8 +50,9 @@ export default function EditProjectPage({ params }: EditProjectPageProps) {
         throw new Error('Failed to load project')
       }
       
-      const data = await response.json()
-      setProject(data)
+      const responseData = await response.json()
+      console.log('Fetched project data for edit:', responseData.data)
+      setProject(responseData.data)
     } catch (err: any) {
       console.error('Error fetching project:', err)
       setError(err.message || 'Failed to load project')
@@ -59,7 +62,7 @@ export default function EditProjectPage({ params }: EditProjectPageProps) {
   }
 
   const handleSubmit = async (data: ProjectFormData) => {
-    const response = await fetch(`/api/projects/${params.id}`, {
+    const response = await fetch(`/api/projects/${resolvedParams.id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -72,11 +75,11 @@ export default function EditProjectPage({ params }: EditProjectPageProps) {
       throw new Error(error.error || 'Failed to update project')
     }
 
-    router.push(`/projects/${params.id}`)
+    router.push(`/projects/${resolvedParams.id}`)
   }
 
   const handleCancel = () => {
-    router.push(`/projects/${params.id}`)
+    router.push(`/projects/${resolvedParams.id}`)
   }
 
   if (loading) {
@@ -101,7 +104,7 @@ export default function EditProjectPage({ params }: EditProjectPageProps) {
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="flex items-center gap-4 mb-6">
-        <Link href={`/projects/${params.id}`}>
+        <Link href={`/projects/${resolvedParams.id}`}>
           <Button variant="ghost" size="sm" className="gap-2">
             <ArrowLeft className="h-4 w-4" />
             Back to Project
