@@ -20,11 +20,6 @@ import {
   UserStatus,
   SystemRole
 } from './auth-types';
-} catch (error) {
-  // Handle initialization errors gracefully
-  console.error('Failed to initialize Prisma client:', error);
-  throw error;
-}
 
 /**
  * Profile Service Class

@@ -14,8 +14,8 @@ export interface UserProfile {
   full_name: string;
   email: string;
   phone?: string | null;
-  city?: string | null;
-  state?: string | null;
+  nearest_major_city?: string | null;
+  willing_to_fly?: boolean | null;
   profile_picture_url?: string | null;
   status: UserStatus;
   role?: SystemRole | null;
@@ -25,13 +25,15 @@ export interface UserProfile {
 
 // Registration data interface for new user creation
 export interface RegistrationData {
+  role: Exclude<SystemRole | ProjectRole, 'admin'>; // All roles except admin
   firstName: string;
   lastName: string;
   email: string;
   password: string;
-  phone?: string;
-  city?: string;
-  state?: string;
+  phone: string;
+  nearestMajorCity: string;
+  willingToFly?: boolean;
+  agreeToTerms: boolean;
   // Computed field for database storage
   full_name?: string;
 }
@@ -47,8 +49,8 @@ export interface ProfileUpdateData {
   full_name?: string;
   email?: string;
   phone?: string;
-  city?: string;
-  state?: string;
+  nearest_major_city?: string;
+  willing_to_fly?: boolean;
   profile_picture_url?: string;
   status?: UserStatus;
   role?: SystemRole;

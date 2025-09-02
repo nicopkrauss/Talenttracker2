@@ -204,8 +204,60 @@ export const validatePasswordStrength = (password: string) => {
 // Enhanced phone number validation with formatting
 const phoneRegex = /^(\+1\s?)?(\([0-9]{3}\)|[0-9]{3})[\s\-]?[0-9]{3}[\s\-]?[0-9]{4}$/
 
+// Major cities list for dropdown
+export const MAJOR_CITIES = [
+  'Atlanta, GA',
+  'Austin, TX',
+  'Baltimore, MD',
+  'Boston, MA',
+  'Charlotte, NC',
+  'Chicago, IL',
+  'Cleveland, OH',
+  'Dallas, TX',
+  'Denver, CO',
+  'Detroit, MI',
+  'Houston, TX',
+  'Indianapolis, IN',
+  'Kansas City, MO',
+  'Las Vegas, NV',
+  'Los Angeles, CA',
+  'Miami, FL',
+  'Minneapolis, MN',
+  'Nashville, TN',
+  'New Orleans, LA',
+  'New York, NY',
+  'Orlando, FL',
+  'Philadelphia, PA',
+  'Phoenix, AZ',
+  'Portland, OR',
+  'Salt Lake City, UT',
+  'San Antonio, TX',
+  'San Diego, CA',
+  'San Francisco, CA',
+  'Seattle, WA',
+  'St. Louis, MO',
+  'Tampa, FL',
+  'Washington, DC'
+] as const
+
+// System role types (matches database enum)
+export type SystemRole = 'admin' | 'in_house' | 'supervisor' | 'talent_logistics_coordinator' | 'talent_escort'
+
+// Role display names for registration (excluding admin which is not selectable during registration)
+export const REGISTRATION_ROLE_LABELS: Record<Exclude<SystemRole, 'admin'>, string> = {
+  in_house: 'In-House Staff',
+  supervisor: 'Supervisor',
+  talent_logistics_coordinator: 'Talent Logistics Coordinator',
+  talent_escort: 'Talent Escort'
+}
+
 // Authentication Zod validation schemas with enhanced validation
 export const registrationSchema = z.object({
+  // Role selection (first field) - matches system_role enum except admin
+  role: z.enum(['in_house', 'supervisor', 'talent_logistics_coordinator', 'talent_escort'] as const, {
+    required_error: "Please select your position"
+  }),
+  
   firstName: z.string()
     .min(1, "First name is required")
     .max(50, "First name must be 50 characters or less")
@@ -250,15 +302,13 @@ export const registrationSchema = z.object({
       return phone
     }),
   
-  city: z.string()
-    .min(1, "City is required")
-    .max(100, "City must be 100 characters or less")
-    .regex(/^[a-zA-Z\s'-]+$/, "City can only contain letters, spaces, hyphens, and apostrophes"),
+  // Changed from city/state to nearest major city
+  nearestMajorCity: z.enum(MAJOR_CITIES, {
+    required_error: "Please select your nearest major city"
+  }),
   
-  state: z.string()
-    .min(2, "State is required")
-    .max(50, "State must be 50 characters or less")
-    .regex(/^[a-zA-Z\s]+$/, "State can only contain letters and spaces"),
+  // Conditional flight willingness (only for roles that get flights covered)
+  willingToFly: z.boolean().optional(),
   
   agreeToTerms: z.boolean()
     .refine(val => val === true, "You must agree to the Terms of Service and Privacy Policy")
@@ -423,8 +473,8 @@ export interface UserProfile {
   full_name: string
   email: string
   phone?: string
-  city?: string
-  state?: string
+  nearest_major_city?: string
+  willing_to_fly?: boolean
   profile_picture_url?: string
   role: SystemRole | null
   status: 'pending' | 'approved' | 'rejected' | 'active'
@@ -434,13 +484,14 @@ export interface UserProfile {
 
 // Registration form data interface
 export interface RegistrationData {
+  role: Exclude<SystemRole, 'admin'> // All system roles except admin
   firstName: string
   lastName: string
   email: string
   password: string
   phone: string
-  city: string
-  state: string
+  nearestMajorCity: string
+  willingToFly?: boolean
   agreeToTerms: boolean
 }
 
@@ -467,8 +518,9 @@ export interface PendingUser {
   full_name: string
   email: string
   phone?: string
-  city?: string
-  state?: string
+  role?: SystemRole
+  nearest_major_city?: string
+  willing_to_fly?: boolean
   created_at: string
 }
 
@@ -648,11 +700,110 @@ export interface EnhancedProject extends Project {
   statistics: ProjectStatistics
 }
 
+// Team Assignment interface
+export interface TeamAssignment {
+  id: string
+  project_id: string
+  user_id: string
+  role: ProjectRole
+  pay_rate?: number
+  schedule_notes?: string
+  created_at: string
+  profiles: {
+    id: string
+    full_name: string
+    email: string
+    phone?: string
+    nearest_major_city?: string
+    willing_to_fly?: boolean
+  }
+}
+
+// Team Assignment form data
+export interface TeamAssignmentFormData {
+  user_id: string
+  role: ProjectRole
+  pay_rate?: number
+  schedule_notes?: string
+}
+
+// Available staff member interface
+export interface AvailableStaff {
+  id: string
+  full_name: string
+  email: string
+  phone?: string
+  nearest_major_city?: string
+  willing_to_fly?: boolean
+  role?: SystemRole | null
+  status: string
+  created_at: string
+}
+
+// Staff filter interface
+export interface StaffFilter {
+  search: string
+  role: string | null
+  location: string | null
+  status: string | null
+  willing_to_fly: boolean | null
+  sort_by: string
+  sort_order: 'asc' | 'desc'
+}
+
+// Assignment summary interface
+export interface AssignmentSummary {
+  supervisorCount: number
+  tlcCount: number
+  escortCount: number
+  totalStaffAssigned: number
+  estimatedDailyCost: number
+}
+
+// Role definition interface (legacy - for backward compatibility)
+export interface RoleDefinition {
+  role: ProjectRole
+  displayName: string
+  basePayRate: number
+  timeType: 'Daily' | 'Hourly'
+  assignmentCount: number
+}
+
+// Project role template interface
+export interface ProjectRoleTemplate {
+  id: string
+  project_id: string
+  role: ProjectRole
+  display_name: string
+  base_pay_rate: number
+  time_type: 'hourly' | 'daily'
+  description?: string
+  is_active: boolean
+  is_default: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+// Form data for role template creation/editing
+export interface ProjectRoleTemplateFormData {
+  role: ProjectRole
+  display_name: string
+  base_pay_rate: number
+  time_type: 'hourly' | 'daily'
+  description?: string
+  is_active?: boolean
+  is_default?: boolean
+  sort_order?: number
+}
+
 // Project details interface (extended project with all related data)
 export interface ProjectDetails extends Project {
   project_setup_checklist: ProjectSetupChecklist
   project_roles: ProjectRoleConfig[]
+  project_role_templates: ProjectRoleTemplate[]
   project_locations: ProjectLocation[]
+  team_assignments?: TeamAssignment[]
   // Additional computed properties
   setup_progress: number // 0-100 percentage
   is_setup_complete: boolean

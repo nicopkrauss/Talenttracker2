@@ -154,14 +154,22 @@
   - _Follow wireframe: project-details-wireframe.md - Info Tab section_
   - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5_
 
-- [ ] 18. Create Roles & Team tab with assignment interface
-  - Build role definition table with base pay and time type configuration
-  - Create team assignment grid with staff directory and role drop-zones
-  - Implement drag-and-drop staff assignment functionality
-  - Add inline pay rate and shift overrides
-  - Create "Finalize Team Assignments" button and checklist integration
+- [x] 18. Create Roles & Team tab with assignment interface
+
+
+
+
+
+  - Build role definition table showing Supervisor ($300/day, Daily), Escort ($20/hr, Hourly), and Talent Logistics Coordinator ($350/day, Daily) with base pay, time type, and assignment counts
+  - Create filterable staff list with multiple filter options (name search, role, location, status, experience level)
+  - Add bulk selection with "Select All" checkbox and bulk assignment to roles
+  - Implement inline pay rate overrides and schedule notes for individual assignments
+  - Create assignment summary showing role counts, total staff assigned, and estimated daily cost
+  - Add "Finalize Team Assignments" button and checklist integration
+  - Create API routes for team assignments (GET/POST/PUT /api/projects/[id]/team-assignments)
+  - Create API route for available staff (GET /api/projects/[id]/available-staff)
   - _Follow wireframe: project-details-wireframe.md - Roles & Team Tab section_
-  - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5_
+  - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7, 11.8_
 
 - [ ] 19. Build Talent Roster tab with import and management
   - Create CSV import functionality for talent data
@@ -182,23 +190,24 @@
   - _Requirements: 12.3, 12.4, 12.5_
 
 - [ ] 21. Build Settings tab with project configuration
-  - Add default break duration setting
-  - Create payroll export configuration options
-  - Implement notification rules management
-  - Build audit log display showing project changes
-  - Add attachments and notes functionality
+  - Connect existing UI to backend API for default break duration setting
+  - Implement functional payroll export configuration options
+  - Create notification rules management interface and backend integration
+  - Connect audit log display to real project changes data
+  - Implement functional attachments and notes with file upload
   - _Follow wireframe: project-details-wireframe.md - Settings Tab section_
   - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5_
 
-- [ ] 22. Create operations mode dashboard for active projects
-  - Build live KPIs section with staff and talent check-in status
-  - Create talent locations board with status tracking
-  - Implement team status board with shift duration alerts
-  - Add supervisor checkout controls with multi-select functionality
+- [ ] 22. Complete operations mode dashboard for active projects
+  - Fix Supabase client import issues and complete live KPIs section implementation
+  - Complete talent locations board with real-time status tracking and quick-move actions
+  - Finish team status board with shift duration alerts and color-coded warnings
+  - Implement functional supervisor checkout controls with multi-select functionality
+  - Add real-time data subscriptions and WebSocket connections for live updates
   - _Follow wireframe: project-details-wireframe.md - Operations Mode section_
   - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5_
 
-- [ ] 23. Add project location management API routes
+- [x] 23. Add project location management API routes
   - Create GET /api/projects/[id]/locations route for fetching project locations
   - Create POST /api/projects/[id]/locations route for adding new locations
   - Create PUT /api/projects/[id]/locations/[locationId] route for updating locations
@@ -214,7 +223,39 @@
   - Create archived projects filtering and management interface
   - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
 
-- [ ] 25. Enhance role-based access with team assignment filtering
+- [ ] 25. Complete team assignments API implementation
+  - Create GET /api/projects/[id]/team-assignments route for fetching project team assignments
+  - Create POST /api/projects/[id]/team-assignments route for creating team assignments
+  - Create PUT /api/projects/[id]/team-assignments/[assignmentId] route for updating assignments
+  - Create DELETE /api/projects/[id]/team-assignments/[assignmentId] route for removing assignments
+  - Create POST /api/projects/[id]/team-assignments/complete route for marking checklist complete
+  - Create GET /api/projects/[id]/available-staff route for fetching available staff for assignment
+  - _Requirements: 11.2, 11.4, 11.5, 11.7, 11.8_
+
+- [ ] 26. Add talent roster and assignments API routes
+  - Create GET /api/projects/[id]/talent-roster route for fetching project talent
+  - Create POST /api/projects/[id]/talent-roster route for adding talent (manual entry)
+  - Create POST /api/projects/[id]/talent-roster/import route for CSV import
+  - Create PUT /api/projects/[id]/talent-roster/[talentId] route for updating talent
+  - Create DELETE /api/projects/[id]/talent-roster/[talentId] route for removing talent
+  - Create POST /api/projects/[id]/talent-roster/complete route for marking roster complete
+  - Create GET /api/projects/[id]/talent-assignments route for fetching talent-escort assignments
+  - Create POST /api/projects/[id]/talent-assignments route for creating assignments
+  - Create PUT /api/projects/[id]/talent-assignments/[assignmentId] route for updating assignments
+  - Create POST /api/projects/[id]/talent-assignments/randomize route for randomizing remaining assignments
+  - Create DELETE /api/projects/[id]/talent-assignments/clear route for clearing all assignments
+  - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5_
+
+- [ ] 27. Add project settings and audit API routes
+  - Create GET /api/projects/[id]/settings route for fetching project configuration
+  - Create PUT /api/projects/[id]/settings route for updating project settings
+  - Create GET /api/projects/[id]/audit-log route for fetching project audit history
+  - Create POST /api/projects/[id]/attachments route for uploading project files
+  - Create GET /api/projects/[id]/attachments route for fetching project attachments
+  - Create DELETE /api/projects/[id]/attachments/[attachmentId] route for removing attachments
+  - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5_
+
+- [ ] 28. Enhance role-based access with team assignment filtering
   - Implement project assignment filtering for non-admin users
   - Add "View My Timecard" button for inactive projects with user timecards
   - Create middleware for project access validation based on assignments

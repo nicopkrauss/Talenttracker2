@@ -238,84 +238,55 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [])
 
   /**
-   * Sign up new user and create profile
+   * Sign up new user using the new registration API
    */
   const signUp = useCallback(async (data: RegistrationData) => {
     try {
       setLoading(true)
 
-      // Normalize and validate email
-      const normalizedEmail = data.email.trim().toLowerCase()
-
-      // Create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: normalizedEmail,
-        password: data.password,
+      // Use the new registration API endpoint
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
       })
 
-      if (authError) {
-        const error = handleAuthError(authError)
-        const errorMessage = getUserFriendlyMessage(error)
-        
-        // Only log system errors, not user errors like duplicate email
-        const userErrors = ['EMAIL_EXISTS', 'PASSWORD_ERROR', 'VALIDATION_ERROR']
-        if (!userErrors.includes(error.code)) {
-          logError(error, { action: 'signUp', email: normalizedEmail })
-          console.error('Sign up system error:', errorMessage, authError)
+      const result = await response.json()
+
+      if (!response.ok) {
+        // Handle API errors
+        if (result.details) {
+          // Check if details is an array (validation errors) or string (auth errors)
+          if (Array.isArray(result.details)) {
+            const fieldErrors = result.details.map((detail: any) => `${detail.field}: ${detail.message}`).join(', ')
+            throw new Error(`Registration failed: ${fieldErrors}`)
+          } else {
+            // Single error message
+            throw new Error(result.details)
+          }
         }
-        
-        throw new Error(errorMessage)
+        throw new Error(result.error || 'Registration failed. Please try again.')
       }
 
-      if (!authData.user) {
-        throw new Error('Failed to create user account. Please try again.')
-      }
-
-      // Create user profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id,
-          full_name: `${data.firstName.trim()} ${data.lastName.trim()}`,
-          email: normalizedEmail,
-          phone: data.phone?.trim(),
-          city: data.city?.trim(),
-          state: data.state?.trim(),
-          status: 'pending', // New users start as pending
-          role: null, // Role will be assigned by admin during approval
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-
-      if (profileError) {
-        console.error('Failed to create user profile:', profileError)
-        console.error('Profile error details:', {
-          message: profileError.message,
-          code: profileError.code,
-          details: profileError.details,
-          hint: profileError.hint
-        })
-        console.error('Profile data attempted:', {
-          id: authData.user.id,
-          full_name: `${data.firstName.trim()} ${data.lastName.trim()}`,
-          email: normalizedEmail,
-          phone: data.phone?.trim(),
-          city: data.city?.trim(),
-          state: data.state?.trim(),
-          status: 'pending',
-          role: null
-        })
-        
-        // If profile creation fails, we should ideally clean up the auth user
-        // For now, we'll throw an error with guidance
-        throw new Error(`Account created but profile setup failed: ${profileError.message || 'Unknown error'}. Please contact support.`)
-      }
-
-      // Profile will be fetched automatically by auth state change handler
+      // Registration successful - user is now pending approval
+      console.log('Registration successful:', result.message)
+      
+      // Don't automatically sign in - user needs approval first
+      // The registration API creates the auth user and profile
+      
     } catch (error) {
       setLoading(false)
+      
+      // Handle network errors
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Network error. Please check your connection and try again.')
+      }
+      
       // Re-throw with user-friendly message if it's not already handled
       if (error instanceof Error) {
+        console.error('Registration system error:', error.message)
         throw error
       }
       throw new Error('An unexpected error occurred during registration. Please try again.')

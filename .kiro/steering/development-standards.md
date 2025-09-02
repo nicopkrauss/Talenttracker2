@@ -14,23 +14,27 @@ inclusion: always
 - **State Management**: React Context + hooks for local state, Zustand for global state
 
 ### Backend & Database
-- **Database**: Supabase PostgreSQL with Row Level Security (RLS)
-- **ORM**: Prisma for type-safe database operations and schema management
-- **Authentication**: Supabase Auth with role-based access control
-- **API**: Supabase client with TypeScript types + Prisma Client
-- **Real-time**: Supabase Realtime for live updates
+- **Database**: Supabase PostgreSQL with Row Level Security (RLS) and custom triggers
+- **Schema Management**: Prisma for type generation and schema introspection
+- **Authentication**: Supabase Auth with server-side validation and automatic profile creation
+- **API**: Supabase client with TypeScript types and comprehensive error handling
+- **Real-time**: Supabase Realtime for live talent tracking and project updates
+- **Notifications**: Email notification system with delivery tracking
 - **File Storage**: Supabase Storage for profile pictures and documents
 
 ## Code Organization Patterns
 
 ### File Structure
 ```
-/app - Next.js app router pages
-/components - Reusable UI components organized by domain
-/lib - Utility functions, database helpers, auth logic
-/hooks - Custom React hooks
-/types - TypeScript type definitions
-/middleware.ts - Auth and routing middleware
+/app - Next.js app router pages and API routes
+/components - Reusable UI components organized by domain (auth, projects, talent, navigation)
+/lib - Utility functions, database helpers, auth logic, role utilities
+/hooks - Custom React hooks (use-auth, use-navigation, use-form-validation)
+/scripts - Database migration and utility scripts
+/migrations - SQL migration files for database schema changes
+/docs - Technical documentation and guides
+/.kiro/steering - Project steering documentation and standards
+/middleware.ts - Comprehensive auth and routing middleware with role-based protection
 ```
 
 ### Component Architecture
@@ -42,10 +46,11 @@ inclusion: always
 ## Security & Data Protection
 
 ### Authentication Flow
-- Public registration with admin approval workflow
-- JWT tokens with role-based claims
-- Protected routes with middleware validation
-- Session management with automatic refresh
+- Public registration with role selection and admin approval workflow
+- Supabase Auth with server-side user validation via `getUser()`
+- Comprehensive middleware with role-based route protection
+- Automatic profile creation via database triggers
+- Session management with automatic refresh and proper error handling
 
 ### Data Security
 - All PII encrypted at rest and in transit

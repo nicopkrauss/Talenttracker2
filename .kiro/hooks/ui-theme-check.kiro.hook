@@ -4,7 +4,7 @@
   "description": "Automatically checks that both light and dark mode colors have been properly set after any UI change or implementation",
   "version": "1",
   "when": {
-    "type": "fileEdited",
+    "type": "userTriggered",
     "patterns": [
       "components/**/*.tsx",
       "app/**/*.tsx",

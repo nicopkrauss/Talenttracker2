@@ -37,7 +37,8 @@ const PROTECTED_ROUTES = [
 // API routes that are public (no authentication required)
 const PUBLIC_API_ROUTES = [
   '/api/health',
-  '/api/auth/profile' // Allow profile fetching during authentication
+  '/api/auth/profile', // Allow profile fetching during authentication
+  '/api/auth/register' // Allow user registration
 ]
 
 // API routes that require authentication
@@ -223,6 +224,11 @@ export async function middleware(request: NextRequest) {
     }
   )
 
+  // Handle public API routes FIRST (before authentication check)
+  if (pathname.startsWith('/api/') && isPublicApiRoute(pathname)) {
+    return response
+  }
+
   try {
     // Get authenticated user from Supabase (more secure than getSession)
     const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -270,10 +276,7 @@ export async function middleware(request: NextRequest) {
       return response
     }
 
-    // Handle public API routes (no authentication required)
-    if (pathname.startsWith('/api/') && isPublicApiRoute(pathname)) {
-      return response
-    }
+    // Public API routes are already handled above
 
     // Check if user is authenticated for protected routes
     if (!user) {

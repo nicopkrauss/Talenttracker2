@@ -7,10 +7,11 @@ inclusion: always
 ## Supabase Client Configuration
 
 ### Authentication Integration
-- Use Supabase Auth with custom claims for role-based access
-- Implement middleware for route protection based on project roles
+- Use Supabase Auth with server-side user validation via `getUser()`
+- Implement comprehensive middleware for route protection based on system and project roles
 - Handle session refresh automatically with proper error boundaries
-- Store user context in React Context for global access
+- Store user context in React Context with role-based navigation
+- Automatic profile creation via database triggers on user registration
 
 ### Database Operations
 ```typescript
@@ -29,29 +30,66 @@ const { data, error } = await supabase
 /app/api/
 ├── auth/
 │   ├── register/route.ts
-│   └── approve-users/route.ts
+│   └── profile/route.ts
 ├── projects/
-│   ├── [id]/
-│   │   ├── talent/route.ts
-│   │   └── timecards/route.ts
-├── notifications/
-│   └── send-email/route.ts
-└── time-tracking/
-    ├── check-in/route.ts
-    └── submit-timecard/route.ts
+│   ├── route.ts (GET: list, POST: create)
+│   └── [id]/
+│       ├── route.ts (GET: details, PUT: update)
+│       ├── activate/route.ts
+│       ├── checklist/route.ts
+│       ├── role-templates/
+│       │   ├── route.ts
+│       │   └── [templateId]/route.ts
+│       ├── team-assignments/
+│       │   ├── route.ts
+│       │   └── [assignmentId]/route.ts
+│       ├── available-staff/route.ts
+│       ├── locations/route.ts
+│       ├── statistics/route.ts
+│       ├── live-status/route.ts
+│       └── staff-status/route.ts
+└── notifications/
+    └── send-email/route.ts
 ```
 
 ### Error Handling Standards
 ```typescript
-// Consistent error response format
+// Consistent error response format with detailed error codes
 export async function POST(request: Request) {
   try {
+    // Get authenticated user from middleware headers or Supabase
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized', code: 'UNAUTHORIZED' },
+        { status: 401 }
+      )
+    }
+
+    // Validate request data with Zod
+    const validationResult = schema.safeParse(await request.json())
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { 
+          error: 'Validation failed',
+          code: 'VALIDATION_ERROR',
+          details: validationResult.error.flatten().fieldErrors
+        },
+        { status: 400 }
+      )
+    }
+
     // API logic
     return NextResponse.json({ data: result });
   } catch (error) {
     console.error('API Error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', code: 'INTERNAL_ERROR' },
+      { 
+        error: 'Internal server error', 
+        code: 'INTERNAL_ERROR',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }
@@ -92,24 +130,61 @@ const subscription = supabase
 - Implement optimistic updates for time tracking actions
 - Cache frequently accessed data (user profile, project settings)
 
-### Hybrid Approach
+### Hybrid Approach with Authentication
 ```typescript
-// Server component for initial data
-export default async function TalentPage({ params }: { params: { id: string } }) {
-  const initialTalent = await getTalentRoster(params.id);
+// Server component with authentication check
+export default async function ProjectPage({ params }: { params: { id: string } }) {
+  const cookieStore = await cookies()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+      },
+    }
+  )
+
+  // Server-side authentication and data fetching
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    redirect('/login')
+  }
+
+  const initialProject = await getProjectDetails(params.id, supabase)
   
   return (
-    <TalentManager 
-      initialData={initialTalent}
+    <ProjectDetailLayout 
       projectId={params.id}
+      initialData={initialProject}
     />
-  );
+  )
 }
 
-// Client component for real-time updates
-function TalentManager({ initialData, projectId }: Props) {
-  const { data: talent } = useTalentRoster(projectId, { initialData });
+// Client component with real-time updates and role-based features
+function ProjectDetailLayout({ projectId, initialData }: Props) {
+  const { userProfile } = useAuth()
+  const [project, setProject] = useState(initialData)
+  
+  // Role-based feature access
+  const canEditProject = userProfile?.role ? hasAdminAccess(userProfile.role) : false
+  
   // Real-time subscription logic
+  useEffect(() => {
+    const subscription = supabase
+      .channel(`project-${projectId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'projects',
+        filter: `id=eq.${projectId}`
+      }, handleProjectUpdate)
+      .subscribe()
+
+    return () => subscription.unsubscribe()
+  }, [projectId])
 }
 ```
 

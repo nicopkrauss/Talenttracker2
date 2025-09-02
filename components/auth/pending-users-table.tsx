@@ -6,26 +6,35 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from "@/components/ui/table"
-import { 
-  Clock, 
-  UserCheck, 
-  Users, 
-  Mail, 
-  Phone, 
+import {
+  Clock,
+  UserCheck,
+  Mail,
+  Phone,
   MapPin,
-  Calendar
+  Calendar,
+  Briefcase,
+  Plane
 } from "lucide-react"
 import { ApprovalConfirmationDialog } from "./approval-confirmation-dialog"
 import { useUserApproval } from "./use-user-approval"
-import type { PendingUser } from "@/lib/types"
+import type { PendingUser, SystemRole } from "@/lib/types"
+import { REGISTRATION_ROLE_LABELS } from "@/lib/types"
 
 interface PendingUsersTableProps {
   users: PendingUser[]
@@ -33,15 +42,16 @@ interface PendingUsersTableProps {
   loading?: boolean
 }
 
-export function PendingUsersTable({ 
-  users, 
+export function PendingUsersTable({
+  users,
   onUsersApproved,
-  loading = false 
+  loading = false
 }: PendingUsersTableProps) {
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set())
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [usersToApprove, setUsersToApprove] = useState<PendingUser[]>([])
-  
+  const [updatingRole, setUpdatingRole] = useState<string | null>(null)
+
   const { approveUsers, loading: approving } = useUserApproval()
 
   // Handle individual user selection
@@ -67,7 +77,7 @@ export function PendingUsersTable({
   // Handle bulk approval
   const handleBulkApproval = () => {
     if (selectedUsers.size === 0) return
-    
+
     const selectedUsersList = users.filter(user => selectedUsers.has(user.id))
     setUsersToApprove(selectedUsersList)
     setShowConfirmDialog(true)
@@ -79,17 +89,46 @@ export function PendingUsersTable({
     setShowConfirmDialog(true)
   }
 
+  // Handle role update
+  const handleRoleUpdate = async (userId: string, newRole: Exclude<SystemRole, 'admin'>) => {
+    setUpdatingRole(userId)
+    try {
+      const response = await fetch(`/api/auth/update-registration-role`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          role: newRole
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update role')
+      }
+
+      // Notify parent to refresh data
+      onUsersApproved?.()
+    } catch (error) {
+      console.error('Failed to update role:', error)
+      // You might want to show a toast notification here
+    } finally {
+      setUpdatingRole(null)
+    }
+  }
+
   // Confirm approval action
   const handleConfirmApproval = async () => {
     try {
       const userIds = usersToApprove.map(user => user.id)
       await approveUsers(userIds)
-      
+
       // Clear selection and close dialog
       setSelectedUsers(new Set())
       setShowConfirmDialog(false)
       setUsersToApprove([])
-      
+
       // Notify parent component to refresh data
       onUsersApproved?.()
     } catch (error) {
@@ -123,13 +162,13 @@ export function PendingUsersTable({
             <Clock className="w-5 h-5 mr-2" />
             Pending Approvals ({users.length})
           </CardTitle>
-          
+
           {selectedUsers.size > 0 && (
             <div className="flex items-center space-x-2">
               <Badge variant="secondary">
                 {selectedUsers.size} selected
               </Badge>
-              <Button 
+              <Button
                 onClick={handleBulkApproval}
                 disabled={approving || loading}
                 size="sm"
@@ -141,7 +180,7 @@ export function PendingUsersTable({
           )}
         </div>
       </CardHeader>
-      
+
       <CardContent>
         <div className="rounded-md border">
           <Table>
@@ -153,11 +192,14 @@ export function PendingUsersTable({
                     onCheckedChange={handleSelectAll}
                     aria-label="Select all users"
                     ref={(el) => {
-                      if (el) el.indeterminate = isPartiallySelected
+                      if (el && 'indeterminate' in el) {
+                        (el as any).indeterminate = isPartiallySelected
+                      }
                     }}
                   />
                 </TableHead>
                 <TableHead>User</TableHead>
+                <TableHead>Role</TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>Registration Date</TableHead>
@@ -170,13 +212,13 @@ export function PendingUsersTable({
                   <TableCell>
                     <Checkbox
                       checked={selectedUsers.has(user.id)}
-                      onCheckedChange={(checked) => 
+                      onCheckedChange={(checked) =>
                         handleUserSelect(user.id, checked as boolean)
                       }
                       aria-label={`Select ${user.full_name}`}
                     />
                   </TableCell>
-                  
+
                   <TableCell>
                     <div className="flex items-center space-x-3">
                       <Avatar className="h-8 w-8">
@@ -193,32 +235,71 @@ export function PendingUsersTable({
                       </div>
                     </div>
                   </TableCell>
-                  
+
                   <TableCell>
-                    {user.phone && (
-                      <div className="text-sm flex items-center">
-                        <Phone className="w-3 h-3 mr-1" />
-                        {user.phone}
-                      </div>
-                    )}
+                    <div className="space-y-1">
+                      <Select
+                        value={user.role || ''}
+                        onValueChange={(value) => handleRoleUpdate(user.id, value as Exclude<SystemRole, 'admin'>)}
+                        disabled={updatingRole === user.id}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select role">
+                            <div className="flex items-center">
+                              <Briefcase className="w-3 h-3 mr-1" />
+                              {user.role && user.role !== 'admin' ? REGISTRATION_ROLE_LABELS[user.role as Exclude<SystemRole, 'admin'>] : 'Select role'}
+                            </div>
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(REGISTRATION_ROLE_LABELS).map(([value, label]) => (
+                            <SelectItem key={value} value={value}>
+                              {label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {/* Show additional info for flight-eligible roles */}
+                      {user.role && ['in_house', 'supervisor', 'talent_logistics_coordinator'].includes(user.role) && user.willing_to_fly && (
+                        <div className="flex items-center text-xs text-muted-foreground">
+                          <Plane className="w-3 h-3 mr-1" />
+                          Willing to fly
+                        </div>
+                      )}
+                    </div>
                   </TableCell>
-                  
+
                   <TableCell>
-                    {(user.city || user.state) && (
-                      <div className="text-sm flex items-center">
-                        <MapPin className="w-3 h-3 mr-1" />
-                        {user.city}{user.city && user.state ? ', ' : ''}{user.state}
-                      </div>
-                    )}
+                    <div className="space-y-1">
+                      {user.phone && (
+                        <div className="text-sm flex items-center">
+                          <Phone className="w-3 h-3 mr-1" />
+                          {user.phone}
+                        </div>
+                      )}
+                    </div>
                   </TableCell>
-                  
+
+                  <TableCell>
+                    <div className="space-y-1">
+                      {user.nearest_major_city && (
+                        <div className="text-sm flex items-center">
+                          <MapPin className="w-3 h-3 mr-1" />
+                          {user.nearest_major_city}
+                        </div>
+                      )}
+
+                    </div>
+                  </TableCell>
+
                   <TableCell>
                     <div className="text-sm flex items-center">
                       <Calendar className="w-3 h-3 mr-1" />
                       {new Date(user.created_at).toLocaleDateString()}
                     </div>
                   </TableCell>
-                  
+
                   <TableCell className="text-right">
                     <Button
                       size="sm"
@@ -234,7 +315,7 @@ export function PendingUsersTable({
             </TableBody>
           </Table>
         </div>
-        
+
         {/* Bulk Actions Footer */}
         {users.length > 1 && (
           <div className="mt-4 p-4 bg-muted rounded-lg">
@@ -264,7 +345,7 @@ export function PendingUsersTable({
           </div>
         )}
       </CardContent>
-      
+
       {/* Approval Confirmation Dialog */}
       <ApprovalConfirmationDialog
         open={showConfirmDialog}

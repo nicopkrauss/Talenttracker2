@@ -10,7 +10,9 @@ inclusion: always
 - **Admin/In-House**: Projects | Team | Talent | Timecards | Profile
 - **Supervisor/TLC**: Talent | Team | Timecards | Profile  
 - **Talent Escort**: Talent | Timecards | Profile
-- Icons: Use SF Symbols style (folder.fill, person.3.fill, star.fill, list.bullet.clipboard.fill, person.crop.circle.fill)
+- **Dynamic Role-Based**: Navigation items filtered by effective user role (system + project roles)
+- **Active State**: Visual indicators with primary color highlighting and background changes
+- **Touch Targets**: Minimum 44px touch targets with proper spacing for mobile interaction
 
 ### Desktop Navigation (Top Bar)
 - Horizontal navigation with same sections based on role
@@ -26,8 +28,10 @@ inclusion: always
 
 ### State Management Indicators
 - **Time Tracking**: Yellow (approaching limits) / Red (over limits) indicators
-- **Project Status**: Prep → Active lifecycle with visual checklist
-- **User Status**: Pending Approval → Active with clear messaging
+- **Project Status**: Prep → Active → Archived lifecycle with visual checklist and progress tracking
+- **User Status**: Pending Approval → Active with clear messaging and role-based access
+- **Setup Progress**: Visual checklist with completion indicators for project setup phases
+- **Real-time Updates**: Live status indicators for talent location and staff check-in status
 
 ### Modal Patterns
 - **Confirmation Modals**: Always show counts and warnings

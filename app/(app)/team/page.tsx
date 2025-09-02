@@ -41,10 +41,10 @@ export default function TeamPage() {
 
   const fetchTeamData = async () => {
     try {
-      // Fetch pending users
+      // Fetch pending users with registration fields
       const { data: pendingData, error: pendingError } = await supabase
         .from("profiles")
-        .select("id, full_name, email, phone, city, state, created_at")
+        .select("id, full_name, email, phone, role, nearest_major_city, willing_to_fly, created_at")
         .eq("status", "pending")
         .order("created_at", { ascending: false })
 
@@ -171,9 +171,9 @@ export default function TeamPage() {
                       </p>
                     )}
                     
-                    {(user.city || user.state) && (
+                    {user.nearest_major_city && (
                       <p className="text-sm text-muted-foreground mb-3">
-                        <span className="font-medium">Location:</span> {user.city}{user.city && user.state ? ', ' : ''}{user.state}
+                        <span className="font-medium">Location:</span> {user.nearest_major_city}
                       </p>
                     )}
                     

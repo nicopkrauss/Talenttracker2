@@ -17,10 +17,11 @@ inclusion: always
 4. **Modification Rules**: Changes to finalized items untick checklist but don't revert status
 
 ### Project Setup Requirements
-- **Locations**: Default to House, Holding, Stage (customizable)
-- **Roles & Pay**: Base pay rates with individual overrides
-- **Team Assignment**: Drag-and-drop interface with "Randomize Remaining" option
-- **Talent Import**: CSV import or manual entry with roster finalization
+- **Role Templates**: Define roles with display names, pay rates, and time types (hourly/daily)
+- **Locations**: Default to House, Holding, Stage (customizable with colors and sort order)
+- **Team Assignments**: Staff assignment with role-specific pay rate overrides
+- **Talent Roster**: Enhanced talent profiles with representative information
+- **Setup Checklist**: Automated tracking of completion status for each setup phase
 
 ## Time Tracking State Machine
 
@@ -43,11 +44,14 @@ All time-tracking roles (Escort, Supervisor, TLC) follow the same pattern:
 ## User Approval & Onboarding
 
 ### Registration Workflow
-1. **Public Sign-up**: Full name, email, password, phone, location
-2. **Terms Agreement**: Must check "I agree to Terms of Service and Privacy Policy"
-3. **Pending State**: Full-screen message, no app access
-4. **Admin Queue**: Bulk approval interface for administrators
-5. **Activation**: Notification sent, account becomes active
+1. **Role Selection**: User selects their hired position (Talent Escort, TLC, Supervisor, In-House)
+2. **Registration Form**: Full name, email, password, phone, nearest major city, flight willingness
+3. **Terms Agreement**: Must check "I agree to Terms of Service and Privacy Policy"
+4. **Auto-Profile Creation**: Database trigger creates profile with 'pending' status
+5. **Admin Notification**: Email sent to admins about new registration
+6. **Pending State**: Full-screen message, no app access until approved
+7. **Admin Approval**: Bulk approval interface for administrators
+8. **Activation**: Status changed to 'active', notification sent, account becomes operational
 
 ### Account States
 - **Pending**: Awaiting admin approval, limited access

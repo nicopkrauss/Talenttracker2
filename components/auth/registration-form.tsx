@@ -4,11 +4,18 @@ import * as React from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
-import { Eye, EyeOff, Loader2 } from "lucide-react"
+import { Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Form,
   FormControl,
@@ -17,7 +24,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
-import { registrationSchema, type RegistrationInput } from "@/lib/types"
+import { 
+  registrationSchema, 
+  type RegistrationInput, 
+  REGISTRATION_ROLE_LABELS,
+  MAJOR_CITIES
+} from "@/lib/types"
 import { PasswordStrengthIndicator } from "./password-strength-indicator"
 import { FormErrorDisplay, type FormError, parseAuthError } from "./form-error-display"
 import { cn } from "@/lib/utils"
@@ -35,24 +47,30 @@ export function RegistrationForm({
 }: RegistrationFormProps) {
   const [showPassword, setShowPassword] = React.useState(false)
   const [formError, setFormError] = React.useState<FormError | null>(null)
+  const [currentStep, setCurrentStep] = React.useState<'role-selection' | 'form'>('role-selection')
 
   const form = useForm<RegistrationInput>({
     resolver: zodResolver(registrationSchema),
     defaultValues: {
+      role: undefined,
       firstName: "",
       lastName: "",
       email: "",
       password: "",
       phone: "",
-      city: "",
-      state: "",
+      nearestMajorCity: undefined,
+      willingToFly: undefined,
       agreeToTerms: false,
     },
     mode: "onSubmit", // Only validate on form submission
   })
 
-  // Watch password for strength indicator
+  // Watch password for strength indicator and role for conditional fields
   const password = form.watch("password")
+  const selectedRole = form.watch("role")
+  
+  // Determine if flight willingness should be shown (covered roles only)
+  const showFlightWillingness = selectedRole && ['in_house', 'supervisor', 'talent_logistics_coordinator'].includes(selectedRole)
 
   // Parse and set form error when error prop changes
   React.useEffect(() => {
@@ -91,19 +109,155 @@ export function RegistrationForm({
     setShowPassword(!showPassword)
   }
 
+  const handleRoleSelect = (role: string) => {
+    form.setValue('role', role as any)
+    setCurrentStep('form')
+  }
+
+  const handleBackToRoleSelection = () => {
+    setCurrentStep('role-selection')
+  }
+
+  // Role Selection Step
+  if (currentStep === 'role-selection') {
+    return (
+      <div className="space-y-6">
+        <div className="space-y-2 text-center">
+          <h1 className={cn(
+            "text-2xl font-bold tracking-tight text-foreground",
+            "sm:text-3xl",
+            "transition-all duration-200 ease-in-out"
+          )}>
+            Create your account
+          </h1>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            What position have you been hired for?
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          {/* Talent Escort - First */}
+          <Button
+            type="button"
+            variant="outline"
+            className={cn(
+              "w-full h-12 justify-center text-center font-medium",
+              "transition-all duration-200 ease-in-out",
+              "hover:!bg-primary hover:!text-primary-foreground hover:!border-primary",
+              "focus:ring-2 focus:ring-primary/20 focus:ring-offset-2",
+              "disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
+            onClick={() => handleRoleSelect('talent_escort')}
+            disabled={isLoading}
+          >
+            {REGISTRATION_ROLE_LABELS.talent_escort}
+          </Button>
+          
+          {/* Talent Logistics Coordinator - Second */}
+          <Button
+            type="button"
+            variant="outline"
+            className={cn(
+              "w-full h-12 justify-center text-center font-medium",
+              "transition-all duration-200 ease-in-out",
+              "hover:!bg-primary hover:!text-primary-foreground hover:!border-primary",
+              "focus:ring-2 focus:ring-primary/20 focus:ring-offset-2",
+              "disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
+            onClick={() => handleRoleSelect('talent_logistics_coordinator')}
+            disabled={isLoading}
+          >
+            {REGISTRATION_ROLE_LABELS.talent_logistics_coordinator}
+          </Button>
+          
+          {/* Supervisor - Third */}
+          <Button
+            type="button"
+            variant="outline"
+            className={cn(
+              "w-full h-12 justify-center text-center font-medium",
+              "transition-all duration-200 ease-in-out",
+              "hover:!bg-primary hover:!text-primary-foreground hover:!border-primary",
+              "focus:ring-2 focus:ring-primary/20 focus:ring-offset-2",
+              "disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
+            onClick={() => handleRoleSelect('supervisor')}
+            disabled={isLoading}
+          >
+            {REGISTRATION_ROLE_LABELS.supervisor}
+          </Button>
+          
+          {/* In-House - Fourth */}
+          <Button
+            type="button"
+            variant="outline"
+            className={cn(
+              "w-full h-12 justify-center text-center font-medium",
+              "transition-all duration-200 ease-in-out",
+              "hover:!bg-primary hover:!text-primary-foreground hover:!border-primary",
+              "focus:ring-2 focus:ring-primary/20 focus:ring-offset-2",
+              "disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
+            onClick={() => handleRoleSelect('in_house')}
+            disabled={isLoading}
+          >
+            {REGISTRATION_ROLE_LABELS.in_house}
+          </Button>
+        </div>
+
+        {/* Login Link */}
+        <div className="text-center text-sm pt-4">
+          <span className="text-muted-foreground">Already have an account? </span>
+          <Link
+            href="/login"
+            className={cn(
+              "text-primary font-semibold underline-offset-4",
+              "hover:underline hover:text-primary/80",
+              "transition-colors duration-200 ease-in-out",
+              "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:rounded-sm"
+            )}
+          >
+            Sign in
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  // Form Step
   return (
     <div className="space-y-6">
-      <div className="space-y-2 text-center">
-        <h1 className={cn(
-          "text-2xl font-bold tracking-tight text-foreground",
-          "sm:text-3xl",
-          "transition-all duration-200 ease-in-out"
-        )}>
-          Create your account
-        </h1>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          Enter your information to get started with Talent Tracker
-        </p>
+      <div className="space-y-2">
+        {/* Back Button */}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className={cn(
+            "mb-2 p-2 h-auto text-muted-foreground hover:text-foreground",
+            "transition-colors duration-200 ease-in-out"
+          )}
+          onClick={handleBackToRoleSelection}
+          disabled={isLoading}
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to role selection
+        </Button>
+        
+        <div className="text-center">
+          <h1 className={cn(
+            "text-2xl font-bold tracking-tight text-foreground",
+            "sm:text-3xl",
+            "transition-all duration-200 ease-in-out"
+          )}>
+            Complete your registration
+          </h1>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Registering as: <span className="font-semibold text-foreground">
+              {selectedRole ? REGISTRATION_ROLE_LABELS[selectedRole as keyof typeof REGISTRATION_ROLE_LABELS] : ''}
+            </span>
+          </p>
+        </div>
       </div>
 
       <Form {...form}>
@@ -114,6 +268,7 @@ export function RegistrationForm({
             onRetry={formError?.retryable ? handleRetry : undefined}
             className="animate-in slide-in-from-top-2 duration-300"
           />
+
           {/* Name Fields with enhanced styling */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <FormField
@@ -287,61 +442,69 @@ export function RegistrationForm({
             )}
           />
 
-          {/* Location Fields with enhanced styling */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          {/* Nearest Major City Field */}
+          <FormField
+            control={form.control}
+            name="nearestMajorCity"
+            render={({ field }) => (
+              <FormItem className="space-y-2">
+                <FormLabel className="text-sm font-semibold text-foreground">
+                  Nearest Major City
+                </FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                  <FormControl>
+                    <SelectTrigger className={cn(
+                      "h-12 sm:h-11 transition-all duration-200 ease-in-out",
+                      "focus:ring-2 focus:ring-primary/20 focus:border-primary",
+                      "disabled:opacity-50 disabled:cursor-not-allowed",
+                      "text-base sm:text-sm", // Prevent zoom on iOS
+                      isLoading && "animate-pulse"
+                    )}>
+                      <SelectValue placeholder="Select your nearest major city" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {MAJOR_CITIES.map((city) => (
+                      <SelectItem key={city} value={city}>
+                        {city}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage className="text-xs animate-in slide-in-from-left-2 duration-200" />
+              </FormItem>
+            )}
+          />
+
+          {/* Flight Willingness - Only for covered roles */}
+          {showFlightWillingness && (
             <FormField
               control={form.control}
-              name="city"
+              name="willingToFly"
               render={({ field }) => (
-                <FormItem className="space-y-2">
-                  <FormLabel className="text-sm font-semibold text-foreground">
-                    City
-                  </FormLabel>
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                   <FormControl>
-                    <Input
-                      placeholder="New York"
+                    <Checkbox
+                      checked={field.value || false}
+                      onCheckedChange={field.onChange}
                       disabled={isLoading}
-                      className={cn(
-                        "h-12 sm:h-11 transition-all duration-200 ease-in-out",
-                        "focus:ring-2 focus:ring-primary/20 focus:border-primary",
-                        "disabled:opacity-50 disabled:cursor-not-allowed",
-                        "text-base sm:text-sm", // Prevent zoom on iOS
-                        isLoading && "animate-pulse"
-                      )}
-                      {...field}
                     />
                   </FormControl>
-                  <FormMessage className="text-xs animate-in slide-in-from-left-2 duration-200" />
+                  <div className="space-y-1 leading-none">
+                    <FormLabel className="text-sm font-semibold text-foreground">
+                      I am willing to fly for projects (flights covered)
+                    </FormLabel>
+                    <p className="text-xs text-muted-foreground">
+                      Check this if you're available for projects that require air travel
+                    </p>
+                    <FormMessage />
+                  </div>
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="state"
-              render={({ field }) => (
-                <FormItem className="space-y-2">
-                  <FormLabel className="text-sm font-semibold text-foreground">
-                    State
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="NY"
-                      disabled={isLoading}
-                      className={cn(
-                        "h-12 sm:h-11 transition-all duration-200 ease-in-out",
-                        "focus:ring-2 focus:ring-primary/20 focus:border-primary",
-                        "disabled:opacity-50 disabled:cursor-not-allowed",
-                        "text-base sm:text-sm", // Prevent zoom on iOS
-                        isLoading && "animate-pulse"
-                      )}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage className="text-xs animate-in slide-in-from-left-2 duration-200" />
-                </FormItem>
-              )}
-            />
-          </div>
+          )}
+
+
 
           {/* Terms and Conditions */}
           <FormField

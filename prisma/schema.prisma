@@ -395,9 +395,15 @@ model profiles {
   created_at                                                                  DateTime?                    @default(now()) @db.Timestamptz(6)
   updated_at                                                                  DateTime?                    @default(now()) @db.Timestamptz(6)
   role                                                                        system_role?
+  // Registration fields
+  nearest_major_city                                                          String?
+  willing_to_fly                                                              Boolean                      @default(false)
   email_notifications                                                         email_notifications[]
   notifications                                                               notifications[]
   users                                                                       users                        @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([nearest_major_city], map: "idx_profiles_nearest_major_city")
+  @@index([willing_to_fly], map: "idx_profiles_willing_to_fly")
   projects                                                                    projects[]
   shifts                                                                      shifts[]
   system_settings                                                             system_settings[]
@@ -421,6 +427,30 @@ model project_roles {
   role       project_role
   projects   projects?    @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@schema("public")
+}
+
+model project_role_templates {
+  id            String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  project_id    String       @db.Uuid
+  role          project_role
+  display_name  String       @db.VarChar(100)
+  base_pay_rate Decimal      @db.Decimal(10, 2)
+  time_type     String       @default("hourly") @db.VarChar(20)
+  description   String?
+  is_active     Boolean      @default(true)
+  is_default    Boolean      @default(false)
+  sort_order    Int          @default(0)
+  created_at    DateTime?    @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime?    @default(now()) @db.Timestamptz(6)
+  projects      projects     @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([project_id, role, display_name], map: "project_role_templates_project_role_name_unique")
+  @@index([project_id], map: "idx_project_role_templates_project_id")
+  @@index([role], map: "idx_project_role_templates_role")
+  @@index([project_id, is_active], map: "idx_project_role_templates_active")
+  @@index([project_id, sort_order], map: "idx_project_role_templates_sort")
+  @@index([project_id, role, is_default], map: "idx_project_role_templates_default")
   @@schema("public")
 }
 
@@ -457,6 +487,7 @@ model projects {
   notifications              notifications[]
   project_locations          project_locations[]
   project_roles              project_roles[]
+  project_role_templates     project_role_templates[]
   project_setup_checklist    project_setup_checklist?
   profiles                   profiles?                    @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   shifts                     shifts[]
@@ -708,6 +739,9 @@ enum one_time_token_type {
 enum system_role {
   admin
   in_house
+  supervisor
+  talent_logistics_coordinator
+  talent_escort
 
   @@schema("public")
 }

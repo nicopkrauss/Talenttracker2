@@ -83,6 +83,18 @@ export async function GET(
           completed_at,
           created_at,
           updated_at
+        ),
+        project_role_templates (
+          id,
+          role,
+          display_name,
+          base_pay_rate,
+          time_type,
+          description,
+          is_active,
+          sort_order,
+          created_at,
+          updated_at
         )
       `)
       .eq('id', projectId)

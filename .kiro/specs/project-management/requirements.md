@@ -136,11 +136,14 @@ The Project Management system is a core feature that enables administrators and 
 
 #### Acceptance Criteria
 
-1. WHEN I access the Roles & Team tab THEN the system SHALL display a role definition table with base pay, time type, and assignment counts
-2. WHEN managing team assignments THEN the system SHALL provide a drag-and-drop interface with staff directory and role drop-zones
-3. WHEN assigning staff to roles THEN the system SHALL allow inline pay rate and shift overrides
-4. WHEN I finalize team assignments THEN the system SHALL mark the team assignments checklist item as complete
-5. WHEN team assignments are modified after finalization THEN the system SHALL update the checklist status accordingly
+1. WHEN I access the Roles & Team tab THEN the system SHALL display a role definition table showing Supervisor ($300/day, Daily), Escort ($20/hr, Hourly), and Talent Logistics Coordinator ($350/day, Daily) with base pay, time type, and assignment counts
+2. WHEN managing team assignments THEN the system SHALL provide a filterable staff list with multiple filter options including name search, role, location, status, and experience level
+3. WHEN filtering staff THEN the system SHALL allow combining multiple filters simultaneously and provide a "Clear Filters" option
+4. WHEN selecting staff THEN the system SHALL provide bulk selection with "Select All" checkbox and bulk assignment to roles
+5. WHEN assigning staff to roles THEN the system SHALL allow inline pay rate overrides and schedule notes for individual assignments
+6. WHEN viewing assignments THEN the system SHALL display an assignment summary showing role counts, total staff assigned, and estimated daily cost
+7. WHEN I finalize team assignments THEN the system SHALL mark the team assignments checklist item as complete
+8. WHEN team assignments are modified after finalization THEN the system SHALL update the checklist status accordingly
 
 ### Requirement 12
 

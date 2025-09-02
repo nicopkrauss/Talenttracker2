@@ -96,29 +96,51 @@ The project details page has two distinct modes based on project status:
 │ Role Definition Table                                           │
 │ ┌─────────────────────────────────────────────────────────────┐ │
 │ │ Role        │ Base Pay │ Time Type │ # Assigned            │ │
-│ │ Supervisor  │ $25/hr   │ Hourly    │ 2                     │ │
+│ │ Supervisor  │ $300/day │ Daily     │ 2                     │ │
 │ │ Escort      │ $20/hr   │ Hourly    │ 4                     │ │
-│ │ TLC         │ $300/day │ Daily     │ 1                     │ │
+│ │ TLC         │ $350/day │ Daily     │ 1                     │ │
 │ └─────────────────────────────────────────────────────────────┘ │
 │                                                                 │
-│ Team Assignment Grid                                            │
+│ Team Assignment Interface                                       │
 │ ┌─────────────────────────────────────────────────────────────┐ │
-│ │ Staff Directory        │ Role Drop-zones                    │ │
-│ │ ┌─────────────────┐   │ ┌─────────────────┐               │ │
-│ │ │ [Search...]     │   │ │ Supervisor      │               │ │
-│ │ │                 │   │ │ • John Doe      │               │ │
-│ │ │ • Alice Smith   │   │ │ • Jane Smith    │               │ │
-│ │ │ • Bob Johnson   │   │ └─────────────────┘               │ │
-│ │ │ • Carol Davis   │   │ ┌─────────────────┐               │ │
-│ │ └─────────────────┘   │ │ Escort          │               │ │
-│ │                       │ │ • Mike Wilson   │               │ │
-│ │                       │ │ • Sarah Brown   │               │ │
-│ │                       │ └─────────────────┘               │ │
+│ │ Filters & Search                                            │ │
+│ │ ┌─────────────────┐ ┌─────────────┐ ┌─────────────────┐   │ │
+│ │ │ [Search Name...] │ │ [Role: All▼]│ │ [Location: All▼]│   │ │
+│ │ └─────────────────┘ └─────────────┘ └─────────────────┘   │ │
+│ │ ┌─────────────────┐ ┌─────────────┐ ┌─────────────────┐   │ │
+│ │ │ [Status: All▼]  │ │ [Exp: All▼] │ │ [Clear Filters] │   │ │
+│ │ └─────────────────┘ └─────────────┘ └─────────────────┘   │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│ Staff List with Bulk Actions                                   │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ [☐] Select All (12 staff)    [Assign Selected to: Role▼]   │ │
+│ ├─────────────────────────────────────────────────────────────┤ │
+│ │ [☐] Alice Smith      │ Admin     │ LA, CA    │ Available    │ │
+│ │     alice@prod.com   │ 3yr exp   │ Phone: 555-0123        │ │
+│ │                                                             │ │
+│ │ [☑] Bob Johnson      │ In-House  │ LA, CA    │ Supervisor  │ │
+│ │     bob@prod.com     │ 5yr exp   │ Phone: 555-0124        │ │
+│ │     Pay: $320/day    │ Notes: Lead supervisor             │ │
+│ │                                                             │ │
+│ │ [☐] Carol Davis      │ None      │ NYC, NY   │ Available    │ │
+│ │     carol@prod.com   │ 1yr exp   │ Phone: 555-0125        │ │
+│ │                                                             │ │
+│ │ [☑] Mike Wilson      │ None      │ LA, CA    │ Escort      │ │
+│ │     mike@prod.com    │ 2yr exp   │ Phone: 555-0126        │ │
+│ │     Pay: $22/hr      │ Notes: Experienced with VIPs       │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│ Assignment Summary                                              │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ Supervisor: 2 assigned │ Escort: 4 assigned │ TLC: 1 assigned│ │
+│ │ Total Staff: 7/12      │ Estimated Cost: $2,840/day        │ │
 │ └─────────────────────────────────────────────────────────────┘ │
 │                                                                 │
 │                    [Finalize Team Assignments]                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
 
 ### Talent Roster Tab
 

@@ -168,11 +168,12 @@ interface ProjectSetupChecklist {
 interface ProjectRole {
   id: string;
   projectId: string;
-  roleName: 'admin' | 'in-house' | 'supervisor' | 'tlc' | 'escort';
+  roleName: 'admin' | 'in-house' | 'supervisor' | 'talent-logistics-coordinator' | 'escort';
   basePayRate?: number;
   isActive: boolean;
 }
 ```
+DOUBLE CHECK WITH DATABASE
 
 ### Project Location
 ```typescript
@@ -499,10 +500,23 @@ interface RolesTeamTabProps {
   onRoleUpdate: (role: ProjectRole) => void;
   onAssignmentUpdate: (assignment: TeamAssignment) => void;
 }
+
+interface StaffFilter {
+  search: string;
+  role: string | null;
+  location: string | null;
+  status: string | null;
+  experience: string | null;
+}
 ```
-- Role definition table with pay rates and time types
-- Drag-and-drop team assignment interface
-- Inline overrides for pay and shifts
+- Role definition table with corrected pay rates and time types:
+  - Supervisor: $300/day (Daily rate)
+  - Talent Logistics Coordinator: $350/day (Daily rate)
+  - Escort: $20/hr (Hourly rate)  
+- Filterable staff list with multiple simultaneous filters
+- Bulk selection and assignment capabilities
+- Assignment summary with cost calculations
+- Inline pay rate overrides and schedule notes
 
 #### OperationsDashboard Component
 ```typescript
