@@ -22,7 +22,7 @@ const majorCities = [
 // Available roles (excluding admin and in_house as requested)
 const availableRoles = [
   'supervisor',
-  'talent_logistics_coordinator', 
+  'coordinator', 
   'talent_escort'
 ];
 

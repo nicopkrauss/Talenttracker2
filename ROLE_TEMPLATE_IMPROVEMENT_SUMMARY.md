@@ -1,7 +1,7 @@
 # Role Template System Improvement Summary
 
 ## Problem Identified
-The original implementation had a unique constraint on `(project_id, role)` which prevented creating multiple templates for the same role within a project. However, the main use case for role templates is to have different pay rates for the same role (e.g., "Senior TLC" vs "Junior TLC").
+The original implementation had a unique constraint on `(project_id, role)` which prevented creating multiple templates for the same role within a project. However, the main use case for role templates is to have different pay rates for the same role (e.g., "Senior Coordinator" vs "Junior Coordinator").
 
 ## Solution Implemented
 
@@ -25,15 +25,15 @@ The original implementation had a unique constraint on `(project_id, role)` whic
 ```javascript
 // Now possible:
 {
-  role: 'talent_logistics_coordinator',
-  display_name: 'Senior TLC',
+  role: 'coordinator',
+  display_name: 'Senior Coordinator',
   base_pay_rate: 400.00,
   time_type: 'daily'
 }
 
 {
-  role: 'talent_logistics_coordinator', 
-  display_name: 'Junior TLC',
+  role: 'coordinator', 
+  display_name: 'Junior Coordinator',
   base_pay_rate: 300.00,
   time_type: 'daily'
 }
@@ -45,7 +45,7 @@ The original implementation had a unique constraint on `(project_id, role)` whic
 - **Organized Display**: UI groups templates by role for clarity
 
 ## Testing Results
-✅ **Multiple Template Creation**: Successfully created "Senior TLC" and "Junior TLC" templates
+✅ **Multiple Template Creation**: Successfully created "Senior Coordinator" and "Junior Coordinator" templates
 ✅ **Duplicate Prevention**: Correctly prevents duplicate display names within the same role
 ✅ **Database Constraints**: New unique constraint working properly
 ✅ **API Validation**: Updated validation logic functioning correctly
@@ -59,9 +59,9 @@ The original implementation had a unique constraint on `(project_id, role)` whic
 - Junior Supervisor ($250/day)
 
 ### 2. Specialized Role Variants
-- Lead TLC ($450/day) - Team leadership responsibilities
-- TLC ($350/day) - Standard responsibilities
-- Assistant TLC ($275/day) - Support role
+- Lead Coordinator ($450/day) - Team leadership responsibilities
+- Coordinator ($350/day) - Standard responsibilities
+- Assistant Coordinator ($275/day) - Support role
 
 ### 3. Location-Based Rates
 - NYC Escort ($25/hr) - High cost of living adjustment
@@ -72,7 +72,7 @@ The original implementation had a unique constraint on `(project_id, role)` whic
 
 ### For Administrators
 1. **Create Role Templates**: Add multiple templates per role with different names and rates
-2. **Bulk Assignment**: Assign staff to role types (supervisor, TLC, escort)
+2. **Bulk Assignment**: Assign staff to role types (supervisor, coordinator, escort)
 3. **Individual Rate Setting**: Set specific pay rates based on available templates during assignment
 
 ### For Team Management

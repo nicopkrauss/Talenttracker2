@@ -11,7 +11,7 @@
   <SelectItem value="admin">Admin</SelectItem>
   <SelectItem value="in_house">In-House</SelectItem>
   <SelectItem value="supervisor">Supervisor</SelectItem>
-  <SelectItem value="talent_logistics_coordinator">Talent Logistics Coordinator</SelectItem>
+  <SelectItem value="coordinator">Coordinator</SelectItem>
   <SelectItem value="talent_escort">Talent Escort</SelectItem>
   <SelectItem value="null">Regular User</SelectItem>  // ❌ Removed
 </SelectContent>
@@ -24,7 +24,7 @@
   <SelectItem value="admin">Admin</SelectItem>
   <SelectItem value="in_house">In-House</SelectItem>
   <SelectItem value="supervisor">Supervisor</SelectItem>
-  <SelectItem value="talent_logistics_coordinator">Talent Logistics Coordinator</SelectItem>
+  <SelectItem value="coordinator">Coordinator</SelectItem>
   <SelectItem value="talent_escort">Talent Escort</SelectItem>
 </SelectContent>
 ```

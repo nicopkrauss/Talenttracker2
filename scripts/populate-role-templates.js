@@ -60,8 +60,8 @@ async function populateRoleTemplates() {
         sort_order: 1
       },
       {
-        role: 'talent_logistics_coordinator',
-        display_name: 'Talent Logistics Coordinator',
+        role: 'coordinator',
+        display_name: 'Coordinator',
         base_pay_rate: 350.00,
         time_type: 'daily',
         sort_order: 2

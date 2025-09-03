@@ -23,10 +23,10 @@ vi.mock('@/lib/navigation-config', () => ({
   getNavigationItemsForRole: vi.fn((role) => {
     const allItems = [
       { id: 'projects', label: 'Projects', href: '/projects', icon: vi.fn(), roles: ['admin', 'in_house'] },
-      { id: 'team', label: 'Team', href: '/team', icon: vi.fn(), roles: ['admin', 'in_house', 'supervisor', 'talent_logistics_coordinator'] },
-      { id: 'talent', label: 'Talent', href: '/talent', icon: vi.fn(), roles: ['admin', 'in_house', 'supervisor', 'talent_logistics_coordinator', 'talent_escort'] },
-      { id: 'timecards', label: 'Timecards', href: '/timecards', icon: vi.fn(), roles: ['admin', 'in_house', 'supervisor', 'talent_logistics_coordinator', 'talent_escort'] },
-      { id: 'profile', label: 'Profile', href: '/profile', icon: vi.fn(), roles: ['admin', 'in_house', 'supervisor', 'talent_logistics_coordinator', 'talent_escort'] },
+      { id: 'team', label: 'Team', href: '/team', icon: vi.fn(), roles: ['admin', 'in_house', 'supervisor', 'coordinator'] },
+      { id: 'talent', label: 'Talent', href: '/talent', icon: vi.fn(), roles: ['admin', 'in_house', 'supervisor', 'coordinator', 'talent_escort'] },
+      { id: 'timecards', label: 'Timecards', href: '/timecards', icon: vi.fn(), roles: ['admin', 'in_house', 'supervisor', 'coordinator', 'talent_escort'] },
+      { id: 'profile', label: 'Profile', href: '/profile', icon: vi.fn(), roles: ['admin', 'in_house', 'supervisor', 'coordinator', 'talent_escort'] },
     ]
     return allItems.filter(item => item.roles.includes(role))
   }),

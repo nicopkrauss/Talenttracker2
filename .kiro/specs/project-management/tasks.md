@@ -84,7 +84,7 @@
   - Add middleware for project access validation
   - Implement admin access to all projects
   - Create in-house user project assignment filtering
-  - Add supervisor/TLC/escort active project filtering
+  - Add supervisor/coordinator/escort active project filtering
   - Implement inactive project card display with restricted access
   - Add "View My Timecard" button for inactive projects with user timecards
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7_
@@ -160,7 +160,7 @@
 
 
 
-  - Build role definition table showing Supervisor ($300/day, Daily), Escort ($20/hr, Hourly), and Talent Logistics Coordinator ($350/day, Daily) with base pay, time type, and assignment counts
+  - Build role definition table showing Supervisor ($300/day, Daily), Escort ($20/hr, Hourly), and Coordinator ($350/day, Daily) with base pay, time type, and assignment counts
   - Create filterable staff list with multiple filter options (name search, role, location, status, experience level)
   - Add bulk selection with "Select All" checkbox and bulk assignment to roles
   - Implement inline pay rate overrides and schedule notes for individual assignments

@@ -53,5 +53,5 @@ The navigation switches between mobile and desktop layouts at 768px width, using
 - **admin**: Access to Projects, Team, Talent, Timecards, Profile
 - **in-house**: Access to Projects, Team, Talent, Timecards, Profile  
 - **supervisor**: Access to Team, Talent, Timecards, Profile
-- **tlc** (Talent Logistics Coordinator): Access to Team, Talent, Timecards, Profile
+- **coordinator**: Access to Team, Talent, Timecards, Profile
 - **talent-escort**: Access to Talent, Timecards, Profile

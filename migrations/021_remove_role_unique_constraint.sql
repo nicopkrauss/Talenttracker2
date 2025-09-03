@@ -1,6 +1,6 @@
 -- Migration: Remove unique constraint on project_id, role to allow multiple templates per role
 -- Date: 2024-01-20
--- Description: Allows multiple role templates for the same role within a project (e.g., Senior TLC, Junior TLC)
+-- Description: Allows multiple role templates for the same role within a project (e.g., Senior Coordinator, Junior Coordinator)
 
 -- Drop the unique constraint that prevents multiple templates per role
 ALTER TABLE project_role_templates DROP CONSTRAINT project_role_templates_project_id_role_key;

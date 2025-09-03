@@ -9,7 +9,7 @@ Implemented a role-based registration system that asks users to select their pos
 - **Role Selection First**: Added role dropdown as the first field that must be selected before other fields appear
 - **Conditional Fields**: Form fields only show after role selection
 - **Major Cities Dropdown**: Replaced city/state fields with predefined major cities list
-- **Flight Willingness**: Shows flight checkbox only for roles where flights are covered (In-House, Supervisor, TLC)
+- **Flight Willingness**: Shows flight checkbox only for roles where flights are covered (In-House, Supervisor, Coordinator)
 - **Progressive Disclosure**: Better UX by showing relevant fields based on role selection
 
 ### 2. Enhanced Type System (`lib/types.ts`)

@@ -8,7 +8,7 @@ inclusion: always
 
 ### Mobile Navigation (Bottom Dock)
 - **Admin/In-House**: Projects | Team | Talent | Timecards | Profile
-- **Supervisor/TLC**: Talent | Team | Timecards | Profile  
+- **Supervisor/Coordinator**: Talent | Team | Timecards | Profile  
 - **Talent Escort**: Talent | Timecards | Profile
 - **Dynamic Role-Based**: Navigation items filtered by effective user role (system + project roles)
 - **Active State**: Visual indicators with primary color highlighting and background changes

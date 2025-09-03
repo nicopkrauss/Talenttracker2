@@ -7,7 +7,7 @@
 | **Admin** | Black | Black background, white text |
 | **In-House** | Blue | Light blue background, dark blue text |
 | **Supervisor** | Green | Light green background, dark green text |
-| **Talent Logistics Coordinator** | Purple | Light purple background, dark purple text |
+| **Coordinator** | Purple | Light purple background, dark purple text |
 | **Talent Escort** | Orange | Light orange background, dark orange text |
 
 ## Implementation

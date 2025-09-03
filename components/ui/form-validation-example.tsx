@@ -430,7 +430,7 @@ export function FormValidationExample({
                       <SelectItem value="admin">Administrator</SelectItem>
                       <SelectItem value="supervisor">Supervisor</SelectItem>
                       <SelectItem value="escort">Talent Escort</SelectItem>
-                      <SelectItem value="tlc">Talent Logistics Coordinator</SelectItem>
+                      <SelectItem value="coordinator">Coordinator</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage className="animate-in slide-in-from-left-2 duration-200" />

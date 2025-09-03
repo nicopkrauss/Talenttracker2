@@ -56,29 +56,29 @@ async function testMultipleTemplates() {
     const testProject = projects[0]
     console.log(`📋 Testing with project: ${testProject.name} (${testProject.id})`)
     
-    // Test creating multiple TLC templates
-    const tlcTemplates = [
+    // Test creating multiple Coordinator templates
+    const coordinatorTemplates = [
       {
         project_id: testProject.id,
-        role: 'talent_logistics_coordinator',
-        display_name: 'Senior TLC',
+        role: 'coordinator',
+        display_name: 'Senior Coordinator',
         base_pay_rate: 400.00,
         time_type: 'daily',
-        description: 'Senior level TLC with team leadership responsibilities'
+        description: 'Senior level coordinator with team leadership responsibilities'
       },
       {
         project_id: testProject.id,
-        role: 'talent_logistics_coordinator',
-        display_name: 'Junior TLC',
+        role: 'coordinator',
+        display_name: 'Junior Coordinator',
         base_pay_rate: 300.00,
         time_type: 'daily',
-        description: 'Entry level TLC position'
+        description: 'Entry level coordinator position'
       }
     ]
     
-    console.log('\n🔍 Creating multiple TLC templates...')
+    console.log('\n🔍 Creating multiple coordinator templates...')
     
-    for (const template of tlcTemplates) {
+    for (const template of coordinatorTemplates) {
       // Check if this specific template already exists
       const { data: existing } = await supabase
         .from('project_role_templates')
@@ -106,21 +106,21 @@ async function testMultipleTemplates() {
       }
     }
     
-    // Fetch all TLC templates to verify
-    console.log('\n🔍 Fetching all TLC templates...')
-    const { data: allTlcTemplates, error: fetchError } = await supabase
+    // Fetch all coordinator templates to verify
+    console.log('\n🔍 Fetching all coordinator templates...')
+    const { data: allCoordinatorTemplates, error: fetchError } = await supabase
       .from('project_role_templates')
       .select('*')
       .eq('project_id', testProject.id)
-      .eq('role', 'talent_logistics_coordinator')
+      .eq('role', 'coordinator')
       .eq('is_active', true)
       .order('base_pay_rate', { ascending: false })
     
     if (fetchError) {
-      console.error('❌ Error fetching TLC templates:', fetchError.message)
+      console.error('❌ Error fetching coordinator templates:', fetchError.message)
     } else {
-      console.log(`✅ Found ${allTlcTemplates.length} TLC templates:`)
-      allTlcTemplates.forEach(template => {
+      console.log(`✅ Found ${allCoordinatorTemplates.length} coordinator templates:`)
+      allCoordinatorTemplates.forEach(template => {
         console.log(`   - ${template.display_name}: $${template.base_pay_rate}/${template.time_type}`)
       })
     }
@@ -129,8 +129,8 @@ async function testMultipleTemplates() {
     console.log('\n🔍 Testing duplicate display name prevention...')
     const duplicateTemplate = {
       project_id: testProject.id,
-      role: 'talent_logistics_coordinator',
-      display_name: 'Senior TLC', // This should fail
+      role: 'coordinator',
+      display_name: 'Senior Coordinator', // This should fail
       base_pay_rate: 450.00,
       time_type: 'daily'
     }

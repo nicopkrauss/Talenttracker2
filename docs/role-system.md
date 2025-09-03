@@ -17,7 +17,7 @@ System roles are global and take precedence over project roles:
 Project roles are assigned per project and only apply when no system role exists:
 
 - **`supervisor`**: On-site management with day rate time tracking
-- **`talent_logistics_coordinator`**: Informational oversight with day rate tracking
+- **`coordinator`**: Informational oversight with day rate tracking
 - **`talent_escort`**: On-the-ground operations with hourly time tracking
 
 ## Role Priority System
@@ -51,7 +51,7 @@ Each role has a numeric permission level (higher = more permissions):
 - **`admin`**: 100
 - **`in_house`**: 50  
 - **`supervisor`**: 30
-- **`talent_logistics_coordinator`**: 20
+- **`coordinator`**: 20
 - **`talent_escort`**: 10
 
 ## Key Permission Functions
@@ -149,7 +149,7 @@ CREATE TABLE team_assignments (
   id UUID PRIMARY KEY,
   user_id UUID REFERENCES profiles(id),
   project_id UUID REFERENCES projects(id),
-  role project_role NOT NULL, -- 'supervisor' | 'talent_logistics_coordinator' | 'talent_escort'
+  role project_role NOT NULL, -- 'supervisor' | 'coordinator' | 'talent_escort'
   pay_rate DECIMAL(10,2),
   -- other fields...
 );

@@ -72,11 +72,11 @@ Added a helper text that shows existing template names for the selected role:
 
 ## Example Workflow
 
-1. **User selects "Talent Logistics Coordinator" role**
-2. **Helper text appears**: "Existing templates: Senior TLC, Junior TLC, Talent Logistics Coordinator"
-3. **User types "Senior TLC"** 
+1. **User selects "Coordinator" role**
+2. **Helper text appears**: "Existing templates: Senior Coordinator, Junior Coordinator, Coordinator"
+3. **User types "Senior Coordinator"** 
 4. **Client-side validation triggers**: Shows friendly error before submission
-5. **User changes to "Lead TLC"**
+5. **User changes to "Lead Coordinator"**
 6. **Form submits successfully**
 
 ## Benefits

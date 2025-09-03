@@ -79,11 +79,11 @@ async function testRoleTemplates() {
     console.log('\n🔍 Test 2: Creating a new role template...')
     const newTemplate = {
       project_id: testProject.id,
-      role: 'supervisor',
-      display_name: 'Senior Supervisor',
+      role: 'coordinator',
+      display_name: 'Senior Coordinator',
       base_pay_rate: 350.00,
       time_type: 'daily',
-      description: 'Senior level supervisor with additional responsibilities',
+      description: 'Senior level coordinator with additional responsibilities',
       is_active: true,
       sort_order: 10
     }
@@ -93,12 +93,12 @@ async function testRoleTemplates() {
       .from('project_role_templates')
       .select('id')
       .eq('project_id', testProject.id)
-      .eq('role', 'supervisor')
-      .eq('display_name', 'Senior Supervisor')
+      .eq('role', 'coordinator')
+      .eq('display_name', 'Senior Coordinator')
       .single()
     
     if (existing) {
-      console.log('⚠️  Senior Supervisor template already exists, skipping creation')
+      console.log('⚠️  Senior Coordinator template already exists, skipping creation')
     } else {
       const { data: created, error: createError } = await supabase
         .from('project_role_templates')
@@ -117,7 +117,7 @@ async function testRoleTemplates() {
           .from('project_role_templates')
           .update({
             base_pay_rate: 375.00,
-            description: 'Updated: Senior level supervisor with additional responsibilities and team leadership'
+            description: 'Updated: Senior level coordinator with additional responsibilities and team leadership'
           })
           .eq('id', created.id)
           .select()

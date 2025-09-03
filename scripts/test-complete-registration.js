@@ -36,7 +36,7 @@ const testCases = [
     expectedFlightEligible: true
   },
   {
-    role: 'talent_logistics_coordinator',
+    role: 'coordinator',
     firstName: 'Alex',
     lastName: 'Rivera',
     nearestMajorCity: 'Miami, FL',
@@ -154,7 +154,7 @@ async function testCompleteRegistration(testCase) {
     })
     
     // Special validation for flight eligibility logic
-    const isFlightEligible = ['in_house', 'supervisor', 'talent_logistics_coordinator'].includes(profile.role)
+    const isFlightEligible = ['in_house', 'supervisor', 'coordinator'].includes(profile.role)
     if (isFlightEligible === testCase.expectedFlightEligible) {
       console.log(`   ✅ Flight eligibility: ${isFlightEligible ? 'eligible' : 'not eligible'} (correct)`)
     } else {

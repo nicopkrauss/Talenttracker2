@@ -32,7 +32,7 @@ The system operates on a project-based role assignment model:
 - Full talent management, configurable checkout initiation
 - Cannot approve timecards or manage projects
 
-### Talent Logistics Coordinator (TLC)
+### Coordinator
 - Informational oversight role with day rate tracking
 - Full talent management, no checkout initiation
 

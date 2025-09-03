@@ -49,7 +49,7 @@ enum project_role {
   <SelectItem value="admin">Admin</SelectItem>
   <SelectItem value="in_house">In-House</SelectItem>
   <SelectItem value="supervisor">Supervisor</SelectItem>
-  <SelectItem value="talent_logistics_coordinator">Talent Logistics Coordinator</SelectItem>
+  <SelectItem value="coordinator">Coordinator</SelectItem>
   <SelectItem value="talent_escort">Talent Escort</SelectItem>
   <SelectItem value="null">Regular User</SelectItem>
 </SelectContent>
@@ -100,12 +100,12 @@ const eligibleStaff = filteredStaff.filter(staff =>
    - `admin`: Full system access
    - `in_house`: System management
    - `supervisor`: System-level supervisor
-   - `talent_logistics_coordinator`: System-level TLC
+   - `coordinator`: System-level Coordinator
    - `talent_escort`: System-level escort
 
 2. **Project Roles** (used when no system role)
    - `supervisor`: Project supervisor
-   - `talent_logistics_coordinator`: Project TLC  
+   - `coordinator`: Project Coordinator  
    - `talent_escort`: Project escort
 
 3. **Regular Users** (`null` system role)
@@ -128,7 +128,7 @@ This maintains the security model where only system administrators can manage te
 2. **Admin**: System administrators
 3. **In-House**: System managers
 4. **Supervisor**: System or project supervisors
-5. **Talent Logistics Coordinator**: System or project TLCs
+5. **Coordinator**: System or project Coordinators
 6. **Talent Escort**: System or project escorts
 7. **Regular User**: Users with no system role (project roles only)
 

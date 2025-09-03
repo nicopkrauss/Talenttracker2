@@ -1,6 +1,26 @@
 import { SystemRole, ProjectRole, UserRole } from './types'
 
 /**
+ * Role display names mapping for UI components
+ */
+export const ROLE_DISPLAY_NAMES: Record<UserRole, string> = {
+  admin: 'Admin',
+  in_house: 'In-House Manager',
+  supervisor: 'Supervisor',
+  coordinator: 'Coordinator',
+  talent_escort: 'Talent Escort'
+}
+
+/**
+ * Project role descriptions for UI components
+ */
+export const PROJECT_ROLE_DESCRIPTIONS: Record<ProjectRole, string> = {
+  supervisor: 'On-site Manager',
+  coordinator: 'Informational Oversight',
+  talent_escort: 'On-the-ground Operator'
+}
+
+/**
  * Role hierarchy and utility functions
  * 
  * System roles (stored in profiles.role):
@@ -10,7 +30,7 @@ import { SystemRole, ProjectRole, UserRole } from './types'
  * 
  * Project roles (stored in team_assignments.role):
  * - supervisor: On-site manager with day rate tracking
- * - talent_logistics_coordinator: Informational oversight role
+ * - coordinator: Informational oversight role
  * - talent_escort: On-the-ground operator with hourly tracking
  * 
  * Role Priority: System Role > Project Role > Default (talent_escort)
@@ -19,13 +39,16 @@ import { SystemRole, ProjectRole, UserRole } from './types'
 // System role hierarchy (higher number = more permissions)
 const SYSTEM_ROLE_HIERARCHY: Record<SystemRole, number> = {
   admin: 100,
-  in_house: 50
+  in_house: 50,
+  supervisor: 30,
+  coordinator: 20,
+  talent_escort: 10
 }
 
 // Project role hierarchy (higher number = more permissions)
 const PROJECT_ROLE_HIERARCHY: Record<ProjectRole, number> = {
   supervisor: 30,
-  talent_logistics_coordinator: 20,
+  coordinator: 20,
   talent_escort: 10
 }
 
@@ -124,7 +147,7 @@ export function canManageTalent(
   // Most project roles can manage talent
   const allowedProjectRoles: ProjectRole[] = [
     'supervisor',
-    'talent_logistics_coordinator',
+    'coordinator',
     'talent_escort'
   ]
   
@@ -228,7 +251,7 @@ export function getRoleDisplayName(role: UserRole): string {
     admin: 'Administrator',
     in_house: 'In-House Manager',
     supervisor: 'Supervisor',
-    talent_logistics_coordinator: 'Talent Logistics Coordinator',
+    coordinator: 'Coordinator',
     talent_escort: 'Talent Escort'
   }
   
@@ -243,7 +266,7 @@ export function getRoleDescription(role: UserRole): string {
     admin: 'Full system access and management capabilities',
     in_house: 'System management with configurable permissions',
     supervisor: 'On-site management with day rate time tracking',
-    talent_logistics_coordinator: 'Informational oversight with day rate tracking',
+    coordinator: 'Informational oversight with day rate tracking',
     talent_escort: 'On-the-ground operations with hourly time tracking'
   }
   

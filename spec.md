@@ -19,7 +19,7 @@ Project Role	Core Function	Tracks Own Time?	Manages Talent?	Initiates Daily Chec
 Admin	System Owner	❌	✅ (Full)	✅	✅	✅
 In-House	System Manager	❌	✅ (Full)	✅ (Configurable)	✅ (Configurable)	✅ (Configurable)
 Supervisor	On-site Manager	✅ (Day Rate)	✅ (Full)	✅ (Configurable)	❌	❌
-Talent Logistics Coordinator (TLC)	Informational Oversight	✅ (Day Rate)	✅ (Full)	❌	❌	❌
+Coordinator	Informational Oversight	✅ (Day Rate)	✅ (Full)	❌	❌	❌
 Talent Escort	On-the-ground Operator	✅ (Hourly)	✅ (Restricted)	❌	❌	❌
 2.2. User Profile Page & Settings
 Access: Every user has a "Profile" tab in their navigation.
@@ -44,7 +44,7 @@ Part II: Global Navigation & UI Structure
 4. Application Navigation
 4.1. Mobile Navigation (Dock at bottom of screen):
 Admin/In-House: [Projects (folder.fill) | Team (person.3.fill) | Talent (star.fill) | Timecards (list.bullet.clipboard.fill) | Profile (person.crop.circle.fill)]
-Supervisor/TLC: [Talent (star.fill) | Team (person.3.fill) | Timecards (list.bullet.clipboard.fill) | Profile (person.crop.circle.fill)]
+Supervisor/Coordinator: [Talent (star.fill) | Team (person.3.fill) | Timecards (list.bullet.clipboard.fill) | Profile (person.crop.circle.fill)]
 Talent Escort: [Talent (star.fill) | Timecards (list.bullet.clipboard.fill) | Profile (person.crop.circle.fill)]
 4.2. Desktop Navigation (Top navigation bar):
 Links: "Projects," "Team," "Talent," "Timecards" (visibility based on rank).
@@ -70,7 +70,7 @@ Section: Talent Roster: Admin can "Import Talent CSV" or "Add Talent Manually." 
 Section: Assignments: A drag-and-drop interface for Admin, In-House, and Supervisors to pair unassigned Escorts with unassigned Talent. A "Randomize Remaining" button automates pairing.
 Part IV: Daily Operations & Time Logging
 6. Team & Talent Management Views
-6.1. Time Logging Workflow for All Ranks (Escort, Supervisor, TLC)
+6.1. Time Logging Workflow for All Ranks (Escort, Supervisor, Coordinator)
 User Story: "As an on-site team member, I need a simple, one-button way to manage my shift status (checked-in, on break, checked-out) without navigating to different screens."
 Persistent Action Bar: A static bar appears at the top or bottom of the primary operational tabs ("Talent," "Team") for all time-tracking ranks. It displays "[Project Name]" and a single, stateful action button.
 Button State Machine:
@@ -80,18 +80,18 @@ User taps "Start My Break." The breakStartTime is logged, and the button changes
 Once the break duration is met, the "End My Break" button becomes clickable.
 User taps "End My Break." The breakEndTime is logged.
 For Talent Escorts: The button disappears. Their checkout is initiated by a Supervisor.
-For Supervisors & TLCs: The button changes to "Check Out."
-A Supervisor/TLC taps "Check Out." Their checkoutTime is logged, and the button state resets to "Check In" for the next day.
+For Supervisors & Coordinators: The button changes to "Check Out."
+A Supervisor/Coordinator taps "Check Out." Their checkoutTime is logged, and the button state resets to "Check In" for the next day.
 Grace Period Logic: If "End My Break" is tapped within 5 minutes of it becoming available, the break is logged as the exact default duration (30/60 mins). Otherwise, it logs the actual time. Manually editing a break time by more than 15 minutes during final timecard review will flag it.
 Modal for Corrections: The modal-based time entry UI is used only when correcting a missed break during the final Project Timecard submission.
-6.2. Supervisor & TLC Dashboards
+6.2. Supervisor & Coordinator Dashboards
 Default View: Both roles default to the "Talent" tab.
 "Team" Tab: Both can switch to the "Team" tab. The list is sorted with checked-in Escorts at the top. Hour tracking indicators (Yellow/Red) apply to all ranks.
 6.3. Talent Escort's "Talent" Tab & Workflow
 Pre-Check-In View: The "Talent" tab screen is locked and shows: "Your call is at [Time]" with a disabled "Check In" button and a countdown.
 Floater Escort Workflow: A "Floater" sees a "View All Talent" button, which opens a read-only list of all project talent, where they can tap any talent to update their location.
 6.4. Talent Status & Location Workflow
-The Talent Detail View: Shows all relevant Talent information. For authorized roles (Admin, IH, Sup, TLC), it includes a section for the "Assigned Escort" with their name and a "Call Escort" button. This section is hidden from the Escort's own view.
+The Talent Detail View: Shows all relevant Talent information. For authorized roles (Admin, IH, Sup, Coordinator), it includes a section for the "Assigned Escort" with their name and a "Call Escort" button. This section is hidden from the Escort's own view.
 Workflow: Updating a Location: User taps the current location text, revealing an accordion of buttons for the project-defined locations.
 Favoriting Talent: Users with full talent list access can tap a star icon on a Talent card. Favorites are sorted to the top of the list for that user on that project.
 Part V: Timecard & Approval Module
@@ -118,17 +118,17 @@ Valid checkouts are processed. Escorts with issues remain on the active list, hi
 In the "Timecards" tab, Admins review submitted timecards. All user-edited fields are highlighted.
 Two-Way Confirmation: If an Admin edits a timecard, they must add a note. The timecard is returned to the user, who must "Approve and Resubmit."
 9. Notifications
-To Time-Tracking Ranks (Escorts, Supervisors, TLCs):
+To Time-Tracking Ranks (Escorts, Supervisors, Coordinators):
 "Timecard submission for '[Project Name]' is now open."
 "Don't forget to submit your timecard for [Project Name]!" (Triggers 24h before the Target Submission Date set in Project Settings).
 "Action Required: Your timecard for [Project Name]' was not approved. Tap to see why."
 Personal Break Reminders.
 Specific to Escorts: Talent arrival notifications.
-Specific to Supervisors/TLCs: Notification when a favorited talent arrives. A one-time prompt will ask if they want to enable this the first time they favorite a talent.
+Specific to Supervisors/Coordinators: Notification when a favorited talent arrives. A one-time prompt will ask if they want to enable this the first time they favorite a talent.
 To Management (Consolidated):
 "A few team members are approaching the end of their 12-hour shift."
 10. Admin Settings Module
 Access: Via the "Settings" tab in the Admin dock. Each setting includes a (?) tooltip.
-Key Settings: User Management, Project Defaults, Time & Payroll (Default Break Duration), System (Email Offer Toggle, Archiving Timezone), Data & Privacy (Global and per-project toggle for Supervisor/TLC access to Rep Contact Info), Email Templates.
+Key Settings: User Management, Project Defaults, Time & Payroll (Default Break Duration), System (Email Offer Toggle, Archiving Timezone), Data & Privacy (Global and per-project toggle for Supervisor/Coordinator access to Rep Contact Info), Email Templates.
 11. Work In Progress / Future Considerations
 Automated Talent Scheduling via Run-of-Show CSV Import: For V1, a Talent's specific daily schedule is considered an offline detail.

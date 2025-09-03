@@ -72,7 +72,7 @@ Current location and status of talent for each project.
 - View current location of their talent
 - Limited to talent they're assigned to
 
-### For Supervisors/TLCs
+### For Supervisors/Coordinators
 - View all talent locations within their projects
 - Update any talent location within their projects
 - See location history and who made updates

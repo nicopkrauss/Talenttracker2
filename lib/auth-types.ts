@@ -6,7 +6,7 @@
 // Enum types from database
 export type UserStatus = 'pending' | 'active' | 'inactive';
 export type SystemRole = 'admin' | 'in_house';
-export type ProjectRole = 'supervisor' | 'talent_logistics_coordinator' | 'talent_escort';
+export type ProjectRole = 'supervisor' | 'coordinator' | 'talent_escort';
 
 // Core user profile interface matching database schema
 export interface UserProfile {

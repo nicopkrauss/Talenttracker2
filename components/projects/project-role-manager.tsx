@@ -25,12 +25,12 @@ interface ProjectRoleManagerProps {
 }
 
 interface RoleFormData {
-  role_name: 'supervisor' | 'talent_logistics_coordinator' | 'talent_escort'
+  role_name: 'supervisor' | 'coordinator' | 'talent_escort'
   base_pay_rate?: number
 }
 
 const AVAILABLE_ROLES: Array<{
-  key: 'supervisor' | 'talent_logistics_coordinator' | 'talent_escort'
+  key: 'supervisor' | 'coordinator' | 'talent_escort'
   label: string
   description: string
 }> = [
@@ -40,8 +40,8 @@ const AVAILABLE_ROLES: Array<{
     description: 'On-site manager with day rate tracking and full talent management'
   },
   {
-    key: 'talent_logistics_coordinator',
-    label: 'Talent Logistics Coordinator (TLC)',
+    key: 'coordinator',
+    label: 'Coordinator',
     description: 'Informational oversight role with day rate tracking'
   },
   {

@@ -37,16 +37,16 @@ describe('Navigation Configuration', () => {
       expect(projectsItem?.roles).toEqual(['admin', 'in_house'])
 
       const teamItem = navigationItems.find(item => item.id === 'team')
-      expect(teamItem?.roles).toEqual(['admin', 'in_house', 'supervisor', 'talent_logistics_coordinator'])
+      expect(teamItem?.roles).toEqual(['admin', 'in_house', 'supervisor', 'coordinator'])
 
       const talentItem = navigationItems.find(item => item.id === 'talent')
-      expect(talentItem?.roles).toEqual(['admin', 'in_house', 'supervisor', 'talent_logistics_coordinator', 'talent_escort'])
+      expect(talentItem?.roles).toEqual(['admin', 'in_house', 'supervisor', 'coordinator', 'talent_escort'])
 
       const timecardsItem = navigationItems.find(item => item.id === 'timecards')
-      expect(timecardsItem?.roles).toEqual(['admin', 'in_house', 'supervisor', 'talent_logistics_coordinator', 'talent_escort'])
+      expect(timecardsItem?.roles).toEqual(['admin', 'in_house', 'supervisor', 'coordinator', 'talent_escort'])
 
       const profileItem = navigationItems.find(item => item.id === 'profile')
-      expect(profileItem?.roles).toEqual(['admin', 'in_house', 'supervisor', 'talent_logistics_coordinator', 'talent_escort'])
+      expect(profileItem?.roles).toEqual(['admin', 'in_house', 'supervisor', 'coordinator', 'talent_escort'])
     })
 
     it('should have correct href paths', () => {
@@ -90,8 +90,8 @@ describe('Navigation Configuration', () => {
       expect(itemIds).not.toContain('projects')
     })
 
-    it('should return correct items for talent_logistics_coordinator role', () => {
-      const items = getNavigationItemsForRole('talent_logistics_coordinator')
+    it('should return correct items for coordinator role', () => {
+      const items = getNavigationItemsForRole('coordinator')
       expect(items).toHaveLength(4)
       
       const itemIds = items.map(item => item.id)
@@ -144,12 +144,12 @@ describe('Navigation Configuration', () => {
       expect(hasAccessToNavItem('supervisor', 'profile')).toBe(true)
     })
 
-    it('should return correct access for talent_logistics_coordinator role', () => {
-      expect(hasAccessToNavItem('talent_logistics_coordinator', 'projects')).toBe(false)
-      expect(hasAccessToNavItem('talent_logistics_coordinator', 'team')).toBe(true)
-      expect(hasAccessToNavItem('talent_logistics_coordinator', 'talent')).toBe(true)
-      expect(hasAccessToNavItem('talent_logistics_coordinator', 'timecards')).toBe(true)
-      expect(hasAccessToNavItem('talent_logistics_coordinator', 'profile')).toBe(true)
+    it('should return correct access for coordinator role', () => {
+      expect(hasAccessToNavItem('coordinator', 'projects')).toBe(false)
+      expect(hasAccessToNavItem('coordinator', 'team')).toBe(true)
+      expect(hasAccessToNavItem('coordinator', 'talent')).toBe(true)
+      expect(hasAccessToNavItem('coordinator', 'timecards')).toBe(true)
+      expect(hasAccessToNavItem('coordinator', 'profile')).toBe(true)
     })
 
     it('should return correct access for talent_escort role', () => {
@@ -184,8 +184,8 @@ describe('Navigation Configuration', () => {
       expect(getDefaultRouteForRole('supervisor')).toBe('/team')
     })
 
-    it('should return /team for talent_logistics_coordinator role', () => {
-      expect(getDefaultRouteForRole('talent_logistics_coordinator')).toBe('/team')
+    it('should return /team for coordinator role', () => {
+      expect(getDefaultRouteForRole('coordinator')).toBe('/team')
     })
 
     it('should return /talent for talent_escort role', () => {
@@ -195,7 +195,7 @@ describe('Navigation Configuration', () => {
     it('should fallback to /talent when no items available', () => {
       // This is a theoretical case, but good to test the fallback
       // We can't easily mock getNavigationItemsForRole here, so we test the current behavior
-      const roles: UserRole[] = ['admin', 'in_house', 'supervisor', 'talent_logistics_coordinator', 'talent_escort']
+      const roles: UserRole[] = ['admin', 'in_house', 'supervisor', 'coordinator', 'talent_escort']
       
       roles.forEach(role => {
         const defaultRoute = getDefaultRouteForRole(role)
@@ -216,14 +216,14 @@ describe('Navigation Configuration', () => {
       expect(inHouseItems.map(item => item.id)).toEqual(expectedItems)
     })
 
-    it('should meet requirement 1.2: Supervisor and TLC see Team, Talent, Timecards, Profile', () => {
+    it('should meet requirement 1.2: Supervisor and Coordinator see Team, Talent, Timecards, Profile', () => {
       const supervisorItems = getNavigationItemsForRole('supervisor')
-      const tlcItems = getNavigationItemsForRole('talent_logistics_coordinator')
+      const coordinatorItems = getNavigationItemsForRole('coordinator')
       
       const expectedItems = ['team', 'talent', 'timecards', 'profile']
       
       expect(supervisorItems.map(item => item.id)).toEqual(expectedItems)
-      expect(tlcItems.map(item => item.id)).toEqual(expectedItems)
+      expect(coordinatorItems.map(item => item.id)).toEqual(expectedItems)
     })
 
     it('should meet requirement 1.3: Talent Escort sees Talent, Timecards, Profile', () => {
@@ -235,7 +235,7 @@ describe('Navigation Configuration', () => {
     })
 
     it('should ensure all roles have access to Profile', () => {
-      const roles: UserRole[] = ['admin', 'in_house', 'supervisor', 'talent_logistics_coordinator', 'talent_escort']
+      const roles: UserRole[] = ['admin', 'in_house', 'supervisor', 'coordinator', 'talent_escort']
       
       roles.forEach(role => {
         expect(hasAccessToNavItem(role, 'profile')).toBe(true)
@@ -243,7 +243,7 @@ describe('Navigation Configuration', () => {
     })
 
     it('should ensure all roles have access to Talent and Timecards', () => {
-      const roles: UserRole[] = ['admin', 'in_house', 'supervisor', 'talent_logistics_coordinator', 'talent_escort']
+      const roles: UserRole[] = ['admin', 'in_house', 'supervisor', 'coordinator', 'talent_escort']
       
       roles.forEach(role => {
         expect(hasAccessToNavItem(role, 'talent')).toBe(true)
@@ -256,7 +256,7 @@ describe('Navigation Configuration', () => {
       expect(hasAccessToNavItem('in_house', 'projects')).toBe(true)
       
       expect(hasAccessToNavItem('supervisor', 'projects')).toBe(false)
-      expect(hasAccessToNavItem('talent_logistics_coordinator', 'projects')).toBe(false)
+      expect(hasAccessToNavItem('coordinator', 'projects')).toBe(false)
       expect(hasAccessToNavItem('talent_escort', 'projects')).toBe(false)
     })
 
@@ -264,7 +264,7 @@ describe('Navigation Configuration', () => {
       expect(hasAccessToNavItem('admin', 'team')).toBe(true)
       expect(hasAccessToNavItem('in_house', 'team')).toBe(true)
       expect(hasAccessToNavItem('supervisor', 'team')).toBe(true)
-      expect(hasAccessToNavItem('talent_logistics_coordinator', 'team')).toBe(true)
+      expect(hasAccessToNavItem('coordinator', 'team')).toBe(true)
       
       expect(hasAccessToNavItem('talent_escort', 'team')).toBe(false)
     })

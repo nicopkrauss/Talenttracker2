@@ -103,7 +103,7 @@ node scripts/test-registration-api.js
 ### Registration Form
 - Shows role selection first
 - Displays relevant fields based on role
-- Shows flight willingness only for covered roles (In-House, Supervisor, TLC)
+- Shows flight willingness only for covered roles (In-House, Supervisor, Coordinator)
 - Uses major cities dropdown instead of free-form city/state
 
 ### Database

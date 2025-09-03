@@ -29,10 +29,10 @@ async function testRegistrationFlow() {
       description: 'Talent Escort (no flight field)'
     },
     {
-      role: 'talent_logistics_coordinator',
+      role: 'coordinator',
       name: 'Alex Rivera',
       expectedFlightField: true,
-      description: 'Talent Logistics Coordinator (with flight field)'
+      description: 'Coordinator (with flight field)'
     },
     {
       role: 'supervisor',
@@ -127,7 +127,7 @@ async function testRegistrationFlow() {
         console.log(`      - Status: ${profile.status}`)
         
         // Validate flight field logic
-        const flightEligibleRoles = ['in_house', 'supervisor', 'talent_logistics_coordinator']
+        const flightEligibleRoles = ['in_house', 'supervisor', 'coordinator']
         const isFlightEligible = flightEligibleRoles.includes(profile.role)
         
         if (isFlightEligible === testCase.expectedFlightField) {
@@ -154,7 +154,7 @@ async function main() {
   
   console.log('📋 Changes implemented:')
   console.log('   • Role selection: Dropdown → Full-width buttons')
-  console.log('   • Button order: Talent Escort → TLC → Supervisor → In-House')
+  console.log('   • Button order: Talent Escort → Coordinator → Supervisor → In-House')
   console.log('   • Terms checkbox: Moved to main form (after role selection)')
   console.log('   • Flight field: Only shows for eligible roles\n')
   

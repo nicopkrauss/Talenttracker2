@@ -26,7 +26,7 @@ describe('Role Utilities', () => {
 
     it('should use project role when no system role', () => {
       expect(getEffectiveUserRole(null, 'supervisor')).toBe('supervisor')
-      expect(getEffectiveUserRole(null, 'talent_logistics_coordinator')).toBe('talent_logistics_coordinator')
+      expect(getEffectiveUserRole(null, 'coordinator')).toBe('coordinator')
     })
 
     it('should default to talent_escort when no roles', () => {
@@ -84,7 +84,7 @@ describe('Role Utilities', () => {
       expect(canManageTalent('admin', null)).toBe(true)
       expect(canManageTalent('in_house', null)).toBe(true)
       expect(canManageTalent(null, 'supervisor')).toBe(true)
-      expect(canManageTalent(null, 'talent_logistics_coordinator')).toBe(true)
+      expect(canManageTalent(null, 'coordinator')).toBe(true)
       expect(canManageTalent(null, 'talent_escort')).toBe(true)
       expect(canManageTalent(null, null)).toBe(false)
     })
@@ -115,7 +115,7 @@ describe('Role Utilities', () => {
 
     it('should use project role permissions when no system role', () => {
       expect(getRolePermissionLevel(null, 'supervisor')).toBe(30)
-      expect(getRolePermissionLevel(null, 'talent_logistics_coordinator')).toBe(20)
+      expect(getRolePermissionLevel(null, 'coordinator')).toBe(20)
       expect(getRolePermissionLevel(null, 'talent_escort')).toBe(10)
     })
 
@@ -159,7 +159,7 @@ describe('Role Utilities', () => {
       expect(getRoleDisplayName('admin')).toBe('Administrator')
       expect(getRoleDisplayName('in_house')).toBe('In-House Manager')
       expect(getRoleDisplayName('supervisor')).toBe('Supervisor')
-      expect(getRoleDisplayName('talent_logistics_coordinator')).toBe('Talent Logistics Coordinator')
+      expect(getRoleDisplayName('coordinator')).toBe('Coordinator')
       expect(getRoleDisplayName('talent_escort')).toBe('Talent Escort')
     })
   })
@@ -169,7 +169,7 @@ describe('Role Utilities', () => {
       expect(getRoleDescription('admin')).toContain('Full system access')
       expect(getRoleDescription('in_house')).toContain('System management')
       expect(getRoleDescription('supervisor')).toContain('On-site management')
-      expect(getRoleDescription('talent_logistics_coordinator')).toContain('Informational oversight')
+      expect(getRoleDescription('coordinator')).toContain('Informational oversight')
       expect(getRoleDescription('talent_escort')).toContain('On-the-ground operations')
     })
   })

@@ -69,7 +69,7 @@ ADD COLUMN IF NOT EXISTS willing_to_fly BOOLEAN DEFAULT false;
 
 ALTER TABLE public.profiles 
 ADD CONSTRAINT check_registration_role 
-CHECK (registration_role IN ('in_house', 'supervisor', 'talent_logistics_coordinator', 'talent_escort'));
+CHECK (registration_role IN ('in_house', 'supervisor', 'coordinator', 'talent_escort'));
 
 CREATE INDEX IF NOT EXISTS idx_profiles_registration_role ON public.profiles(registration_role);
 CREATE INDEX IF NOT EXISTS idx_profiles_nearest_major_city ON public.profiles(nearest_major_city);

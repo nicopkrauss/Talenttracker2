@@ -261,7 +261,7 @@ export function PendingUsersTable({
                       </Select>
 
                       {/* Show additional info for flight-eligible roles */}
-                      {user.role && ['in_house', 'supervisor', 'talent_logistics_coordinator'].includes(user.role) && user.willing_to_fly && (
+                      {user.role && ['in_house', 'supervisor', 'coordinator'].includes(user.role) && user.willing_to_fly && (
                         <div className="flex items-center text-xs text-muted-foreground">
                           <Plane className="w-3 h-3 mr-1" />
                           Willing to fly

@@ -44,7 +44,7 @@ The existing database schema is well-structured and compatible with the new auth
 
 #### project_role (Separate from system roles)
 - `supervisor`: On-site manager
-- `talent_logistics_coordinator`: TLC role
+- `coordinator`: Coordinator role
 - `talent_escort`: Escort role
 
 ### Foreign Key Relationships

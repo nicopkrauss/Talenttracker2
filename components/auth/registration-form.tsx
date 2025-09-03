@@ -70,7 +70,7 @@ export function RegistrationForm({
   const selectedRole = form.watch("role")
   
   // Determine if flight willingness should be shown (covered roles only)
-  const showFlightWillingness = selectedRole && ['in_house', 'supervisor', 'talent_logistics_coordinator'].includes(selectedRole)
+  const showFlightWillingness = selectedRole && ['in_house', 'supervisor', 'coordinator'].includes(selectedRole)
 
   // Parse and set form error when error prop changes
   React.useEffect(() => {
@@ -153,7 +153,7 @@ export function RegistrationForm({
             {REGISTRATION_ROLE_LABELS.talent_escort}
           </Button>
           
-          {/* Talent Logistics Coordinator - Second */}
+          {/* Coordinator - Second */}
           <Button
             type="button"
             variant="outline"
@@ -164,10 +164,10 @@ export function RegistrationForm({
               "focus:ring-2 focus:ring-primary/20 focus:ring-offset-2",
               "disabled:opacity-50 disabled:cursor-not-allowed"
             )}
-            onClick={() => handleRoleSelect('talent_logistics_coordinator')}
+            onClick={() => handleRoleSelect('coordinator')}
             disabled={isLoading}
           >
-            {REGISTRATION_ROLE_LABELS.talent_logistics_coordinator}
+            {REGISTRATION_ROLE_LABELS.coordinator}
           </Button>
           
           {/* Supervisor - Third */}

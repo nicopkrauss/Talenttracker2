@@ -26,14 +26,14 @@ inclusion: always
 ## Time Tracking State Machine
 
 ### Universal Time Tracking Flow
-All time-tracking roles (Escort, Supervisor, TLC) follow the same pattern:
+All time-tracking roles (Escort, Supervisor, Coordinator) follow the same pattern:
 
 1. **Check In** → Logs timestamp, button becomes "Start My Break"
 2. **Start My Break** → Logs break start, shows timer, button becomes "End My Break"
 3. **Break Duration** → Button disabled until default duration (30/60 min) passes
 4. **End My Break** → Logs break end, different next states by role:
    - **Escorts**: Button disappears (checkout by Supervisor)
-   - **Supervisors/TLC**: Button becomes "Check Out"
+   - **Supervisors/Coordinator**: Button becomes "Check Out"
 5. **Check Out** → Logs checkout, resets to "Check In" for next day
 
 ### Break Management Rules
@@ -44,7 +44,7 @@ All time-tracking roles (Escort, Supervisor, TLC) follow the same pattern:
 ## User Approval & Onboarding
 
 ### Registration Workflow
-1. **Role Selection**: User selects their hired position (Talent Escort, TLC, Supervisor, In-House)
+1. **Role Selection**: User selects their hired position (Talent Escort, Coordinator, Supervisor, In-House)
 2. **Registration Form**: Full name, email, password, phone, nearest major city, flight willingness
 3. **Terms Agreement**: Must check "I agree to Terms of Service and Privacy Policy"
 4. **Auto-Profile Creation**: Database trigger creates profile with 'pending' status
@@ -69,7 +69,7 @@ All time-tracking roles (Escort, Supervisor, TLC) follow the same pattern:
 
 ### Talent & Operations
 - **Escorts**: Talent arrival notifications
-- **Supervisors/TLC**: Favorited talent arrival (opt-in)
+- **Supervisors/Coordinator**: Favorited talent arrival (opt-in)
 - **Management**: Consolidated shift limit warnings
 
 ## Data Validation & Error Handling

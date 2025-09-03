@@ -21,28 +21,28 @@ export const navigationItems: NavItem[] = [
     label: 'Team',
     href: '/team',
     icon: UsersIcon,
-    roles: ['admin', 'in_house', 'supervisor', 'talent_logistics_coordinator']
+    roles: ['admin', 'in_house', 'supervisor', 'coordinator']
   },
   {
     id: 'talent',
     label: 'Talent',
     href: '/talent',
     icon: StarIcon,
-    roles: ['admin', 'in_house', 'supervisor', 'talent_logistics_coordinator', 'talent_escort']
+    roles: ['admin', 'in_house', 'supervisor', 'coordinator', 'talent_escort']
   },
   {
     id: 'timecards',
     label: 'Timecards',
     href: '/timecards',
     icon: ClipboardListIcon,
-    roles: ['admin', 'in_house', 'supervisor', 'talent_logistics_coordinator', 'talent_escort']
+    roles: ['admin', 'in_house', 'supervisor', 'coordinator', 'talent_escort']
   },
   {
     id: 'profile',
     label: 'Profile',
     href: '/profile',
     icon: UserIcon,
-    roles: ['admin', 'in_house', 'supervisor', 'talent_logistics_coordinator', 'talent_escort']
+    roles: ['admin', 'in_house', 'supervisor', 'coordinator', 'talent_escort']
   }
 ]
 

@@ -30,7 +30,7 @@ export default function TimecardsPage() {
   )
 
   const isAdmin = userProfile?.role === "admin" || userProfile?.role === "in_house"
-  const isSupervisor = userProfile?.role === "supervisor" || userProfile?.role === "talent_logistics_coordinator"
+  const isSupervisor = userProfile?.role === "supervisor" || userProfile?.role === "coordinator"
 
   useEffect(() => {
     if (user) {

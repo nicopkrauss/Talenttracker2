@@ -112,9 +112,9 @@ describe('RolesTeamTab', () => {
     // Check role definitions
     expect(screen.getAllByText('Supervisor')).toHaveLength(2) // One in table, one in assignments
     expect(screen.getByText('$300/day')).toBeInTheDocument()
-    expect(screen.getAllByText('Daily')).toHaveLength(2) // Supervisor and TLC are both daily
+    expect(screen.getAllByText('Daily')).toHaveLength(2) // Supervisor and Coordinator are both daily
     
-    expect(screen.getByText('Talent Logistics Coordinator')).toBeInTheDocument()
+    expect(screen.getByText('Coordinator')).toBeInTheDocument()
     expect(screen.getByText('$350/day')).toBeInTheDocument()
     
     expect(screen.getByText('Escort')).toBeInTheDocument()
@@ -156,7 +156,7 @@ describe('RolesTeamTab', () => {
 
     // Check summary counts
     expect(screen.getByText('Supervisors')).toBeInTheDocument()
-    expect(screen.getByText('TLCs')).toBeInTheDocument()
+    expect(screen.getByText('Coordinators')).toBeInTheDocument()
     expect(screen.getByText('Escorts')).toBeInTheDocument()
     expect(screen.getByText('Est. Daily Cost')).toBeInTheDocument()
   })

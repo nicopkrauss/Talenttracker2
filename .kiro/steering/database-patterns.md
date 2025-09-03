@@ -72,7 +72,7 @@ CREATE POLICY "Talent access based on project role" ON talent_project_assignment
   - **null**: Regular users with project-based roles only
 - **Project Roles (team_assignments.role)**:
   - **supervisor**: On-site management with day rate tracking
-  - **talent_logistics_coordinator**: Informational oversight role
+  - **coordinator**: Informational oversight role
   - **talent_escort**: On-the-ground operations with hourly tracking
 - **User Status (profiles.status)**:
   - **pending**: Awaiting admin approval, no operational access

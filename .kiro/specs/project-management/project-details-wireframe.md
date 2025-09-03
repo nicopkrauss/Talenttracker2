@@ -98,7 +98,7 @@ The project details page has two distinct modes based on project status:
 │ │ Role        │ Base Pay │ Time Type │ # Assigned            │ │
 │ │ Supervisor  │ $300/day │ Daily     │ 2                     │ │
 │ │ Escort      │ $20/hr   │ Hourly    │ 4                     │ │
-│ │ TLC         │ $350/day │ Daily     │ 1                     │ │
+│ │ Coordinator │ $350/day │ Daily     │ 1                     │ │
 │ └─────────────────────────────────────────────────────────────┘ │
 │                                                                 │
 │ Team Assignment Interface                                       │
@@ -133,7 +133,7 @@ The project details page has two distinct modes based on project status:
 │                                                                 │
 │ Assignment Summary                                              │
 │ ┌─────────────────────────────────────────────────────────────┐ │
-│ │ Supervisor: 2 assigned │ Escort: 4 assigned │ TLC: 1 assigned│ │
+│ │ Supervisor: 2 assigned │ Escort: 4 assigned │ Coordinator: 1 assigned│ │
 │ │ Total Staff: 7/12      │ Estimated Cost: $2,840/day        │ │
 │ └─────────────────────────────────────────────────────────────┘ │
 │                                                                 │

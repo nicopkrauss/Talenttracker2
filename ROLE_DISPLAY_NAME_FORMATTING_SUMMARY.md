@@ -12,7 +12,7 @@ Updated the roles-team-tab component to use proper formatted role names instead 
    - `admin` → "Administrator"
    - `in_house` → "In-House Manager" 
    - `supervisor` → "Supervisor"
-   - `talent_logistics_coordinator` → "Talent Logistics Coordinator"
+   - `coordinator` → "Coordinator"
    - `talent_escort` → "Talent Escort"
 
 3. **Bulk Assignment Dropdown**: Updated role options to use formatted names
@@ -31,7 +31,7 @@ Updated the roles-team-tab component to use proper formatted role names instead 
 
 ### Benefits
 
-- **Better UX**: Users now see "Talent Logistics Coordinator" instead of "talent_logistics_coordinator"
+- **Better UX**: Users now see "Coordinator" instead of "coordinator"
 - **Consistency**: All role displays now use the same formatting function
 - **Maintainability**: Role display names are centralized in the role-utils file
 - **Professional Appearance**: Proper capitalization and spacing for all role names

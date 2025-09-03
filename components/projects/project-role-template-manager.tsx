@@ -37,7 +37,7 @@ export function ProjectRoleTemplateManager({ projectId, onUpdate }: ProjectRoleT
 
   const roleOptions: { value: ProjectRole; label: string }[] = [
     { value: 'supervisor', label: 'Supervisor' },
-    { value: 'talent_logistics_coordinator', label: 'Talent Logistics Coordinator' },
+    { value: 'coordinator', label: 'Coordinator' },
     { value: 'talent_escort', label: 'Escort' }
   ]
 

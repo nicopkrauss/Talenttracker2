@@ -69,21 +69,21 @@ const navigationItems: NavItem[] = [
     label: 'Team',
     href: '/team',
     icon: Users3Icon,
-    roles: ['admin', 'in-house', 'supervisor', 'tlc']
+    roles: ['admin', 'in-house', 'supervisor', 'coordinator']
   },
   {
     id: 'talent',
     label: 'Talent',
     href: '/talent',
     icon: StarIcon,
-    roles: ['admin', 'in-house', 'supervisor', 'tlc', 'talent-escort']
+    roles: ['admin', 'in-house', 'supervisor', 'coordinator', 'talent-escort']
   },
   {
     id: 'timecards',
     label: 'Timecards',
     href: '/timecards',
     icon: ClipboardListIcon,
-    roles: ['admin', 'in-house', 'supervisor', 'tlc', 'talent-escort']
+    roles: ['admin', 'in-house', 'supervisor', 'coordinator', 'talent-escort']
   }
 ]
 ```
@@ -106,7 +106,7 @@ const navigationItems: NavItem[] = [
 
 ### User Role Types
 ```typescript
-type ProjectRole = 'admin' | 'in-house' | 'supervisor' | 'tlc' | 'talent-escort'
+type ProjectRole = 'admin' | 'in-house' | 'supervisor' | 'coordinator' | 'talent-escort'
 
 interface User {
   id: string

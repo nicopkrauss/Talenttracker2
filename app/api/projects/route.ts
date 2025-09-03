@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
       // Admin and In-House users can see all projects
       // No additional filtering needed
     } else {
-      // Supervisor, TLC, and Escort users can only see projects they're assigned to
+      // Supervisor, Coordinator, and Escort users can only see projects they're assigned to
       // For now, we'll show active projects only since team assignments aren't implemented yet
       projectsQuery = projectsQuery.eq('status', 'active')
     }

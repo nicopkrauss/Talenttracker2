@@ -148,13 +148,13 @@ describe('Middleware Integration', () => {
   describe('Role Validation', () => {
     it('should validate system roles correctly', () => {
       const systemRoles = ['admin', 'in_house']
-      const projectRoles = ['supervisor', 'talent_logistics_coordinator', 'talent_escort']
+      const projectRoles = ['supervisor', 'coordinator', 'talent_escort']
       
       expect(systemRoles).toContain('admin')
       expect(systemRoles).toContain('in_house')
       
       expect(projectRoles).toContain('supervisor')
-      expect(projectRoles).toContain('talent_logistics_coordinator')
+      expect(projectRoles).toContain('coordinator')
       expect(projectRoles).toContain('talent_escort')
     })
 

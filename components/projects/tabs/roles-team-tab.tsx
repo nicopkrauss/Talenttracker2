@@ -39,7 +39,7 @@ const getRoleColor = (role: string | null): string => {
       return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-800'
     case 'supervisor':
       return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-200 dark:border-green-800'
-    case 'talent_logistics_coordinator':
+    case 'coordinator':
       return 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900 dark:text-purple-200 dark:border-purple-800'
     case 'talent_escort':
       return 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900 dark:text-orange-200 dark:border-orange-800'
@@ -102,7 +102,7 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
   // Assignment summary calculation
   const assignmentSummary: AssignmentSummary = useMemo(() => {
     const supervisorCount = assignments.filter(a => a.role === 'supervisor').length
-    const tlcCount = assignments.filter(a => a.role === 'talent_logistics_coordinator').length
+    const tlcCount = assignments.filter(a => a.role === 'coordinator').length
     const escortCount = assignments.filter(a => a.role === 'talent_escort').length
     
     // Calculate estimated daily cost
@@ -895,7 +895,7 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
                   <SelectItem value="admin">{getRoleDisplayName('admin')}</SelectItem>
                   <SelectItem value="in_house">{getRoleDisplayName('in_house')}</SelectItem>
                   <SelectItem value="supervisor">{getRoleDisplayName('supervisor')}</SelectItem>
-                  <SelectItem value="talent_logistics_coordinator">{getRoleDisplayName('talent_logistics_coordinator')}</SelectItem>
+                  <SelectItem value="coordinator">{getRoleDisplayName('coordinator')}</SelectItem>
                   <SelectItem value="talent_escort">{getRoleDisplayName('talent_escort')}</SelectItem>
                 </SelectContent>
               </Select>

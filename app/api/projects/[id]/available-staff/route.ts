@@ -64,7 +64,7 @@ export async function GET(
     // (exclude pending users and include all system roles and users without system roles)
     const eligibleStaff = filteredStaff.filter(staff => 
       staff.status === 'active' && 
-      (staff.role === null || ['admin', 'in_house', 'supervisor', 'talent_logistics_coordinator', 'talent_escort'].includes(staff.role))
+      (staff.role === null || ['admin', 'in_house', 'supervisor', 'coordinator', 'talent_escort'].includes(staff.role))
     )
 
     return NextResponse.json({ staff: eligibleStaff })

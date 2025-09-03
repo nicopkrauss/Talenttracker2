@@ -56,7 +56,7 @@ ADD COLUMN IF NOT EXISTS willing_to_fly BOOLEAN DEFAULT false;
 -- Step 2: Update the system_role enum to include all registration roles
 -- First, add the new values to the enum
 ALTER TYPE public.system_role ADD VALUE IF NOT EXISTS 'supervisor';
-ALTER TYPE public.system_role ADD VALUE IF NOT EXISTS 'talent_logistics_coordinator';
+ALTER TYPE public.system_role ADD VALUE IF NOT EXISTS 'coordinator';
 ALTER TYPE public.system_role ADD VALUE IF NOT EXISTS 'talent_escort';
 
 -- Step 3: Add check constraint for registration_role
@@ -65,7 +65,7 @@ DROP CONSTRAINT IF EXISTS check_registration_role;
 
 ALTER TABLE public.profiles 
 ADD CONSTRAINT check_registration_role 
-CHECK (registration_role IN ('in_house', 'supervisor', 'talent_logistics_coordinator', 'talent_escort'));
+CHECK (registration_role IN ('in_house', 'supervisor', 'coordinator', 'talent_escort'));
 
 -- Step 4: Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_profiles_registration_role ON public.profiles(registration_role);
@@ -102,7 +102,7 @@ enum system_role {
   admin
   in_house
   supervisor
-  talent_logistics_coordinator
+  coordinator
   talent_escort
 
   @@schema("public")

@@ -53,7 +53,7 @@ This feature enhances the talent information system to improve talent management
 
 ### Requirement 5
 
-**User Story:** As a supervisor or TLC, I want to view updated talent information including representative details, so that I can contact appropriate parties when needed.
+**User Story:** As a supervisor or coordinator, I want to view updated talent information including representative details, so that I can contact appropriate parties when needed.
 
 #### Acceptance Criteria
 

@@ -27,7 +27,7 @@ Successfully implemented a new role template system for projects that replaces s
 - **Migration**: Populated existing projects with default templates
 - **Default Templates**:
   - Supervisor: $300/day
-  - Talent Logistics Coordinator: $350/day
+  - Coordinator: $350/day
   - Escort: $20/hour
 
 ## API Endpoints

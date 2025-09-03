@@ -16,7 +16,7 @@ const supabaseAdmin = createClient(
 
 const updateRoleSchema = z.object({
   userId: z.string().uuid('Invalid user ID'),
-  role: z.enum(['in_house', 'supervisor', 'talent_logistics_coordinator', 'talent_escort'])
+  role: z.enum(['in_house', 'supervisor', 'coordinator', 'talent_escort'])
 })
 
 export async function PATCH(request: NextRequest) {

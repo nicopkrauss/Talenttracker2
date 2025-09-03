@@ -21,7 +21,7 @@ const supabase = createClient(
 const testRoles = [
   'in_house',
   'supervisor', 
-  'talent_logistics_coordinator',
+  'coordinator',
   'talent_escort'
 ]
 

@@ -241,20 +241,20 @@ export const MAJOR_CITIES = [
 ] as const
 
 // System role types (matches database enum)
-export type SystemRole = 'admin' | 'in_house' | 'supervisor' | 'talent_logistics_coordinator' | 'talent_escort'
+export type SystemRole = 'admin' | 'in_house' | 'supervisor' | 'coordinator' | 'talent_escort'
 
 // Role display names for registration (excluding admin which is not selectable during registration)
 export const REGISTRATION_ROLE_LABELS: Record<Exclude<SystemRole, 'admin'>, string> = {
   in_house: 'In-House Staff',
   supervisor: 'Supervisor',
-  talent_logistics_coordinator: 'Talent Logistics Coordinator',
+  coordinator: 'Coordinator',
   talent_escort: 'Talent Escort'
 }
 
 // Authentication Zod validation schemas with enhanced validation
 export const registrationSchema = z.object({
   // Role selection (first field) - matches system_role enum except admin
-  role: z.enum(['in_house', 'supervisor', 'talent_logistics_coordinator', 'talent_escort'] as const, {
+  role: z.enum(['in_house', 'supervisor', 'coordinator', 'talent_escort'] as const, {
     required_error: "Please select your position"
   }),
   
@@ -374,7 +374,7 @@ export const projectFormSchema = z.object({
 })
 
 export const projectRoleFormSchema = z.object({
-  role_name: z.enum(['supervisor', 'talent_logistics_coordinator', 'talent_escort']),
+  role_name: z.enum(['supervisor', 'coordinator', 'talent_escort']),
   base_pay_rate: z.number()
     .positive("Pay rate must be a positive number")
     .max(9999.99, "Pay rate cannot exceed $9,999.99")
@@ -414,11 +414,8 @@ export type ProjectLocationFormInput = z.infer<typeof projectLocationFormSchema>
 
 // Navigation System Types
 
-// System-level roles (stored in profiles table)
-export type SystemRole = 'admin' | 'in_house'
-
 // Project-specific roles (stored in team_assignments table)
-export type ProjectRole = 'supervisor' | 'talent_logistics_coordinator' | 'talent_escort'
+export type ProjectRole = 'supervisor' | 'coordinator' | 'talent_escort'
 
 // Combined type for navigation and permissions (system + project roles)
 export type UserRole = SystemRole | ProjectRole
@@ -611,7 +608,7 @@ export interface ProjectSetupChecklist {
 export interface ProjectRoleConfig {
   id: string
   project_id: string
-  role: 'supervisor' | 'talent_logistics_coordinator' | 'talent_escort'
+  role: 'supervisor' | 'coordinator' | 'talent_escort'
   base_pay?: number
   created_at: string
 }
@@ -667,7 +664,7 @@ export interface ProjectFormData {
 
 // Project role form data
 export interface ProjectRoleFormData {
-  role_name: 'supervisor' | 'talent_logistics_coordinator' | 'talent_escort'
+  role_name: 'supervisor' | 'coordinator' | 'talent_escort'
   base_pay_rate?: number
 }
 
@@ -754,7 +751,7 @@ export interface StaffFilter {
 // Assignment summary interface
 export interface AssignmentSummary {
   supervisorCount: number
-  tlcCount: number
+  coordinatorCount: number
   escortCount: number
   totalStaffAssigned: number
   estimatedDailyCost: number

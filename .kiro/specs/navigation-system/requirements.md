@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The navigation system provides role-based navigation that adapts between mobile and desktop interfaces. The system must display different navigation options based on user project roles (Admin, In-House, Supervisor, Talent Logistics Coordinator, Talent Escort) and provide an optimal user experience across device types.
+The navigation system provides role-based navigation that adapts between mobile and desktop interfaces. The system must display different navigation options based on user project roles (Admin, In-House, Supervisor, Coordinator, Talent Escort) and provide an optimal user experience across device types.
 
 ## Requirements
 
@@ -13,7 +13,7 @@ The navigation system provides role-based navigation that adapts between mobile 
 #### Acceptance Criteria
 
 1. WHEN a user has Admin or In-House role THEN the system SHALL display Projects, Team, Talent, Timecards, and Profile navigation options
-2. WHEN a user has Supervisor or Talent Logistics Coordinator role THEN the system SHALL display Team, Talent, Timecards, and Profile navigation options
+2. WHEN a user has Supervisor or Coordinator role THEN the system SHALL display Team, Talent, Timecards, and Profile navigation options
 3. WHEN a user has Talent Escort role THEN the system SHALL display Talent, Timecards, and Profile navigation options
 4. WHEN a user's project role changes THEN the system SHALL update the navigation options immediately
 

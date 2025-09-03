@@ -100,7 +100,7 @@ describe('ProjectRoleManager', () => {
     })
 
     expect(screen.getByText('Supervisor')).toBeInTheDocument()
-    expect(screen.getByText('Talent Logistics Coordinator (TLC)')).toBeInTheDocument()
+    expect(screen.getByText('Coordinator')).toBeInTheDocument()
     expect(screen.getByText('Talent Escort')).toBeInTheDocument()
     expect(screen.getByText('Configured')).toBeInTheDocument()
   })

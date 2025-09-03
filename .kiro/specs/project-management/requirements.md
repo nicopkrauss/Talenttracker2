@@ -49,7 +49,7 @@ The Project Management system is a core feature that enables administrators and 
 
 #### Acceptance Criteria
 
-1. WHEN I access project role management THEN the system SHALL display existing roles (Admin, In-House, Supervisor, Talent Logistics Coordinator, Talent Escort)
+1. WHEN I access project role management THEN the system SHALL display existing roles (Admin, In-House, Supervisor, Coordinator, Talent Escort)
 2. WHEN I configure a role THEN the system SHALL allow setting base pay rates for that role
 3. WHEN I save role configurations THEN the system SHALL validate pay rates are positive numbers
 4. WHEN roles are configured THEN the system SHALL mark "Add Project Roles & Pay Rates" as complete
@@ -75,9 +75,9 @@ The Project Management system is a core feature that enables administrators and 
 
 1. WHEN I am an Admin THEN the system SHALL show all projects in the system
 2. WHEN I am an In-House user THEN the system SHALL show projects where I have been assigned
-3. WHEN I am a Supervisor, Talent Logistics Coordinator, or Escort THEN the system SHALL show only active projects where I am assigned
-4. WHEN I am a Supervisor, Talent Logistics Coordinator, or Escort AND a project is no longer active THEN the system SHALL show the project list card but prevent access to project details
-5. WHEN viewing an inactive project as Supervisor, Talent Logistics Coordinator, or Escort AND I have a submitted timecard or invoice THEN the system SHALL provide a "View My Timecard" or "View My Invoice" button
+3. WHEN I am a Supervisor, Coordinator, or Escort THEN the system SHALL show only active projects where I am assigned
+4. WHEN I am a Supervisor, Coordinator, or Escort AND a project is no longer active THEN the system SHALL show the project list card but prevent access to project details
+5. WHEN viewing an inactive project as Supervisor, Coordinator, or Escort AND I have a submitted timecard or invoice THEN the system SHALL provide a "View My Timecard" or "View My Invoice" button
 6. WHEN I have no project assignments THEN the system SHALL display an appropriate message
 7. WHEN my project access changes THEN the system SHALL update the visible projects immediately
 
@@ -136,7 +136,7 @@ The Project Management system is a core feature that enables administrators and 
 
 #### Acceptance Criteria
 
-1. WHEN I access the Roles & Team tab THEN the system SHALL display a role definition table showing Supervisor ($300/day, Daily), Escort ($20/hr, Hourly), and Talent Logistics Coordinator ($350/day, Daily) with base pay, time type, and assignment counts
+1. WHEN I access the Roles & Team tab THEN the system SHALL display a role definition table showing Supervisor ($300/day, Daily), Escort ($20/hr, Hourly), and Coordinator ($350/day, Daily) with base pay, time type, and assignment counts
 2. WHEN managing team assignments THEN the system SHALL provide a filterable staff list with multiple filter options including name search, role, location, status, and experience level
 3. WHEN filtering staff THEN the system SHALL allow combining multiple filters simultaneously and provide a "Clear Filters" option
 4. WHEN selecting staff THEN the system SHALL provide bulk selection with "Select All" checkbox and bulk assignment to roles

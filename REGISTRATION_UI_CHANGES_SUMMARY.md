@@ -18,7 +18,7 @@ The registration form has been updated with the requested UI improvements for be
 ### 2. Role Button Order
 The buttons now appear in the specified order:
 1. **Talent Escort** (top position)
-2. **Talent Logistics Coordinator** 
+2. **Coordinator** 
 3. **Supervisor**
 4. **In-House Staff** (bottom position)
 

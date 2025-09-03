@@ -511,7 +511,7 @@ interface StaffFilter {
 ```
 - Role definition table with corrected pay rates and time types:
   - Supervisor: $300/day (Daily rate)
-  - Talent Logistics Coordinator: $350/day (Daily rate)
+  - Coordinator: $350/day (Daily rate)
   - Escort: $20/hr (Hourly rate)  
 - Filterable staff list with multiple simultaneous filters
 - Bulk selection and assignment capabilities
