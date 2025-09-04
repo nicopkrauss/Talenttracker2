@@ -49,12 +49,36 @@ describe('Talent Components Theme Migration', () => {
     })
   })
 
-  it('should render TalentLocationTracker with theme-aware colors', () => {
+  // NOTE: TalentLocationTracker is for PROJECT-SPECIFIC use only
+  // It should not be used in global talent profile contexts
+  it('should render TalentLocationTracker with theme-aware colors (project context only)', () => {
+    const mockCurrentStatus = {
+      id: 'status-1',
+      talent_id: 'test-id',
+      project_id: 'project-1',
+      current_location_id: 'loc-1',
+      status: 'on_location' as const,
+      last_updated: new Date().toISOString(),
+      updated_by: 'user-1',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      current_location: {
+        id: 'loc-1',
+        project_id: 'project-1',
+        name: 'Stage A',
+        color: '#3b82f6',
+        is_default: false,
+        sort_order: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    }
+
     const { container } = render(
       <TalentLocationTracker
         talentId="test-id"
-        currentLocation="Stage A"
-        locationHistory={[]}
+        projectId="project-1"
+        currentStatus={mockCurrentStatus}
         onLocationUpdate={() => {}}
       />
     )

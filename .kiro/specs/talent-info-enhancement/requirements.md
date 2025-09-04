@@ -20,14 +20,14 @@ This feature enhances the talent information system to improve talent management
 
 ### Requirement 2
 
-**User Story:** As an admin, I want to add talent to the system without requiring immediate project assignment, so that I can build a talent database that can be used across multiple projects.
+**User Story:** As a user, I want to search and filter talent efficiently, so that I can quickly find specific talent or representatives.
 
 #### Acceptance Criteria
 
-1. WHEN creating new talent THEN the system SHALL allow saving talent without assigning to any project
-2. WHEN viewing the talent database THEN the system SHALL display all talent regardless of project assignment status
-3. WHEN talent has no project assignments THEN the system SHALL clearly indicate their unassigned status
-4. WHEN searching for talent THEN the system SHALL include both assigned and unassigned talent in results
+1. WHEN searching for talent THEN the system SHALL search across talent first name, last name, and representative name
+2. WHEN viewing the talent database THEN the system SHALL display all talent in a clean, organized grid layout
+3. WHEN search results are displayed THEN the system SHALL show talent name, representative information, and action buttons only
+4. WHEN no search results are found THEN the system SHALL display a clear message with option to clear search
 
 ### Requirement 3
 

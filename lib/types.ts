@@ -7,19 +7,13 @@ export interface TalentProfile {
   first_name: string
   last_name: string
   
-  // New representative information
+  // Representative information
   rep_name: string
   rep_email: string
   rep_phone: string
   
   // Enhanced notes field
   notes?: string
-  
-  // Simplified contact info (emergency contact removed)
-  contact_info: {
-    phone?: string
-    email?: string
-  }
   
   // Timestamps
   created_at: string
@@ -28,17 +22,11 @@ export interface TalentProfile {
   // Project relationships (many-to-many)
   talent_assignments?: Array<TalentProjectAssignment>
   
-  // Joined data
+  // Joined data for project information only
   projects?: {
     name: string
     status: string
   }
-  talent_status?: Array<{
-    project_locations: {
-      name: string
-    }
-    updated_at: string
-  }>
 }
 
 export interface TalentProjectAssignment {

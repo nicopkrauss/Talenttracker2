@@ -6,6 +6,24 @@ This design enhances the existing talent management system to support expanded t
 
 ## Architecture
 
+### Separation of Concerns: Global vs Project-Specific Data
+
+**Critical Design Decision**: Talent location tracking is PROJECT-SPECIFIC and must be separated from global talent management.
+
+#### Global Talent Context
+- **Scope**: Cross-project talent information
+- **Tables**: `talent`, `talent_project_assignments`
+- **UI Context**: `/talent/[id]` pages, global talent lists
+- **Data**: Personal info, representative contact, project assignments, general notes
+- **NO**: Location tracking, current status, project-specific data
+
+#### Project-Specific Context  
+- **Scope**: Talent management within a specific project
+- **Tables**: `talent_status`, `project_locations`, `talent_location_updates`
+- **UI Context**: `/projects/[id]/talent` pages, operations dashboards
+- **Data**: Current location, status, location history, project-specific actions
+- **Includes**: All global talent data PLUS project-specific location data
+
 ### Database Schema Changes
 
 The current `TalentProfile` interface will be extended to support the new requirements:
@@ -100,8 +118,10 @@ The existing `TalentProfileForm` component will be updated to include:
    - Improved notes section with better UX
 
 2. **TalentLocationTracker**
-   - Updated to work with new talent data structure
-   - Maintains existing functionality
+   - **IMPORTANT**: This component is for PROJECT-SPECIFIC use only
+   - Should NOT be used in global talent profile pages
+   - Only for use in project-specific talent management contexts
+   - Uses project-specific tables (talent_status, project_locations)
 
 ## Data Models
 

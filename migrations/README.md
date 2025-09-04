@@ -1,11 +1,11 @@
 # Database Migrations
 
-This directory contains SQL migration scripts that have been applied to the database, along with archived migrations for historical reference.
+This directory contains SQL migration scripts for the Talent Tracker database.
 
 ## Current Structure
 
 ### Applied Migrations
-These migrations have been successfully applied to the database and are tracked in the `schema_migrations` table:
+These migrations have been successfully applied to the database:
 
 - `005_add_missing_timecard_columns.sql` - Added missing columns to timecards table
 - `008_separate_system_and_project_roles.sql` - Separated system and project role management
@@ -16,9 +16,21 @@ These migrations have been successfully applied to the database and are tracked 
 - `014_add_project_setup_indexes.sql` - Added performance indexes for project setup
 - `015_create_default_setup_checklists.sql` - Created default setup checklists
 - `016_update_default_locations.sql` - Updated default location configurations
+- `017_add_talent_expected_field.sql` - Added talent expected count to projects
+- `018_add_project_locations_color.sql` - Added color and abbreviation fields to locations
+- `019_fix_project_locations_data.sql` - Fixed location data and sort orders
+- `020_create_project_role_templates.sql` - Created role templates system
+- `021_remove_role_unique_constraint.sql` - Updated role templates to allow multiple per role
+
+### Pending Migrations
+These migrations are ready to be applied:
+
+- `022_rename_talent_logistics_coordinator_to_coordinator.sql` - **PENDING** - Rename role from talent_logistics_coordinator to coordinator
+- `coordinator-migration-step1-enums.sql` - **PENDING** - Step 1: Add coordinator enum values
+- `coordinator-migration-step2-data.sql` - **PENDING** - Step 2: Migrate data to coordinator role
 
 ### Archived Migrations
-Unapplied migrations have been moved to the `archive/` directory for historical reference. These were part of earlier development iterations but were superseded by other approaches or became obsolete.
+Superseded or obsolete migrations have been moved to the `archive/` directory for historical reference.
 
 ## Current Database Schema Management
 

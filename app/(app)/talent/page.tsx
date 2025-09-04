@@ -7,16 +7,15 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Search, MapPin, Phone, AlertTriangle, Plus } from "lucide-react"
+import { Search, Phone, Mail, Plus } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { TalentProfile } from "@/lib/types"
 import Link from "next/link"
+import { CSVImportDialog } from "@/components/talent/csv-import-dialog"
 
 export default function TalentPage() {
   const [talent, setTalent] = useState<TalentProfile[]>([])
   const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [projectFilter, setProjectFilter] = useState<string>("all")
   const [loading, setLoading] = useState(true)
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -31,17 +30,7 @@ export default function TalentPage() {
     try {
       const { data, error } = await supabase
         .from("talent")
-        .select(`
-          *,
-          talent_project_assignments (
-            project_id,
-            status,
-            projects (
-              name,
-              status
-            )
-          )
-        `)
+        .select("*")
         .order("first_name")
 
       if (error) throw error
@@ -62,30 +51,11 @@ export default function TalentPage() {
     const matchesSearch =
       fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       person.rep_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      person.rep_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       false
 
-    const matchesProject = projectFilter === "all" || 
-      person.talent_project_assignments?.some(assignment => 
-        assignment.project_id === projectFilter && assignment.status === 'active'
-      )
-
-    return matchesSearch && matchesProject
+    return matchesSearch
   })
-
-  const getCurrentLocation = (person: TalentProfile) => {
-    const latestStatus = person.talent_status?.[0]
-    return latestStatus?.project_locations?.name || "Unknown"
-  }
-
-  const getEscortName = (person: TalentProfile) => {
-    const assignment = person.talent_project_assignments?.[0]
-    return assignment?.escort_id ? "Escort assigned" : "No escort assigned"
-  }
-
-  const getProjectName = (person: TalentProfile) => {
-    const assignment = person.talent_project_assignments?.find(a => a.status === 'active')
-    return assignment?.projects?.name || "No project assigned"
-  }
 
   if (loading) {
     return (
@@ -107,92 +77,89 @@ export default function TalentPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Talent Management</h1>
-        <Button asChild>
-          <Link href="/talent/new">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Talent
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <CSVImportDialog onImportComplete={fetchTalent} />
+          <Button asChild>
+            <Link href="/talent/new">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Talent
+            </Link>
+          </Button>
+        </div>
       </div>
 
-      {/* Search and Filters */}
+      {/* Search */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <Input
-                placeholder="Search talent by name or email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            <Select value={projectFilter} onValueChange={setProjectFilter}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Filter by project" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Projects</SelectItem>
-                {/* Add project options dynamically */}
-              </SelectContent>
-            </Select>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              placeholder="Search talent by name, representative name, or email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
           </div>
         </CardContent>
       </Card>
 
       {/* Talent Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filteredTalent.map((person) => (
           <Card key={person.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <Avatar>
-                    <AvatarFallback>
-                      {`${person.first_name?.[0] || ''}${person.last_name?.[0] || ''}`}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <CardTitle className="text-lg">
-                      {person.first_name} {person.last_name}
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground">{person.rep_email || 'No email'}</p>
-                  </div>
+            <CardHeader className="pb-2">
+              <div className="flex items-center space-x-3">
+                <Avatar className="w-10 h-10">
+                  <AvatarFallback>
+                    {`${person.first_name?.[0] || ''}${person.last_name?.[0] || ''}`}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="text-base truncate">
+                    {person.first_name} {person.last_name}
+                  </CardTitle>
                 </div>
-                <Badge variant="secondary">Active</Badge>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center text-sm text-muted-foreground">
-                <MapPin className="w-4 h-4 mr-2" />
-                {getCurrentLocation(person)}
-              </div>
-
-              <div className="text-sm">
-                <span className="font-medium">Escort: </span>
-                {getEscortName(person)}
-              </div>
-
-              <div className="text-sm">
-                <span className="font-medium">Project: </span>
-                {getProjectName(person)}
-              </div>
-
-              <div className="flex items-center justify-between pt-2">
-                {person.rep_phone && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(`tel:${person.rep_phone}`)}
-                    className="text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950/20"
-                  >
-                    <Phone className="w-4 h-4 mr-1" />
-                    Call Rep
-                  </Button>
+            <CardContent className="pt-0 space-y-3">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Representative</p>
+                <p className="text-sm font-medium truncate">
+                  {person.rep_name || 'No representative assigned'}
+                </p>
+                {person.rep_email && (
+                  <p className="text-xs text-muted-foreground truncate mt-1">
+                    {person.rep_email}
+                  </p>
                 )}
-                <Button variant="outline" size="sm" asChild>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
+                  {person.rep_phone && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(`tel:${person.rep_phone}`)}
+                      className="flex-1 text-xs"
+                    >
+                      <Phone className="w-3 h-3 mr-1" />
+                      Call Rep
+                    </Button>
+                  )}
+                  {person.rep_email && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(`mailto:${person.rep_email}`)}
+                      className="flex-1 text-xs"
+                    >
+                      <Mail className="w-3 h-3 mr-1" />
+                      Email Rep
+                    </Button>
+                  )}
+                </div>
+                <Button variant="outline" size="sm" asChild className="text-xs">
                   <Link href={`/talent/${person.id}`}>View Profile</Link>
                 </Button>
               </div>

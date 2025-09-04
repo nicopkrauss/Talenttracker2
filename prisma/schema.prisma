@@ -388,22 +388,16 @@ model profiles {
   full_name                                                                   String
   email                                                                       String
   phone                                                                       String?
-  city                                                                        String?
-  state                                                                       String?
   profile_picture_url                                                         String?
   status                                                                      user_status?                 @default(pending)
   created_at                                                                  DateTime?                    @default(now()) @db.Timestamptz(6)
   updated_at                                                                  DateTime?                    @default(now()) @db.Timestamptz(6)
   role                                                                        system_role?
-  // Registration fields
   nearest_major_city                                                          String?
   willing_to_fly                                                              Boolean                      @default(false)
   email_notifications                                                         email_notifications[]
   notifications                                                               notifications[]
   users                                                                       users                        @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@index([nearest_major_city], map: "idx_profiles_nearest_major_city")
-  @@index([willing_to_fly], map: "idx_profiles_willing_to_fly")
   projects                                                                    projects[]
   shifts                                                                      shifts[]
   system_settings                                                             system_settings[]
@@ -415,6 +409,8 @@ model profiles {
   timecards_timecards_user_idToprofiles                                       timecards[]                  @relation("timecards_user_idToprofiles")
   user_favorites                                                              user_favorites[]
 
+  @@index([nearest_major_city], map: "idx_profiles_nearest_major_city")
+  @@index([willing_to_fly], map: "idx_profiles_willing_to_fly")
   @@index([role], map: "idx_profiles_role")
   @@schema("public")
 }
@@ -439,10 +435,10 @@ model project_role_templates {
   time_type     String       @default("hourly") @db.VarChar(20)
   description   String?
   is_active     Boolean      @default(true)
-  is_default    Boolean      @default(false)
   sort_order    Int          @default(0)
   created_at    DateTime?    @default(now()) @db.Timestamptz(6)
   updated_at    DateTime?    @default(now()) @db.Timestamptz(6)
+  is_default    Boolean?     @default(false)
   projects      projects     @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([project_id, role, display_name], map: "project_role_templates_project_role_name_unique")
@@ -450,7 +446,6 @@ model project_role_templates {
   @@index([role], map: "idx_project_role_templates_role")
   @@index([project_id, is_active], map: "idx_project_role_templates_active")
   @@index([project_id, sort_order], map: "idx_project_role_templates_sort")
-  @@index([project_id, role, is_default], map: "idx_project_role_templates_default")
   @@schema("public")
 }
 
@@ -486,8 +481,8 @@ model projects {
   talent_expected            Int?
   notifications              notifications[]
   project_locations          project_locations[]
-  project_roles              project_roles[]
   project_role_templates     project_role_templates[]
+  project_roles              project_roles[]
   project_setup_checklist    project_setup_checklist?
   profiles                   profiles?                    @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   shifts                     shifts[]
@@ -578,11 +573,11 @@ model project_locations {
   project_id   String?   @db.Uuid
   name         String
   created_at   DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at   DateTime? @updatedAt @db.Timestamptz(6)
   is_default   Boolean?  @default(false)
   sort_order   Int?      @default(0)
   abbreviation String?   @db.VarChar(3)
   color        String?   @default("#3b82f6") @db.VarChar(7)
+  updated_at   DateTime? @updatedAt @db.Timestamptz(6)
   projects     projects? @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "talent_locations_project_id_fkey")
 
   @@unique([project_id, name], map: "talent_locations_project_id_name_key")
@@ -695,6 +690,26 @@ model user_favorites {
   @@schema("public")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model oauth_clients {
+  id                 String                  @id @db.Uuid
+  client_id          String                  @unique
+  client_secret_hash String
+  registration_type  oauth_registration_type
+  redirect_uris      String
+  grant_types        String
+  client_name        String?
+  client_uri         String?
+  logo_uri           String?
+  created_at         DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime                @default(now()) @db.Timestamptz(6)
+  deleted_at         DateTime?               @db.Timestamptz(6)
+
+  @@index([client_id])
+  @@index([deleted_at])
+  @@schema("auth")
+}
+
 enum aal_level {
   aal1
   aal2
@@ -740,7 +755,7 @@ enum system_role {
   admin
   in_house
   supervisor
-  talent_logistics_coordinator
+  coordinator
   talent_escort
 
   @@schema("public")
@@ -748,7 +763,7 @@ enum system_role {
 
 enum project_role {
   supervisor
-  talent_logistics_coordinator
+  coordinator
   talent_escort
 
   @@schema("public")
@@ -786,4 +801,11 @@ enum user_status {
   inactive
 
   @@schema("public")
+}
+
+enum oauth_registration_type {
+  dynamic
+  manual
+
+  @@schema("auth")
 }

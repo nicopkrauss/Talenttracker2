@@ -1,10 +1,20 @@
 # Archived Migrations
 
-This directory contains migration files that were created during development but were never applied to the database. They are preserved here for historical reference and potential future use.
+This directory contains migration files that were created during development but were never applied, superseded by other implementations, or are no longer needed.
 
-## Archived Files
+## Archive Structure
 
-These migrations were part of earlier development iterations but were superseded by other approaches or became obsolete:
+### `/multiple-021-migrations/`
+Contains migration files that were numbered as 021 but have been integrated into the database through other means:
+- Registration fields (nearest_major_city, willing_to_fly)
+- Role template improvements (is_default field)
+- City constraints (handled at application level)
+
+### `/superseded-migrations/`
+Contains alternative approaches to migrations that were superseded by the main implementation files.
+
+### Root Archive Files
+These migrations were part of earlier development iterations:
 
 - `000_create_migration_tracking.sql` - Early migration tracking system (superseded by current schema_migrations table)
 - `001_talent_info_enhancement_corrected.sql` - Talent info enhancement (functionality implemented via other means)
@@ -15,6 +25,13 @@ These migrations were part of earlier development iterations but were superseded
 - `009_simple_auth_logging.sql` - Auth logging system (not implemented)
 - `017_fix_project_locations_trigger.sql` - Project locations trigger fix (not needed)
 
+## Current Migration Status
+
+The active migrations are in the parent `/migrations/` directory. The database schema is managed through:
+1. Applied SQL migrations (tracked in schema_migrations table)
+2. Prisma schema for type generation and introspection
+3. Pending coordinator role migration (ready to apply)
+
 ## Note
 
-These files are kept for reference only. The current database schema is managed primarily through Prisma migrations and the applied SQL migrations in the parent directory.
+These archived files are preserved for historical reference, audit purposes, and understanding the evolution of the database design.

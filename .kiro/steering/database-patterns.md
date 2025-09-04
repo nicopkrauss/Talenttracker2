@@ -20,10 +20,28 @@ inclusion: always
 - **project_roles**: Legacy role configuration (being phased out)
 
 ### Talent Management
-- **talent**: Enhanced talent profiles with representative information
+- **talent**: Enhanced talent profiles with representative information (GLOBAL CONTEXT ONLY)
 - **talent_project_assignments**: Many-to-many talent-project relationships
-- **talent_status**: Current location and status tracking per project
+- **talent_status**: Current location and status tracking per project (PROJECT-SPECIFIC ONLY)
+- **project_locations**: Available locations defined per project (PROJECT-SPECIFIC ONLY)
 - **user_favorites**: Staff favorites for talent notifications
+
+#### Talent Data Separation of Concerns
+**IMPORTANT**: Talent location tracking is PROJECT-SPECIFIC and should never be part of global talent profiles.
+
+**Global Talent Context** (`/talent/[id]` pages):
+- Personal information (first_name, last_name)
+- Representative contact (rep_name, rep_email, rep_phone)
+- General notes
+- Project assignments list
+- NO location tracking, NO current status
+
+**Project-Specific Context** (`/projects/[id]/talent` pages):
+- All global talent info PLUS
+- Current location within the project
+- Location tracking and updates
+- Project-specific status
+- Location history within project
 
 ### Time Tracking Schema
 - **shifts**: Universal shift tracking for all roles with check-in/out times

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
 import { Phone, User, FileText } from "lucide-react"
 import type { TalentProfile } from "@/lib/types"
 import { TalentProfileForm } from "@/components/talent/talent-profile-form"
@@ -17,6 +18,8 @@ export default function TalentProfilePage() {
   const params = useParams()
   const [talent, setTalent] = useState<TalentProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [notes, setNotes] = useState("")
+  const [savingNotes, setSavingNotes] = useState(false)
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -50,10 +53,43 @@ export default function TalentProfilePage() {
 
       if (error) throw error
       setTalent(data)
+      setNotes(data.notes || "")
     } catch (error) {
       console.error("Error fetching talent profile:", error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const saveNotes = async (newNotes: string) => {
+    if (!talent || savingNotes) return
+    
+    setSavingNotes(true)
+    try {
+      const { error } = await supabase
+        .from("talent")
+        .update({ notes: newNotes })
+        .eq("id", talent.id)
+
+      if (error) throw error
+      
+      setTalent(prev => prev ? { ...prev, notes: newNotes } : null)
+    } catch (error) {
+      console.error("Error saving notes:", error)
+      // Revert notes on error
+      setNotes(talent.notes || "")
+    } finally {
+      setSavingNotes(false)
+    }
+  }
+
+  const handleNotesChange = (value: string) => {
+    setNotes(value)
+  }
+
+  const handleNotesBlur = () => {
+    if (notes !== (talent?.notes || "")) {
+      saveNotes(notes)
     }
   }
 
@@ -121,12 +157,6 @@ export default function TalentProfilePage() {
                   Call Rep
                 </Button>
               )}
-              {talent.contact_info?.phone && (
-                <Button variant="outline" onClick={() => window.open(`tel:${talent.contact_info.phone}`)}>
-                  <Phone className="w-4 h-4 mr-2" />
-                  Call Talent
-                </Button>
-              )}
             </div>
           </div>
         </CardHeader>
@@ -148,85 +178,68 @@ export default function TalentProfilePage() {
 
         <TabsContent value="overview" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
-            {/* Contact Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <User className="w-5 h-5 mr-2" />
-                  Talent Contact Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {talent.contact_info?.phone && (
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Phone</label>
-                    <p>{talent.contact_info.phone}</p>
-                  </div>
-                )}
-                {talent.contact_info?.email && (
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Email</label>
-                    <p>{talent.contact_info.email}</p>
-                  </div>
-                )}
-                {!talent.contact_info?.phone && !talent.contact_info?.email && (
-                  <p className="text-gray-500 text-sm">No direct contact information available</p>
-                )}
-              </CardContent>
-            </Card>
-
             {/* Representative Contact */}
-            <Card>
+            <Card className="md:col-span-2">
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <User className="w-5 h-5 mr-2" />
                   Representative Contact
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Name</label>
-                  <p>{talent.rep_name}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Email</label>
-                  <p>
-                    <a 
-                      href={`mailto:${talent.rep_email}`}
-                      className="text-blue-600 hover:underline"
-                    >
-                      {talent.rep_email}
-                    </a>
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Phone</label>
-                  <p>
-                    <a 
-                      href={`tel:${talent.rep_phone}`}
-                      className="text-blue-600 hover:underline"
-                    >
-                      {talent.rep_phone}
-                    </a>
-                  </p>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Name</label>
+                    <p className="mt-1 text-lg">{talent.rep_name}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Email</label>
+                    <p className="mt-1">
+                      <a 
+                        href={`mailto:${talent.rep_email}`}
+                        className="text-blue-600 hover:underline text-lg"
+                      >
+                        {talent.rep_email}
+                      </a>
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Phone</label>
+                    <p className="mt-1">
+                      <a 
+                        href={`tel:${talent.rep_phone}`}
+                        className="text-blue-600 hover:underline text-lg"
+                      >
+                        {talent.rep_phone}
+                      </a>
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Notes */}
-            {talent.notes && (
-              <Card className="md:col-span-2">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <FileText className="w-5 h-5 mr-2" />
-                    Notes
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="whitespace-pre-wrap">{talent.notes}</p>
-                </CardContent>
-              </Card>
-            )}
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <FileText className="w-5 h-5 mr-2" />
+                  Notes
+                  {savingNotes && (
+                    <span className="ml-2 text-xs text-muted-foreground">Saving...</span>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  value={notes}
+                  onChange={(e) => handleNotesChange(e.target.value)}
+                  onBlur={handleNotesBlur}
+                  placeholder="Add notes about this talent..."
+                  className="min-h-[120px] resize-y"
+                  disabled={savingNotes}
+                />
+              </CardContent>
+            </Card>
 
             {/* Current Project Assignments */}
             <Card className="md:col-span-2">
