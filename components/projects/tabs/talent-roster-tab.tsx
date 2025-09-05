@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 import { EnhancedProject, TalentProfile } from '@/lib/types'
-import { Upload, Plus, Search, Users, Check, Trash2 } from 'lucide-react'
+import { Plus, Search, Users, Check, Trash2, UserPlus, ChevronDown, ChevronRight } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { CSVImportDialog } from '@/components/talent/csv-import-dialog'
 
@@ -43,6 +43,10 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
   const [showAddDialog, setShowAddDialog] = useState(false)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  // Collapsible section states
+  const [isAssignTalentExpanded, setIsAssignTalentExpanded] = useState(true)
+  const [isCurrentTalentAssignmentsExpanded, setIsCurrentTalentAssignmentsExpanded] = useState(true)
   
   // Form state for adding talent
   const [formData, setFormData] = useState({
@@ -334,30 +338,45 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
 
   return (
     <div className="space-y-6">
-      {/* Header with Actions */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <Users className="h-6 w-6" />
-            Talent Roster
-            <Badge variant="secondary">{assignedTalent.length} assigned</Badge>
-          </h2>
-        </div>
-        <div className="flex gap-2">
-          <CSVImportDialog onImportComplete={reloadDataSilently} />
-          <Button onClick={() => setShowAddDialog(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Add New Talent
-          </Button>
-        </div>
-      </div>
-
-      {/* Available Talent Section */}
+      {/* Assign Talent Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Available Talent</CardTitle>
+          <CardTitle className="flex items-center justify-between">
+            <div 
+              className="flex items-center gap-2 cursor-pointer flex-1" 
+              onClick={() => setIsAssignTalentExpanded(!isAssignTalentExpanded)}
+            >
+              {isAssignTalentExpanded ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+              <UserPlus className="h-5 w-5" />
+              Assign Talent
+              <Badge variant="secondary">{assignedTalent.length} assigned</Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              {isAssignTalentExpanded && (
+                <>
+                  <CSVImportDialog onImportComplete={reloadDataSilently} />
+                  <Button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowAddDialog(true);
+                    }} 
+                    size="sm" 
+                    className="gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add New Talent
+                  </Button>
+                </>
+              )}
+            </div>
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        {isAssignTalentExpanded && (
+          <CardContent>
           {/* Search for available talent */}
           <div className="mb-4">
             <div className="relative">
@@ -410,14 +429,24 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
             )}
           </div>
         </CardContent>
+        )}
       </Card>
 
-      {/* Assigned Talent Section */}
+      {/* Current Talent Assignments Section */}
       <Card>
-        <CardHeader>
-          <CardTitle>Assigned Talent</CardTitle>
+        <CardHeader className="cursor-pointer" onClick={() => setIsCurrentTalentAssignmentsExpanded(!isCurrentTalentAssignmentsExpanded)}>
+          <CardTitle className="flex items-center gap-2">
+            {isCurrentTalentAssignmentsExpanded ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+            <Users className="h-5 w-5" />
+            Current Talent Assignments
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        {isCurrentTalentAssignmentsExpanded && (
+          <CardContent>
           {/* Search for assigned talent */}
           <div className="mb-4">
             <div className="relative">
@@ -497,6 +526,7 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
             </TableBody>
           </Table>
         </CardContent>
+        )}
       </Card>
 
       {/* Finalize Button */}

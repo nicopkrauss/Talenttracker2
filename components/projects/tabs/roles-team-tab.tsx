@@ -10,18 +10,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
-import { 
-  EnhancedProject, 
-  TeamAssignment, 
-  AvailableStaff, 
-  StaffFilter, 
-  AssignmentSummary, 
+import {
+  EnhancedProject,
+  TeamAssignment,
+  AvailableStaff,
+  StaffFilter,
+  AssignmentSummary,
   RoleDefinition,
   ProjectRole,
   ProjectRoleTemplate
 } from '@/lib/types'
 import { getRoleDisplayName } from '@/lib/role-utils'
-import { Search, Users, DollarSign, Plus, X, Check, ArrowUp, ArrowDown, MapPin, Plane, ChevronDown, ChevronRight, Edit, Trash2, FileText } from 'lucide-react'
+import { Search, Users, DollarSign, Plus, X, Check, ArrowUp, ArrowDown, MapPin, Plane, ChevronDown, ChevronRight, Edit, Trash2, FileText, UserPlus } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { ProjectRoleTemplateManager, ProjectRoleTemplateManagerRef } from '@/components/projects/project-role-template-manager'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -78,7 +78,11 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
   const [individualPayRate, setIndividualPayRate] = useState<number | ''>('')
   const [editPopoverOpen, setEditPopoverOpen] = useState<string | null>(null)
   const [allUserAssignments, setAllUserAssignments] = useState<TeamAssignment[]>([])
-  
+
+  // Collapsible section states
+  const [isAssignStaffExpanded, setIsAssignStaffExpanded] = useState(true)
+  const [isCurrentAssignmentsExpanded, setIsCurrentAssignmentsExpanded] = useState(true)
+
   // Assignment filters and selection
   const [assignmentFilters, setAssignmentFilters] = useState({
     search: '',
@@ -107,12 +111,12 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
     const supervisorCount = assignments.filter(a => a.role === 'supervisor').length
     const tlcCount = assignments.filter(a => a.role === 'coordinator').length
     const escortCount = assignments.filter(a => a.role === 'talent_escort').length
-    
+
     // Calculate estimated daily cost
     const supervisorCost = supervisorCount * 300
     const tlcCost = tlcCount * 350
     const escortCost = escortCount * 20 * 12 // Assuming 12-hour day for escorts
-    
+
     return {
       supervisorCount,
       tlcCount,
@@ -135,7 +139,7 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
   const filteredStaff = useMemo(() => {
     let filtered = availableStaff.filter(staff => {
       if (filters.search && !staff.full_name.toLowerCase().includes(filters.search.toLowerCase()) &&
-          !staff.email.toLowerCase().includes(filters.search.toLowerCase())) {
+        !staff.email.toLowerCase().includes(filters.search.toLowerCase())) {
         return false
       }
       if (filters.role && staff.role !== filters.role) {
@@ -156,7 +160,7 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
     // Apply sorting
     filtered.sort((a, b) => {
       let aValue: any, bValue: any
-      
+
       switch (filters.sort_by) {
         case 'full_name':
           aValue = a.full_name.toLowerCase()
@@ -194,26 +198,26 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
   // Filtered and sorted assignments
   const filteredAssignments = useMemo(() => {
     let filtered = assignments.filter(assignment => {
-      const matchesSearch = assignmentFilters.search === '' || 
+      const matchesSearch = assignmentFilters.search === '' ||
         assignment.profiles.full_name.toLowerCase().includes(assignmentFilters.search.toLowerCase()) ||
         assignment.profiles.email.toLowerCase().includes(assignmentFilters.search.toLowerCase())
-      
+
       const matchesRole = assignmentFilters.role === 'all' || assignment.role === assignmentFilters.role
-      
-      const matchesCity = assignmentFilters.city === 'all' || 
+
+      const matchesCity = assignmentFilters.city === 'all' ||
         assignment.profiles.nearest_major_city === assignmentFilters.city
-      
+
       const matchesFlight = assignmentFilters.flight_willingness === 'all' ||
         (assignmentFilters.flight_willingness === 'yes' && assignment.profiles.willing_to_fly) ||
         (assignmentFilters.flight_willingness === 'no' && !assignment.profiles.willing_to_fly)
-      
+
       return matchesSearch && matchesRole && matchesCity && matchesFlight
     })
 
     // Sort assignments
     filtered.sort((a, b) => {
       let aValue: any, bValue: any
-      
+
       switch (assignmentFilters.sort_by) {
         case 'name':
           aValue = a.profiles.full_name
@@ -235,12 +239,12 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
           aValue = a.profiles.full_name
           bValue = b.profiles.full_name
       }
-      
+
       if (typeof aValue === 'string') {
         aValue = aValue.toLowerCase()
         bValue = bValue.toLowerCase()
       }
-      
+
       const comparison = aValue < bValue ? -1 : aValue > bValue ? 1 : 0
       return assignmentFilters.sort_order === 'asc' ? comparison : -comparison
     })
@@ -252,7 +256,7 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
   const assignmentFilterOptions = useMemo(() => {
     const roles = [...new Set(assignments.map(a => a.role))].filter(Boolean)
     const cities = [...new Set(assignments.map(a => a.profiles.nearest_major_city))].filter(Boolean)
-    
+
     return { roles, cities }
   }, [assignments])
 
@@ -269,7 +273,7 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
   const loadData = async () => {
     try {
       setLoading(true)
-      
+
       // Load team assignments
       const assignmentsResponse = await fetch(`/api/projects/${project.id}/team-assignments`)
       if (assignmentsResponse.ok) {
@@ -341,16 +345,16 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
     if (!bulkRole || selectedStaff.size === 0) return
 
     setIsAssigning(true)
-    
+
     // Store selected staff data for potential rollback
     const selectedStaffArray = Array.from(selectedStaff)
-    const selectedStaffData = selectedStaffArray.map(userId => 
+    const selectedStaffData = selectedStaffArray.map(userId =>
       availableStaff.find(s => s.id === userId)
     ).filter(Boolean)
-    
+
     // Find the template for the selected role to get the base pay rate
     const selectedTemplate = roleTemplates.find(t => t.role === bulkRole)
-    
+
     // Optimistic update - create temporary assignments
     const optimisticAssignments = selectedStaffArray.map(userId => {
       const staff = availableStaff.find(s => s.id === userId)
@@ -374,10 +378,10 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
 
     // Add optimistic assignments to current assignments
     setAssignments(prev => [...prev, ...optimisticAssignments])
-    
+
     // Remove assigned staff from available staff list immediately
     setAvailableStaff(prev => prev.filter(staff => !selectedStaff.has(staff.id)))
-    
+
     // Clear selection immediately for better UX
     setSelectedStaff(new Set())
     setBulkRole('')
@@ -385,7 +389,7 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
     try {
       // Find the template for the selected role to get the base pay rate
       const selectedTemplate = roleTemplates.find(t => t.role === bulkRole)
-      
+
       const promises = selectedStaffArray.map(userId =>
         fetch(`/api/projects/${project.id}/team-assignments`, {
           method: 'POST',
@@ -399,7 +403,7 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
       )
 
       await Promise.all(promises)
-      
+
       toast({
         title: "Success",
         description: `Assigned ${selectedStaffArray.length} staff members to ${getRoleDisplayName(bulkRole)}`,
@@ -409,13 +413,13 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
       await reloadDataSilently()
     } catch (error) {
       console.error('Error bulk assigning:', error)
-      
+
       // Revert optimistic updates on error
       setAssignments(prev => prev.filter(a => !a.id.startsWith('temp-')))
-      
+
       // Restore staff to available list
       setAvailableStaff(prev => [...prev, ...selectedStaffData])
-      
+
       toast({
         title: "Error",
         description: "Failed to assign staff members",
@@ -432,17 +436,17 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
 
     // Find default template for user's system role
     let defaultTemplate = roleTemplates.find(t => t.role === staff.role && t.is_default)
-    
+
     // If no default template for their system role, try to find any default template
     if (!defaultTemplate) {
       defaultTemplate = roleTemplates.find(t => t.is_default)
     }
-    
+
     // If still no default template, use the first available template
     if (!defaultTemplate) {
       defaultTemplate = roleTemplates[0]
     }
-    
+
     if (!defaultTemplate) {
       toast({
         title: "No Role Templates",
@@ -499,11 +503,11 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
       }
     } catch (error) {
       console.error('Error assigning staff:', error)
-      
+
       // Revert optimistic updates on error
       setAssignments(prev => prev.filter(a => a.id !== `temp-${userId}`))
       setAvailableStaff(prev => [...prev, staff])
-      
+
       const errorMessage = error instanceof Error ? error.message : 'Failed to assign staff member'
       toast({
         title: "Error",
@@ -541,7 +545,7 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
     // Add optimistic assignment and remove from available staff
     setAssignments(prev => [...prev, optimisticAssignment])
     setAvailableStaff(prev => prev.filter(s => s.id !== userId))
-    
+
     // Close popover and reset form
     setIndividualAssignOpen(null)
     setIndividualTemplateId('')
@@ -570,11 +574,11 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
       }
     } catch (error) {
       console.error('Error assigning staff:', error)
-      
+
       // Revert optimistic updates on error
       setAssignments(prev => prev.filter(a => a.id !== `temp-${userId}`))
       setAvailableStaff(prev => [...prev, staff])
-      
+
       toast({
         title: "Error",
         description: "Failed to assign staff member",
@@ -590,7 +594,7 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
 
     // Optimistically remove from assignments
     setAssignments(prev => prev.filter(a => a.id !== assignmentId))
-    
+
     // Optimistically add back to available staff
     const staffToRestore = {
       id: assignmentToRemove.user_id,
@@ -621,11 +625,11 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
       }
     } catch (error) {
       console.error('Error removing assignment:', error)
-      
+
       // Revert optimistic updates on error
       setAssignments(prev => [...prev, assignmentToRemove])
       setAvailableStaff(prev => prev.filter(s => s.id !== assignmentToRemove.user_id))
-      
+
       toast({
         title: "Error",
         description: "Failed to remove staff member",
@@ -688,7 +692,7 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
   const handleBulkRemoveAssignments = async () => {
     if (selectedAssignments.size === 0) return
 
-    const assignmentsToRemove = Array.from(selectedAssignments).map(id => 
+    const assignmentsToRemove = Array.from(selectedAssignments).map(id =>
       assignments.find(a => a.id === id)
     ).filter(Boolean)
 
@@ -717,21 +721,21 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
       )
 
       await Promise.all(promises)
-      
+
       toast({
         title: "Success",
         description: `Removed ${assignmentsToRemove.length} team assignments`,
       })
-      
+
       // Silent refresh to sync any server-side changes and get correct system roles
       await reloadDataSilently()
     } catch (error) {
       console.error('Error bulk removing assignments:', error)
-      
+
       // Revert optimistic updates on error
       setAssignments(prev => [...prev, ...assignmentsToRemove])
       setAvailableStaff(prev => prev.filter(s => !staffToRestore.some(staff => staff.id === s.id)))
-      
+
       toast({
         title: "Error",
         description: "Failed to remove assignments",
@@ -743,12 +747,12 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
   const handleBulkUpdatePayRate = async () => {
     if (selectedAssignments.size === 0 || !bulkPayRate) return
 
-    const assignmentsToUpdate = Array.from(selectedAssignments).map(id => 
+    const assignmentsToUpdate = Array.from(selectedAssignments).map(id =>
       assignments.find(a => a.id === id)
     ).filter(Boolean)
 
     // Optimistic update
-    setAssignments(prev => prev.map(a => 
+    setAssignments(prev => prev.map(a =>
       selectedAssignments.has(a.id) ? { ...a, pay_rate: bulkPayRate } : a
     ))
     setSelectedAssignments(new Set())
@@ -764,22 +768,22 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
       )
 
       await Promise.all(promises)
-      
+
       toast({
         title: "Success",
         description: `Updated pay rate for ${assignmentsToUpdate.length} assignments`,
       })
-      
+
       await reloadDataSilently()
     } catch (error) {
       console.error('Error bulk updating pay rates:', error)
-      
+
       // Revert optimistic update
       setAssignments(prev => prev.map(a => {
         const original = assignmentsToUpdate.find(orig => orig.id === a.id)
         return original ? { ...a, pay_rate: original.pay_rate } : a
       }))
-      
+
       toast({
         title: "Error",
         description: "Failed to update pay rates",
@@ -834,15 +838,23 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
     <div className="space-y-6">
       {/* Role Template Manager - Collapsible */}
       <Card>
-        <CardHeader className="cursor-pointer" onClick={() => setIsRoleTemplatesExpanded(!isRoleTemplatesExpanded)}>
+        <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle
+              className="flex items-center gap-2 cursor-pointer flex-1"
+              onClick={() => setIsRoleTemplatesExpanded(!isRoleTemplatesExpanded)}
+            >
+              {isRoleTemplatesExpanded ? (
+                <ChevronDown className="h-5 w-5" />
+              ) : (
+                <ChevronRight className="h-5 w-5" />
+              )}
               <FileText className="h-5 w-5" />
               Role Templates
             </CardTitle>
             <div className="flex items-center gap-2">
               {isRoleTemplatesExpanded && (
-                <Button 
+                <Button
                   onClick={(e) => {
                     e.stopPropagation()
                     roleTemplateManagerRef.current?.openAddDialog()
@@ -854,19 +866,14 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
                   Add Role Template
                 </Button>
               )}
-              {isRoleTemplatesExpanded ? (
-                <ChevronDown className="h-5 w-5" />
-              ) : (
-                <ChevronRight className="h-5 w-5" />
-              )}
             </div>
           </div>
         </CardHeader>
         {isRoleTemplatesExpanded && (
           <CardContent>
-            <ProjectRoleTemplateManager 
+            <ProjectRoleTemplateManager
               ref={roleTemplateManagerRef}
-              projectId={project.id} 
+              projectId={project.id}
               onUpdate={loadData}
             />
           </CardContent>
@@ -877,395 +884,18 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
 
       {/* Staff Assignment Interface */}
       <Card>
-        <CardHeader>
+        <CardHeader className="cursor-pointer" onClick={() => setIsAssignStaffExpanded(!isAssignStaffExpanded)}>
           <CardTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5" />
+            {isAssignStaffExpanded ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+            <UserPlus className="h-5 w-5" />
             Assign Staff to Roles
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Filters Row */}
-          <div className="space-y-3">
-            {/* Search and Controls Row */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search staff by name or email..."
-                    value={filters.search}
-                    onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                    className="pl-9"
-                  />
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={clearFilters}>
-                  Clear Filters
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => handleSortChange(filters.sort_by)}
-                  className="flex items-center gap-2"
-                >
-                  {filters.sort_order === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-                  {filters.sort_order === 'asc' ? 'Ascending' : 'Descending'}
-                </Button>
-              </div>
-            </div>
-            
-            {/* Filter Dropdowns Row */}
-            <div className="flex flex-wrap gap-3">
-              <Select value={filters.role || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, role: value === 'all' ? null : value }))}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="All roles" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All roles</SelectItem>
-                  <SelectItem value="admin">{getRoleDisplayName('admin')}</SelectItem>
-                  <SelectItem value="in_house">{getRoleDisplayName('in_house')}</SelectItem>
-                  <SelectItem value="supervisor">{getRoleDisplayName('supervisor')}</SelectItem>
-                  <SelectItem value="coordinator">{getRoleDisplayName('coordinator')}</SelectItem>
-                  <SelectItem value="talent_escort">{getRoleDisplayName('talent_escort')}</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Select value={filters.location || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, location: value === 'all' ? null : value }))}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="All cities" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All cities</SelectItem>
-                  {uniqueLocations.map(location => (
-                    <SelectItem key={location} value={location}>{location}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <Select value={filters.sort_by} onValueChange={(value) => setFilters(prev => ({ ...prev, sort_by: value }))}>
-                <SelectTrigger className="w-[160px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="full_name">Sort by Name</SelectItem>
-                  <SelectItem value="email">Sort by Email</SelectItem>
-                  <SelectItem value="nearest_major_city">Sort by City</SelectItem>
-                  <SelectItem value="role">Sort by Role</SelectItem>
-                  <SelectItem value="created_at">Sort by Date Added</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Button
-                variant={filters.willing_to_fly === true ? "default" : "outline"}
-                onClick={() => {
-                  setFilters(prev => ({ 
-                    ...prev, 
-                    willing_to_fly: prev.willing_to_fly === true ? null : true 
-                  }))
-                }}
-                className="h-9 flex items-center gap-2"
-              >
-                <Plane className="h-3 w-3" />
-                Will fly
-              </Button>
-            </div>
-          </div>
-
-          {/* Staff Grid */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between gap-4 min-h-[40px]">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (selectedStaff.size === filteredStaff.length && filteredStaff.length > 0) {
-                      setSelectedStaff(new Set())
-                    } else {
-                      setSelectedStaff(new Set(filteredStaff.map(s => s.id)))
-                    }
-                  }}
-                >
-                  {selectedStaff.size === filteredStaff.length && filteredStaff.length > 0 ? 'Deselect All' : 'Select All'} ({filteredStaff.length})
-                </Button>
-                {selectedStaff.size > 0 && (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedStaff(new Set())}
-                    >
-                      Clear Selected
-                    </Button>
-                    <span className="text-sm text-muted-foreground">
-                      {selectedStaff.size} selected
-                    </span>
-                  </>
-                )}
-              </div>
-              
-              {/* Bulk Assignment Controls - Always visible */}
-              <div className="flex items-center gap-2">
-                <Select value={bulkRole || 'none'} onValueChange={(value) => setBulkRole(value === 'none' ? '' : value as ProjectRole)}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Select role template..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Select role template...</SelectItem>
-                    {roleTemplates.map(template => (
-                      <SelectItem key={template.id} value={template.role}>
-                        {template.display_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button onClick={handleBulkAssign} disabled={!bulkRole || isAssigning || selectedStaff.size === 0} size="sm">
-                  {isAssigning ? 'Assigning...' : 'Assign Selected'}
-                </Button>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[440px] overflow-y-auto custom-scrollbar">
-              {filteredStaff.map((staff) => {
-                const isSelected = selectedStaff.has(staff.id)
-                return (
-                  <Card 
-                    key={staff.id} 
-                    className={`relative transition-all cursor-pointer border-2 py-0 ${
-                      isSelected 
-                        ? 'bg-card border-primary shadow-md' 
-                        : 'hover:shadow-md border-border hover:border-muted-foreground/20'
-                    }`}
-                    onClick={() => {
-                      const newSelected = new Set(selectedStaff)
-                      if (isSelected) {
-                        newSelected.delete(staff.id)
-                      } else {
-                        newSelected.add(staff.id)
-                      }
-                      setSelectedStaff(newSelected)
-                    }}
-                  >
-                    <CardContent className="px-4 py-3">
-                      <div className="space-y-2.5">
-                        <div>
-                          <h4 className={`font-medium text-base leading-tight ${
-                            isSelected ? 'text-foreground' : ''
-                          }`}>
-                            {staff.full_name}
-                          </h4>
-                          <p className="text-sm truncate text-muted-foreground">
-                            {staff.email}
-                          </p>
-                        </div>
-                        
-                        <div className="flex justify-between items-end">
-                          <div className="space-y-1.5 flex-1">
-                            {staff.role && (
-                              <Badge variant="outline" className={`text-sm ${getRoleColor(staff.role)}`}>
-                                {getRoleDisplayName(staff.role)}
-                              </Badge>
-                            )}
-                            
-                            {staff.nearest_major_city && (
-                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                <MapPin className="h-3.5 w-3.5" />
-                                <span>{staff.nearest_major_city}</span>
-                              </div>
-                            )}
-                            
-                            {staff.willing_to_fly !== undefined && (
-                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                <Plane className="h-3.5 w-3.5" />
-                                <span>{staff.willing_to_fly ? 'Will fly' : 'Local only'}</span>
-                              </div>
-                            )}
-                          </div>
-                          
-                          {/* Project Badge - Center */}
-                          <div className="flex-1 flex justify-center">
-                            {(() => {
-                              const userAssignments = getUserProjectAssignments(staff.id)
-                              if (userAssignments.length > 0) {
-                                const tooltipContent = userAssignments.map(a => (
-                                  <div key={a.id} className="text-sm leading-relaxed">
-                                    <span className="font-semibold text-foreground">{a.projects?.name || 'Unknown Project'}</span>
-                                    <span className="text-muted-foreground ml-2">({getRoleDisplayName(a.role)})</span>
-                                  </div>
-                                ))
-                                
-                                return (
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Badge 
-                                          variant="outline" 
-                                          className="text-xs cursor-pointer hover:bg-muted transition-colors hidden md:block"
-                                          onClick={(e) => e.stopPropagation()}
-                                        >
-                                          {userAssignments.length} Project{userAssignments.length !== 1 ? 's' : ''}
-                                        </Badge>
-                                      </TooltipTrigger>
-                                      <TooltipContent 
-                                        side="bottom" 
-                                        className="max-w-xs p-3 bg-popover border border-border shadow-lg rounded-md"
-                                      >
-                                        <div className="space-y-2">
-                                          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                                            Project Assignment{userAssignments.length !== 1 ? 's' : ''}
-                                          </div>
-                                          <div className="space-y-1">
-                                            {tooltipContent}
-                                          </div>
-                                        </div>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                    <Badge 
-                                      variant="outline" 
-                                      className="text-xs cursor-pointer hover:bg-muted transition-colors md:hidden"
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        // Could add modal functionality here for mobile
-                                      }}
-                                    >
-                                      {userAssignments.length} Project{userAssignments.length !== 1 ? 's' : ''}
-                                    </Badge>
-                                  </TooltipProvider>
-                                )
-                              }
-                              return null
-                            })()}
-                          </div>
-                          
-                          <div className="flex-1 flex justify-end">
-                            <div className="flex">
-                            {/* Main Assign Button */}
-                            <Button 
-                              size="sm" 
-                              className="h-7 text-xs px-3 rounded-r-none border-r-0"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleQuickAssign(staff.id)
-                              }}
-                            >
-                              Assign
-                            </Button>
-                            
-                            {/* Dropdown Button */}
-                            <Popover 
-                              open={individualAssignOpen === staff.id} 
-                              onOpenChange={(open) => {
-                                if (open) {
-                                  setIndividualAssignOpen(staff.id)
-                                  setIndividualTemplateId('')
-                                  setIndividualPayRate('')
-                                } else {
-                                  setIndividualAssignOpen(null)
-                                }
-                              }}
-                            >
-                              <PopoverTrigger asChild>
-                                <Button 
-                                  size="sm" 
-                                  className="h-7 px-2 rounded-l-none border-l border-primary/20"
-                                  variant="default"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <ChevronDown className="h-3 w-3" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-64 p-3" align="start">
-                                <div className="space-y-3">
-                                  <div className="text-sm font-medium">Assign {staff.full_name}</div>
-                                  
-                                  <div className="space-y-2">
-                                    <Label className="text-xs">Select Role Template</Label>
-                                    <Select value={individualTemplateId || 'none'} onValueChange={(value) => {
-                                      if (value === 'none') {
-                                        setIndividualTemplateId('')
-                                        setIndividualPayRate('')
-                                      } else {
-                                        const template = roleTemplates.find(t => t.id === value)
-                                        setIndividualTemplateId(value)
-                                        setIndividualPayRate(template?.base_pay_rate || '')
-                                      }
-                                    }}>
-                                      <SelectTrigger className="h-8 w-full">
-                                        <SelectValue placeholder="Select role template..." />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="none">Select role template...</SelectItem>
-                                        {roleTemplates.map(template => (
-                                          <SelectItem key={template.id} value={template.id}>
-                                            {template.display_name}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  
-                                  <div className="space-y-2">
-                                    <Label className="text-xs">Pay Rate Override (optional)</Label>
-                                    <Input
-                                      type="number"
-                                      placeholder="Enter rate..."
-                                      value={individualPayRate}
-                                      onChange={(e) => setIndividualPayRate(e.target.value ? Number(e.target.value) : '')}
-                                      className="h-8"
-                                    />
-                                  </div>
-                                  
-                                  <div className="flex gap-2">
-                                    <Button 
-                                      size="sm" 
-                                      onClick={() => handleIndividualAssign(staff.id)}
-                                      disabled={!individualTemplateId}
-                                      className="flex-1"
-                                    >
-                                      Assign
-                                    </Button>
-                                    <Button 
-                                      size="sm" 
-                                      variant="outline"
-                                      onClick={() => setIndividualAssignOpen(null)}
-                                      className="flex-1"
-                                    >
-                                      Cancel
-                                    </Button>
-                                  </div>
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
-            
-            {filteredStaff.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No staff members match your current filters</p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Current Assignments */}
-      {assignments.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Current Team Assignments
-            </CardTitle>
-          </CardHeader>
+        {isAssignStaffExpanded && (
           <CardContent className="space-y-4">
             {/* Filters Row */}
             <div className="space-y-3">
@@ -1275,80 +905,76 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
                   <div className="relative">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Search assignments by name or email..."
-                      value={assignmentFilters.search}
-                      onChange={(e) => setAssignmentFilters(prev => ({ ...prev, search: e.target.value }))}
+                      placeholder="Search staff by name or email..."
+                      value={filters.search}
+                      onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
                       className="pl-9"
                     />
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={clearAssignmentFilters}>
+                  <Button variant="outline" size="sm" onClick={clearFilters}>
                     Clear Filters
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => setAssignmentFilters(prev => ({ 
-                      ...prev, 
-                      sort_order: prev.sort_order === 'asc' ? 'desc' : 'asc' 
-                    }))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSortChange(filters.sort_by)}
                     className="flex items-center gap-2"
                   >
-                    {assignmentFilters.sort_order === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-                    {assignmentFilters.sort_order === 'asc' ? 'Ascending' : 'Descending'}
+                    {filters.sort_order === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                    {filters.sort_order === 'asc' ? 'Ascending' : 'Descending'}
                   </Button>
                 </div>
               </div>
-              
+
               {/* Filter Dropdowns Row */}
               <div className="flex flex-wrap gap-3">
-                <Select value={assignmentFilters.role} onValueChange={(value) => setAssignmentFilters(prev => ({ ...prev, role: value }))}>
+                <Select value={filters.role || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, role: value === 'all' ? null : value }))}>
                   <SelectTrigger className="w-[140px]">
                     <SelectValue placeholder="All roles" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All roles</SelectItem>
-                    {assignmentFilterOptions.roles.map(role => (
-                      <SelectItem key={role} value={role}>
-                        {getRoleDisplayName(role)}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="admin">{getRoleDisplayName('admin')}</SelectItem>
+                    <SelectItem value="in_house">{getRoleDisplayName('in_house')}</SelectItem>
+                    <SelectItem value="supervisor">{getRoleDisplayName('supervisor')}</SelectItem>
+                    <SelectItem value="coordinator">{getRoleDisplayName('coordinator')}</SelectItem>
+                    <SelectItem value="talent_escort">{getRoleDisplayName('talent_escort')}</SelectItem>
                   </SelectContent>
                 </Select>
-                
-                <Select value={assignmentFilters.city} onValueChange={(value) => setAssignmentFilters(prev => ({ ...prev, city: value }))}>
+
+                <Select value={filters.location || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, location: value === 'all' ? null : value }))}>
                   <SelectTrigger className="w-[140px]">
                     <SelectValue placeholder="All cities" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All cities</SelectItem>
-                    {assignmentFilterOptions.cities.map(city => (
-                      <SelectItem key={city} value={city}>
-                        {city}
-                      </SelectItem>
+                    {uniqueLocations.map(location => (
+                      <SelectItem key={location} value={location}>{location}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                
-                <Select value={assignmentFilters.sort_by} onValueChange={(value) => setAssignmentFilters(prev => ({ ...prev, sort_by: value }))}>
+
+                <Select value={filters.sort_by} onValueChange={(value) => setFilters(prev => ({ ...prev, sort_by: value }))}>
                   <SelectTrigger className="w-[160px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="name">Sort by Name</SelectItem>
+                    <SelectItem value="full_name">Sort by Name</SelectItem>
+                    <SelectItem value="email">Sort by Email</SelectItem>
+                    <SelectItem value="nearest_major_city">Sort by City</SelectItem>
                     <SelectItem value="role">Sort by Role</SelectItem>
-                    <SelectItem value="pay_rate">Sort by Pay Rate</SelectItem>
-                    <SelectItem value="city">Sort by City</SelectItem>
+                    <SelectItem value="created_at">Sort by Date Added</SelectItem>
                   </SelectContent>
                 </Select>
-                
+
                 <Button
-                  variant={assignmentFilters.flight_willingness === 'yes' ? "default" : "outline"}
+                  variant={filters.willing_to_fly === true ? "default" : "outline"}
                   onClick={() => {
-                    setAssignmentFilters(prev => ({ 
-                      ...prev, 
-                      flight_willingness: prev.flight_willingness === 'yes' ? 'all' : 'yes' 
+                    setFilters(prev => ({
+                      ...prev,
+                      willing_to_fly: prev.willing_to_fly === true ? null : true
                     }))
                   }}
                   className="h-9 flex items-center gap-2"
@@ -1359,7 +985,7 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
               </div>
             </div>
 
-            {/* Assignment Grid */}
+            {/* Staff Grid */}
             <div className="space-y-4">
               <div className="flex items-center justify-between gap-4 min-h-[40px]">
                 <div className="flex items-center gap-2">
@@ -1367,244 +993,635 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      if (selectedAssignments.size === filteredAssignments.length && filteredAssignments.length > 0) {
-                        setSelectedAssignments(new Set())
+                      if (selectedStaff.size === filteredStaff.length && filteredStaff.length > 0) {
+                        setSelectedStaff(new Set())
                       } else {
-                        setSelectedAssignments(new Set(filteredAssignments.map(a => a.id)))
+                        setSelectedStaff(new Set(filteredStaff.map(s => s.id)))
                       }
                     }}
                   >
-                    {selectedAssignments.size === filteredAssignments.length && filteredAssignments.length > 0 ? 'Deselect All' : 'Select All'} ({filteredAssignments.length})
+                    {selectedStaff.size === filteredStaff.length && filteredStaff.length > 0 ? 'Deselect All' : 'Select All'} ({filteredStaff.length})
                   </Button>
-                  {selectedAssignments.size > 0 && (
+                  {selectedStaff.size > 0 && (
                     <>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setSelectedAssignments(new Set())}
+                        onClick={() => setSelectedStaff(new Set())}
                       >
                         Clear Selected
                       </Button>
                       <span className="text-sm text-muted-foreground">
-                        {selectedAssignments.size} selected
+                        {selectedStaff.size} selected
                       </span>
                     </>
                   )}
                 </div>
-                
-                {/* Bulk Actions */}
-                {selectedAssignments.size > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      placeholder="New pay rate..."
-                      value={bulkPayRate}
-                      onChange={(e) => setBulkPayRate(e.target.value ? Number(e.target.value) : '')}
-                      className="w-32"
-                    />
-                    <Button 
-                      onClick={handleBulkUpdatePayRate} 
-                      disabled={!bulkPayRate} 
-                      size="sm"
-                    >
-                      Update Rate
-                    </Button>
-                    <Button 
-                      onClick={handleBulkRemoveAssignments} 
-                      variant="destructive" 
-                      size="sm"
-                    >
-                      Remove Selected
-                    </Button>
-                  </div>
-                )}
+
+                {/* Bulk Assignment Controls - Always visible */}
+                <div className="flex items-center gap-2">
+                  <Select value={bulkRole || 'none'} onValueChange={(value) => setBulkRole(value === 'none' ? '' : value as ProjectRole)}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="Select role template..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Select role template...</SelectItem>
+                      {roleTemplates.map(template => (
+                        <SelectItem key={template.id} value={template.role}>
+                          {template.display_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button onClick={handleBulkAssign} disabled={!bulkRole || isAssigning || selectedStaff.size === 0} size="sm">
+                    {isAssigning ? 'Assigning...' : 'Assign Selected'}
+                  </Button>
+                </div>
               </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[440px] overflow-y-auto overflow-x-hidden custom-scrollbar">
-              {filteredAssignments.map((assignment) => {
-                const isSelected = selectedAssignments.has(assignment.id)
-                return (
-                <Card 
-                  key={assignment.id} 
-                  className={`relative transition-all cursor-pointer border-2 py-0 ${
-                    isSelected 
-                      ? 'bg-card border-primary shadow-md' 
-                      : 'hover:shadow-md border-border hover:border-muted-foreground/20'
-                  }`}
-                  onClick={() => {
-                    const newSelected = new Set(selectedAssignments)
-                    if (isSelected) {
-                      newSelected.delete(assignment.id)
-                    } else {
-                      newSelected.add(assignment.id)
-                    }
-                    setSelectedAssignments(newSelected)
-                  }}
-                >
-                  <CardContent className="px-4 py-3">
-                    <div className="space-y-2.5">
-                      <div>
-                        <h4 className={`font-medium text-base leading-tight ${
-                          isSelected ? 'text-foreground' : ''
-                        }`}>
-                          {assignment.profiles.full_name}
-                        </h4>
-                        <p className="text-sm truncate text-muted-foreground">
-                          {assignment.profiles.email}
-                        </p>
-                      </div>
-                      
-                      <div className="flex justify-between items-end">
-                        <div className="space-y-1.5 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant="outline" className={`text-sm ${getRoleColor(assignment.role)}`}>
-                              {roleTemplates.find(t => t.role === assignment.role && t.is_default)?.display_name || getRoleDisplayName(assignment.role)}
-                            </Badge>
-                            {assignment.pay_rate && (
-                              <Badge variant="outline" className="text-sm">
-                                ${assignment.pay_rate}
-                              </Badge>
-                            )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[440px] overflow-y-auto custom-scrollbar">
+                {filteredStaff.map((staff) => {
+                  const isSelected = selectedStaff.has(staff.id)
+                  return (
+                    <Card
+                      key={staff.id}
+                      className={`relative transition-all cursor-pointer border-2 py-0 ${isSelected
+                        ? 'bg-card border-primary shadow-md'
+                        : 'hover:shadow-md border-border hover:border-muted-foreground/20'
+                        }`}
+                      onClick={() => {
+                        const newSelected = new Set(selectedStaff)
+                        if (isSelected) {
+                          newSelected.delete(staff.id)
+                        } else {
+                          newSelected.add(staff.id)
+                        }
+                        setSelectedStaff(newSelected)
+                      }}
+                    >
+                      <CardContent className="px-4 py-3">
+                        <div className="space-y-2.5">
+                          <div>
+                            <h4 className={`font-medium text-base leading-tight ${isSelected ? 'text-foreground' : ''
+                              }`}>
+                              {staff.full_name}
+                            </h4>
+                            <p className="text-sm truncate text-muted-foreground">
+                              {staff.email}
+                            </p>
                           </div>
-                          
-                          {assignment.profiles.nearest_major_city && (
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <MapPin className="h-3.5 w-3.5" />
-                              <span>{assignment.profiles.nearest_major_city}</span>
+
+                          <div className="flex justify-between items-end">
+                            <div className="space-y-1.5 flex-1">
+                              {staff.role && (
+                                <Badge variant="outline" className={`text-sm ${getRoleColor(staff.role)}`}>
+                                  {getRoleDisplayName(staff.role)}
+                                </Badge>
+                              )}
+
+                              {staff.nearest_major_city && (
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                  <MapPin className="h-3.5 w-3.5" />
+                                  <span>{staff.nearest_major_city}</span>
+                                </div>
+                              )}
+
+                              {staff.willing_to_fly !== undefined && (
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                  <Plane className="h-3.5 w-3.5" />
+                                  <span>{staff.willing_to_fly ? 'Will fly' : 'Local only'}</span>
+                                </div>
+                              )}
                             </div>
-                          )}
-                          
-                          {assignment.profiles.willing_to_fly !== undefined && (
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <Plane className="h-3.5 w-3.5" />
-                              <span>{assignment.profiles.willing_to_fly ? 'Will fly' : 'Local only'}</span>
-                            </div>
-                          )}
-                          
-                          {assignment.schedule_notes && (
-                            <div className="text-xs text-muted-foreground bg-muted/50 p-1 rounded">
-                              {assignment.schedule_notes}
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="ml-2 flex gap-1">
-                            <Popover 
-                              open={editPopoverOpen === assignment.id} 
-                              onOpenChange={(open) => {
-                                if (open) {
-                                  setEditPopoverOpen(assignment.id)
-                                  setEditingAssignment(assignment.id)
-                                  setEditValues({
-                                    pay_rate: assignment.pay_rate || undefined,
-                                    schedule_notes: assignment.schedule_notes || undefined
-                                  })
-                                } else {
-                                  setEditPopoverOpen(null)
-                                  setEditingAssignment(null)
-                                  setEditValues({})
+
+                            {/* Project Badge - Center */}
+                            <div className="flex-1 flex justify-center">
+                              {(() => {
+                                const userAssignments = getUserProjectAssignments(staff.id)
+                                if (userAssignments.length > 0) {
+                                  const tooltipContent = userAssignments.map(a => (
+                                    <div key={a.id} className="text-sm leading-relaxed">
+                                      <span className="font-semibold text-foreground">{a.projects?.name || 'Unknown Project'}</span>
+                                      <span className="text-muted-foreground ml-2">({getRoleDisplayName(a.role)})</span>
+                                    </div>
+                                  ))
+
+                                  return (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Badge
+                                            variant="outline"
+                                            className="text-xs cursor-pointer hover:bg-muted transition-colors hidden md:block"
+                                            onClick={(e) => e.stopPropagation()}
+                                          >
+                                            {userAssignments.length} Project{userAssignments.length !== 1 ? 's' : ''}
+                                          </Badge>
+                                        </TooltipTrigger>
+                                        <TooltipContent
+                                          side="bottom"
+                                          className="max-w-xs p-3 bg-popover border border-border shadow-lg rounded-md"
+                                        >
+                                          <div className="space-y-2">
+                                            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                              Project Assignment{userAssignments.length !== 1 ? 's' : ''}
+                                            </div>
+                                            <div className="space-y-1">
+                                              {tooltipContent}
+                                            </div>
+                                          </div>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs cursor-pointer hover:bg-muted transition-colors md:hidden"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          // Could add modal functionality here for mobile
+                                        }}
+                                      >
+                                        {userAssignments.length} Project{userAssignments.length !== 1 ? 's' : ''}
+                                      </Badge>
+                                    </TooltipProvider>
+                                  )
                                 }
-                              }}
-                            >
-                              <PopoverTrigger asChild>
+                                return null
+                              })()}
+                            </div>
+
+                            <div className="flex-1 flex justify-end">
+                              <div className="flex">
+                                {/* Main Assign Button */}
                                 <Button
                                   size="sm"
-                                  variant="outline"
-                                  className="h-7 w-7 p-0"
-                                  onClick={(e) => e.stopPropagation()}
+                                  className="h-7 text-xs px-3 rounded-r-none border-r-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleQuickAssign(staff.id)
+                                  }}
                                 >
-                                  <Edit className="h-3 w-3" />
+                                  Assign
                                 </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-64 p-3" align="start">
-                                <div className="space-y-3">
-                                  <div className="text-sm font-medium">Edit {assignment.profiles.full_name}</div>
-                                  
-                                  <div className="space-y-2">
-                                    <Label className="text-xs">Pay Rate Override</Label>
-                                    <Input
-                                      type="number"
-                                      placeholder="Enter pay rate..."
-                                      value={editValues.pay_rate || ''}
-                                      onChange={(e) => setEditValues(prev => ({ 
-                                        ...prev, 
-                                        pay_rate: e.target.value ? Number(e.target.value) : undefined 
-                                      }))}
-                                      className="h-8"
-                                    />
-                                  </div>
-                                  
-                                  <div className="space-y-2">
-                                    <Label className="text-xs">Schedule Notes</Label>
-                                    <Input
-                                      placeholder="Enter schedule notes..."
-                                      value={editValues.schedule_notes || ''}
-                                      onChange={(e) => setEditValues(prev => ({ 
-                                        ...prev, 
-                                        schedule_notes: e.target.value 
-                                      }))}
-                                      className="h-8"
-                                    />
-                                  </div>
-                                  
-                                  <div className="flex gap-2">
-                                    <Button 
-                                      size="sm" 
-                                      onClick={() => {
-                                        handleUpdateAssignment(assignment.id)
-                                        setEditPopoverOpen(null)
-                                      }}
-                                      className="flex-1"
+
+                                {/* Dropdown Button */}
+                                <Popover
+                                  open={individualAssignOpen === staff.id}
+                                  onOpenChange={(open) => {
+                                    if (open) {
+                                      setIndividualAssignOpen(staff.id)
+                                      setIndividualTemplateId('')
+                                      setIndividualPayRate('')
+                                    } else {
+                                      setIndividualAssignOpen(null)
+                                    }
+                                  }}
+                                >
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      className="h-7 px-2 rounded-l-none border-l border-primary/20"
+                                      variant="default"
+                                      onClick={(e) => e.stopPropagation()}
                                     >
-                                      Save
+                                      <ChevronDown className="h-3 w-3" />
                                     </Button>
-                                    <Button 
-                                      size="sm" 
-                                      variant="outline"
-                                      onClick={() => setEditPopoverOpen(null)}
-                                      className="flex-1"
-                                    >
-                                      Cancel
-                                    </Button>
-                                  </div>
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleRemoveAssignment(assignment.id)
-                            }}
-                            className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-64 p-3" align="start">
+                                    <div className="space-y-3">
+                                      <div className="text-sm font-medium">Assign {staff.full_name}</div>
+
+                                      <div className="space-y-2">
+                                        <Label className="text-xs">Select Role Template</Label>
+                                        <Select value={individualTemplateId || 'none'} onValueChange={(value) => {
+                                          if (value === 'none') {
+                                            setIndividualTemplateId('')
+                                            setIndividualPayRate('')
+                                          } else {
+                                            const template = roleTemplates.find(t => t.id === value)
+                                            setIndividualTemplateId(value)
+                                            setIndividualPayRate(template?.base_pay_rate || '')
+                                          }
+                                        }}>
+                                          <SelectTrigger className="h-8 w-full">
+                                            <SelectValue placeholder="Select role template..." />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="none">Select role template...</SelectItem>
+                                            {roleTemplates.map(template => (
+                                              <SelectItem key={template.id} value={template.id}>
+                                                {template.display_name}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+
+                                      <div className="space-y-2">
+                                        <Label className="text-xs">Pay Rate Override (optional)</Label>
+                                        <Input
+                                          type="number"
+                                          placeholder="Enter rate..."
+                                          value={individualPayRate}
+                                          onChange={(e) => setIndividualPayRate(e.target.value ? Number(e.target.value) : '')}
+                                          className="h-8"
+                                        />
+                                      </div>
+
+                                      <div className="flex gap-2">
+                                        <Button
+                                          size="sm"
+                                          onClick={() => handleIndividualAssign(staff.id)}
+                                          disabled={!individualTemplateId}
+                                          className="flex-1"
+                                        >
+                                          Assign
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => setIndividualAssignOpen(null)}
+                                          className="flex-1"
+                                        >
+                                          Cancel
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                )
-              })}
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+
+              {filteredStaff.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No staff members match your current filters</p>
+                </div>
+              )}
             </div>
-            
-            {filteredAssignments.length === 0 && assignments.length > 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No assignments match your current filters</p>
-              </div>
-            )}
-            
-            {assignments.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No team assignments yet</p>
-              </div>
-            )}
           </CardContent>
+        )}
+      </Card>
+
+      {/* Current Assignments */}
+      {assignments.length > 0 && (
+        <Card>
+          <CardHeader className="cursor-pointer" onClick={() => setIsCurrentAssignmentsExpanded(!isCurrentAssignmentsExpanded)}>
+            <CardTitle className="flex items-center gap-2">
+              {isCurrentAssignmentsExpanded ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+              <Users className="h-5 w-5" />
+              Current Team Assignments
+            </CardTitle>
+          </CardHeader>
+          {isCurrentAssignmentsExpanded && (
+            <CardContent className="space-y-4">
+              {/* Filters Row */}
+              <div className="space-y-3">
+                {/* Search and Controls Row */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search assignments by name or email..."
+                        value={assignmentFilters.search}
+                        onChange={(e) => setAssignmentFilters(prev => ({ ...prev, search: e.target.value }))}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={clearAssignmentFilters}>
+                      Clear Filters
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAssignmentFilters(prev => ({
+                        ...prev,
+                        sort_order: prev.sort_order === 'asc' ? 'desc' : 'asc'
+                      }))}
+                      className="flex items-center gap-2"
+                    >
+                      {assignmentFilters.sort_order === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                      {assignmentFilters.sort_order === 'asc' ? 'Ascending' : 'Descending'}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Filter Dropdowns Row */}
+                <div className="flex flex-wrap gap-3">
+                  <Select value={assignmentFilters.role} onValueChange={(value) => setAssignmentFilters(prev => ({ ...prev, role: value }))}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue placeholder="All roles" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All roles</SelectItem>
+                      {assignmentFilterOptions.roles.map(role => (
+                        <SelectItem key={role} value={role}>
+                          {getRoleDisplayName(role)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={assignmentFilters.city} onValueChange={(value) => setAssignmentFilters(prev => ({ ...prev, city: value }))}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue placeholder="All cities" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All cities</SelectItem>
+                      {assignmentFilterOptions.cities.map(city => (
+                        <SelectItem key={city} value={city}>
+                          {city}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={assignmentFilters.sort_by} onValueChange={(value) => setAssignmentFilters(prev => ({ ...prev, sort_by: value }))}>
+                    <SelectTrigger className="w-[160px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="name">Sort by Name</SelectItem>
+                      <SelectItem value="role">Sort by Role</SelectItem>
+                      <SelectItem value="pay_rate">Sort by Pay Rate</SelectItem>
+                      <SelectItem value="city">Sort by City</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Button
+                    variant={assignmentFilters.flight_willingness === 'yes' ? "default" : "outline"}
+                    onClick={() => {
+                      setAssignmentFilters(prev => ({
+                        ...prev,
+                        flight_willingness: prev.flight_willingness === 'yes' ? 'all' : 'yes'
+                      }))
+                    }}
+                    className="h-9 flex items-center gap-2"
+                  >
+                    <Plane className="h-3 w-3" />
+                    Will fly
+                  </Button>
+                </div>
+              </div>
+
+              {/* Assignment Grid */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-4 min-h-[40px]">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (selectedAssignments.size === filteredAssignments.length && filteredAssignments.length > 0) {
+                          setSelectedAssignments(new Set())
+                        } else {
+                          setSelectedAssignments(new Set(filteredAssignments.map(a => a.id)))
+                        }
+                      }}
+                    >
+                      {selectedAssignments.size === filteredAssignments.length && filteredAssignments.length > 0 ? 'Deselect All' : 'Select All'} ({filteredAssignments.length})
+                    </Button>
+                    {selectedAssignments.size > 0 && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedAssignments(new Set())}
+                        >
+                          Clear Selected
+                        </Button>
+                        <span className="text-sm text-muted-foreground">
+                          {selectedAssignments.size} selected
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Bulk Actions */}
+                  {selectedAssignments.size > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        placeholder="New pay rate..."
+                        value={bulkPayRate}
+                        onChange={(e) => setBulkPayRate(e.target.value ? Number(e.target.value) : '')}
+                        className="w-32"
+                      />
+                      <Button
+                        onClick={handleBulkUpdatePayRate}
+                        disabled={!bulkPayRate}
+                        size="sm"
+                      >
+                        Update Rate
+                      </Button>
+                      <Button
+                        onClick={handleBulkRemoveAssignments}
+                        variant="destructive"
+                        size="sm"
+                      >
+                        Remove Selected
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[440px] overflow-y-auto overflow-x-hidden custom-scrollbar">
+                {filteredAssignments.map((assignment) => {
+                  const isSelected = selectedAssignments.has(assignment.id)
+                  return (
+                    <Card
+                      key={assignment.id}
+                      className={`relative transition-all cursor-pointer border-2 py-0 ${isSelected
+                        ? 'bg-card border-primary shadow-md'
+                        : 'hover:shadow-md border-border hover:border-muted-foreground/20'
+                        }`}
+                      onClick={() => {
+                        const newSelected = new Set(selectedAssignments)
+                        if (isSelected) {
+                          newSelected.delete(assignment.id)
+                        } else {
+                          newSelected.add(assignment.id)
+                        }
+                        setSelectedAssignments(newSelected)
+                      }}
+                    >
+                      <CardContent className="px-4 py-3">
+                        <div className="space-y-2.5">
+                          <div>
+                            <h4 className={`font-medium text-base leading-tight ${isSelected ? 'text-foreground' : ''
+                              }`}>
+                              {assignment.profiles.full_name}
+                            </h4>
+                            <p className="text-sm truncate text-muted-foreground">
+                              {assignment.profiles.email}
+                            </p>
+                          </div>
+
+                          <div className="flex justify-between items-end">
+                            <div className="space-y-1.5 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Badge variant="outline" className={`text-sm ${getRoleColor(assignment.role)}`}>
+                                  {roleTemplates.find(t => t.role === assignment.role && t.is_default)?.display_name || getRoleDisplayName(assignment.role)}
+                                </Badge>
+                                {assignment.pay_rate && (
+                                  <Badge variant="outline" className="text-sm">
+                                    ${assignment.pay_rate}
+                                  </Badge>
+                                )}
+                              </div>
+
+                              {assignment.profiles.nearest_major_city && (
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                  <MapPin className="h-3.5 w-3.5" />
+                                  <span>{assignment.profiles.nearest_major_city}</span>
+                                </div>
+                              )}
+
+                              {assignment.profiles.willing_to_fly !== undefined && (
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                  <Plane className="h-3.5 w-3.5" />
+                                  <span>{assignment.profiles.willing_to_fly ? 'Will fly' : 'Local only'}</span>
+                                </div>
+                              )}
+
+                              {assignment.schedule_notes && (
+                                <div className="text-xs text-muted-foreground bg-muted/50 p-1 rounded">
+                                  {assignment.schedule_notes}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="ml-2 flex gap-1">
+                              <Popover
+                                open={editPopoverOpen === assignment.id}
+                                onOpenChange={(open) => {
+                                  if (open) {
+                                    setEditPopoverOpen(assignment.id)
+                                    setEditingAssignment(assignment.id)
+                                    setEditValues({
+                                      pay_rate: assignment.pay_rate || undefined,
+                                      schedule_notes: assignment.schedule_notes || undefined
+                                    })
+                                  } else {
+                                    setEditPopoverOpen(null)
+                                    setEditingAssignment(null)
+                                    setEditValues({})
+                                  }
+                                }}
+                              >
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 w-7 p-0"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-64 p-3" align="start">
+                                  <div className="space-y-3">
+                                    <div className="text-sm font-medium">Edit {assignment.profiles.full_name}</div>
+
+                                    <div className="space-y-2">
+                                      <Label className="text-xs">Pay Rate Override</Label>
+                                      <Input
+                                        type="number"
+                                        placeholder="Enter pay rate..."
+                                        value={editValues.pay_rate || ''}
+                                        onChange={(e) => setEditValues(prev => ({
+                                          ...prev,
+                                          pay_rate: e.target.value ? Number(e.target.value) : undefined
+                                        }))}
+                                        className="h-8"
+                                      />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <Label className="text-xs">Schedule Notes</Label>
+                                      <Input
+                                        placeholder="Enter schedule notes..."
+                                        value={editValues.schedule_notes || ''}
+                                        onChange={(e) => setEditValues(prev => ({
+                                          ...prev,
+                                          schedule_notes: e.target.value
+                                        }))}
+                                        className="h-8"
+                                      />
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                      <Button
+                                        size="sm"
+                                        onClick={() => {
+                                          handleUpdateAssignment(assignment.id)
+                                          setEditPopoverOpen(null)
+                                        }}
+                                        className="flex-1"
+                                      >
+                                        Save
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => setEditPopoverOpen(null)}
+                                        className="flex-1"
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleRemoveAssignment(assignment.id)
+                                }}
+                                className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+
+              {filteredAssignments.length === 0 && assignments.length > 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No assignments match your current filters</p>
+                </div>
+              )}
+
+              {assignments.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No team assignments yet</p>
+                </div>
+              )}
+            </CardContent>
+          )}
         </Card>
       )}
 
@@ -1640,7 +1657,7 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
 
       {/* Finalize Button */}
       <div className="flex justify-center">
-        <Button 
+        <Button
           onClick={handleFinalizeAssignments}
           disabled={assignments.length === 0}
           className="px-8"
