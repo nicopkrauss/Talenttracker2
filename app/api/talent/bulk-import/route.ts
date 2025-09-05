@@ -90,11 +90,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check for existing talent with same representative emails
+    // Check for existing talent and categorize them by name (not email)
     const { data: existingTalent, error: checkError } = await supabase
       .from('talent')
-      .select('rep_email')
-      .in('rep_email', emails)
+      .select('id, first_name, last_name, rep_name, rep_email, rep_phone, notes')
+      .in('first_name', talentRecords.map(t => t.first_name))
+      .in('last_name', talentRecords.map(t => t.last_name))
 
     if (checkError) {
       console.error('Error checking existing talent:', checkError)
@@ -108,61 +109,99 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const existingEmails = existingTalent?.map(t => t.rep_email.toLowerCase()) || []
-    const conflictingEmails = emails.filter(email => existingEmails.includes(email))
-
-    if (conflictingEmails.length > 0) {
-      return NextResponse.json(
-        { 
-          error: 'Some representative emails already exist in the system',
-          code: 'EXISTING_EMAILS',
-          details: { existing: conflictingEmails }
-        },
-        { status: 409 }
+    const existingRecords = existingTalent || []
+    const toInsert: any[] = []
+    const toUpdate: any[] = []
+    const skipped: string[] = []
+    const updated: string[] = []
+    
+    // Categorize each talent record
+    for (const talent of talentRecords) {
+      const existing = existingRecords.find(e => 
+        e.first_name?.toLowerCase() === talent.first_name?.toLowerCase() && 
+        e.last_name?.toLowerCase() === talent.last_name?.toLowerCase()
       )
+      
+      if (!existing) {
+        // New talent - add to insert list
+        toInsert.push({
+          first_name: talent.first_name,
+          last_name: talent.last_name,
+          rep_name: talent.rep_name,
+          rep_email: talent.rep_email,
+          rep_phone: talent.rep_phone,
+          notes: talent.notes || null
+        })
+      } else {
+        // Existing talent - check if data is different
+        const isDifferent = 
+          (existing.rep_name || '') !== (talent.rep_name || '') ||
+          (existing.rep_email || '') !== (talent.rep_email || '') ||
+          (existing.rep_phone || '') !== (talent.rep_phone || '') ||
+          (existing.notes || '') !== (talent.notes || '')
+        
+        if (isDifferent) {
+          // Data is different - add to update list
+          toUpdate.push({
+            id: existing.id,
+            first_name: talent.first_name,
+            last_name: talent.last_name,
+            rep_name: talent.rep_name,
+            rep_email: talent.rep_email,
+            rep_phone: talent.rep_phone,
+            notes: talent.notes || null
+          })
+          updated.push(`${talent.first_name} ${talent.last_name}`)
+        } else {
+          // Exact match - skip
+          skipped.push(`${talent.first_name} ${talent.last_name}`)
+        }
+      }
     }
 
-    // Prepare talent records for insertion
-    const talentInserts = talentRecords.map(talent => ({
-      first_name: talent.first_name,
-      last_name: talent.last_name,
-      rep_name: talent.rep_name,
-      rep_email: talent.rep_email,
-      rep_phone: talent.rep_phone,
-      notes: talent.notes || null,
-      contact_info: {} // Initialize as empty object
-    }))
+    let insertedCount = 0
+    let updatedCount = 0
+    const errors: string[] = []
+    
+    // Insert new talent records
+    if (toInsert.length > 0) {
+      const { data: insertedTalent, error: insertError } = await supabase
+        .from('talent')
+        .insert(toInsert)
+        .select('id, first_name, last_name')
 
-    // Perform bulk insert
-    const { data: insertedTalent, error: insertError } = await supabase
-      .from('talent')
-      .insert(talentInserts)
-      .select(`
-        id,
-        first_name,
-        last_name,
-        rep_name,
-        rep_email,
-        rep_phone,
-        notes,
-        contact_info,
-        created_at,
-        updated_at
-      `)
+      if (insertError) {
+        console.error('Error inserting talent:', insertError)
+        errors.push(`Failed to insert ${toInsert.length} new records`)
+      } else {
+        insertedCount = insertedTalent?.length || 0
+      }
+    }
+    
+    // Update existing talent records
+    if (toUpdate.length > 0) {
+      for (const talent of toUpdate) {
+        const { error: updateError } = await supabase
+          .from('talent')
+          .update({
+            rep_name: talent.rep_name,
+            rep_email: talent.rep_email,
+            rep_phone: talent.rep_phone,
+            notes: talent.notes,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', talent.id)
 
-    if (insertError) {
-      console.error('Error inserting talent:', insertError)
-      return NextResponse.json(
-        { 
-          error: 'Failed to import talent records',
-          code: 'INSERT_ERROR',
-          details: insertError.message
-        },
-        { status: 500 }
-      )
+        if (updateError) {
+          console.error('Error updating talent:', updateError)
+          errors.push(`Failed to update ${talent.first_name} ${talent.last_name}`)
+        } else {
+          updatedCount++
+        }
+      }
     }
 
-    const successfulCount = insertedTalent?.length || 0
+    const successfulCount = insertedCount + updatedCount
 
     // Log the bulk import for audit purposes
     await supabase
@@ -175,11 +214,14 @@ export async function POST(request: NextRequest) {
 
     // Prepare response with detailed results
     const response = {
-      successful: successfulCount,
-      failed: 0,
-      errors: [] as string[],
-      data: insertedTalent,
-      message: `Successfully imported ${successfulCount} talent records`
+      created: insertedCount,
+      updated: updatedCount,
+      skipped: skipped.length,
+      failed: errors.length,
+      errors: errors,
+      skippedNames: skipped,
+      updatedNames: updated,
+      message: 'Talent import completed'
     }
 
     return NextResponse.json(response, { status: 201 })

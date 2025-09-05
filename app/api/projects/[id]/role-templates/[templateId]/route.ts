@@ -136,13 +136,6 @@ export async function DELETE(
 
     const { id: projectId, templateId } = await params
 
-    // Check if role template has any assignments
-    const { data: assignments } = await supabase
-      .from('team_assignments')
-      .select('id')
-      .eq('project_id', projectId)
-      .limit(1)
-
     // Get the role template to check its role
     const { data: template } = await supabase
       .from('project_role_templates')
@@ -150,7 +143,21 @@ export async function DELETE(
       .eq('id', templateId)
       .single()
 
-    if (template && assignments) {
+    if (!template) {
+      return NextResponse.json({ error: 'Role template not found' }, { status: 404 })
+    }
+
+    // Check if this is the ONLY template for this role and there are assignments
+    const { data: otherTemplates } = await supabase
+      .from('project_role_templates')
+      .select('id')
+      .eq('project_id', projectId)
+      .eq('role', template.role)
+      .eq('is_active', true)
+      .neq('id', templateId)
+
+    // Only prevent deletion if this is the last template for this role AND there are assignments
+    if (!otherTemplates || otherTemplates.length === 0) {
       const { data: roleAssignments } = await supabase
         .from('team_assignments')
         .select('id')
@@ -160,7 +167,7 @@ export async function DELETE(
 
       if (roleAssignments && roleAssignments.length > 0) {
         return NextResponse.json({ 
-          error: 'Cannot delete role template with existing assignments' 
+          error: 'Cannot delete the last role template for a role that has existing assignments. Please create another template for this role first, or remove all assignments.' 
         }, { status: 409 })
       }
     }

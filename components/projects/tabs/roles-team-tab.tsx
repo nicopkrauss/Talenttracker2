@@ -21,9 +21,10 @@ import {
   ProjectRoleTemplate
 } from '@/lib/types'
 import { getRoleDisplayName } from '@/lib/role-utils'
-import { Search, Users, DollarSign, Plus, X, Check, ArrowUp, ArrowDown, MapPin, Plane, ChevronDown, ChevronRight, Edit, Trash2 } from 'lucide-react'
+import { Search, Users, DollarSign, Plus, X, Check, ArrowUp, ArrowDown, MapPin, Plane, ChevronDown, ChevronRight, Edit, Trash2, FileText } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { ProjectRoleTemplateManager } from '@/components/projects/project-role-template-manager'
+import { ProjectRoleTemplateManager, ProjectRoleTemplateManagerRef } from '@/components/projects/project-role-template-manager'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface RolesTeamTabProps {
   project: EnhancedProject
@@ -52,6 +53,7 @@ const getRoleColor = (role: string | null): string => {
 
 export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
   const { toast } = useToast()
+  const roleTemplateManagerRef = React.useRef<ProjectRoleTemplateManagerRef>(null)
   const [assignments, setAssignments] = useState<TeamAssignment[]>([])
   const [availableStaff, setAvailableStaff] = useState<AvailableStaff[]>([])
   const [roleTemplates, setRoleTemplates] = useState<ProjectRoleTemplate[]>([])
@@ -75,6 +77,7 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
   const [individualTemplateId, setIndividualTemplateId] = useState<string>('')
   const [individualPayRate, setIndividualPayRate] = useState<number | ''>('')
   const [editPopoverOpen, setEditPopoverOpen] = useState<string | null>(null)
+  const [allUserAssignments, setAllUserAssignments] = useState<TeamAssignment[]>([])
   
   // Assignment filters and selection
   const [assignmentFilters, setAssignmentFilters] = useState({
@@ -253,6 +256,11 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
     return { roles, cities }
   }, [assignments])
 
+  // Get project assignments for a user (from all projects)
+  const getUserProjectAssignments = (userId: string) => {
+    return allUserAssignments.filter(assignment => assignment.user_id === userId)
+  }
+
   // Load team assignments and available staff
   useEffect(() => {
     loadData()
@@ -281,6 +289,13 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
       if (templatesResponse.ok) {
         const templatesData = await templatesResponse.json()
         setRoleTemplates(templatesData.roleTemplates || [])
+      }
+
+      // Load all user assignments (for project badge functionality)
+      const allAssignmentsResponse = await fetch(`/api/team-assignments`)
+      if (allAssignmentsResponse.ok) {
+        const allAssignmentsData = await allAssignmentsResponse.json()
+        setAllUserAssignments(allAssignmentsData.assignments || [])
       }
     } catch (error) {
       console.error('Error loading data:', error)
@@ -819,22 +834,38 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
     <div className="space-y-6">
       {/* Role Template Manager - Collapsible */}
       <Card>
-        <CardHeader>
-          <CardTitle 
-            className="flex items-center gap-2 cursor-pointer hover:text-muted-foreground transition-colors"
-            onClick={() => setIsRoleTemplatesExpanded(!isRoleTemplatesExpanded)}
-          >
-            {isRoleTemplatesExpanded ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )}
-            Role Templates
-          </CardTitle>
+        <CardHeader className="cursor-pointer" onClick={() => setIsRoleTemplatesExpanded(!isRoleTemplatesExpanded)}>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Role Templates
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              {isRoleTemplatesExpanded && (
+                <Button 
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    roleTemplateManagerRef.current?.openAddDialog()
+                  }}
+                  size="sm"
+                  className="mr-2"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Role Template
+                </Button>
+              )}
+              {isRoleTemplatesExpanded ? (
+                <ChevronDown className="h-5 w-5" />
+              ) : (
+                <ChevronRight className="h-5 w-5" />
+              )}
+            </div>
+          </div>
         </CardHeader>
         {isRoleTemplatesExpanded && (
           <CardContent>
             <ProjectRoleTemplateManager 
+              ref={roleTemplateManagerRef}
               projectId={project.id} 
               onUpdate={loadData}
             />
@@ -1052,7 +1083,63 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
                             )}
                           </div>
                           
-                          <div className="ml-2 flex">
+                          {/* Project Badge - Center */}
+                          <div className="flex-1 flex justify-center">
+                            {(() => {
+                              const userAssignments = getUserProjectAssignments(staff.id)
+                              if (userAssignments.length > 0) {
+                                const tooltipContent = userAssignments.map(a => (
+                                  <div key={a.id} className="text-sm leading-relaxed">
+                                    <span className="font-semibold text-foreground">{a.projects?.name || 'Unknown Project'}</span>
+                                    <span className="text-muted-foreground ml-2">({getRoleDisplayName(a.role)})</span>
+                                  </div>
+                                ))
+                                
+                                return (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Badge 
+                                          variant="outline" 
+                                          className="text-xs cursor-pointer hover:bg-muted transition-colors hidden md:block"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          {userAssignments.length} Project{userAssignments.length !== 1 ? 's' : ''}
+                                        </Badge>
+                                      </TooltipTrigger>
+                                      <TooltipContent 
+                                        side="bottom" 
+                                        className="max-w-xs p-3 bg-popover border border-border shadow-lg rounded-md"
+                                      >
+                                        <div className="space-y-2">
+                                          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                            Project Assignment{userAssignments.length !== 1 ? 's' : ''}
+                                          </div>
+                                          <div className="space-y-1">
+                                            {tooltipContent}
+                                          </div>
+                                        </div>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                    <Badge 
+                                      variant="outline" 
+                                      className="text-xs cursor-pointer hover:bg-muted transition-colors md:hidden"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        // Could add modal functionality here for mobile
+                                      }}
+                                    >
+                                      {userAssignments.length} Project{userAssignments.length !== 1 ? 's' : ''}
+                                    </Badge>
+                                  </TooltipProvider>
+                                )
+                              }
+                              return null
+                            })()}
+                          </div>
+                          
+                          <div className="flex-1 flex justify-end">
+                            <div className="flex">
                             {/* Main Assign Button */}
                             <Button 
                               size="sm" 
@@ -1150,6 +1237,7 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
                                 </div>
                               </PopoverContent>
                             </Popover>
+                            </div>
                           </div>
                         </div>
                       </div>

@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { ProjectRoleTemplate, ProjectRoleTemplateFormData, ProjectRole } from '@/lib/types'
-import { Plus, Edit, Trash2, FileText, Clock, Save, X, DollarSign } from 'lucide-react'
+import { Plus, Edit, Trash2, FileText, Clock, Save, X, DollarSign, AlertTriangle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 interface ProjectRoleTemplateManagerProps {
@@ -18,12 +18,19 @@ interface ProjectRoleTemplateManagerProps {
   onUpdate?: () => void
 }
 
-export function ProjectRoleTemplateManager({ projectId, onUpdate }: ProjectRoleTemplateManagerProps) {
+export interface ProjectRoleTemplateManagerRef {
+  openAddDialog: () => void
+}
+
+export const ProjectRoleTemplateManager = React.forwardRef<ProjectRoleTemplateManagerRef, ProjectRoleTemplateManagerProps>(
+  ({ projectId, onUpdate }, ref) => {
   const { toast } = useToast()
   const [templates, setTemplates] = useState<ProjectRoleTemplate[]>([])
   const [loading, setLoading] = useState(true)
   const [editingTemplate, setEditingTemplate] = useState<ProjectRoleTemplate | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [templateToDelete, setTemplateToDelete] = useState<ProjectRoleTemplate | null>(null)
   const [formData, setFormData] = useState<ProjectRoleTemplateFormData>({
     role: 'talent_escort',
     display_name: '',
@@ -127,13 +134,16 @@ export function ProjectRoleTemplateManager({ projectId, onUpdate }: ProjectRoleT
     }
   }
 
-  const handleDelete = async (template: ProjectRoleTemplate) => {
-    if (!confirm(`Are you sure you want to delete the ${template.display_name} role template?`)) {
-      return
-    }
+  const handleDeleteClick = (template: ProjectRoleTemplate) => {
+    setTemplateToDelete(template)
+    setDeleteConfirmOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!templateToDelete) return
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/role-templates/${template.id}`, {
+      const response = await fetch(`/api/projects/${projectId}/role-templates/${templateToDelete.id}`, {
         method: 'DELETE'
       })
 
@@ -155,7 +165,15 @@ export function ProjectRoleTemplateManager({ projectId, onUpdate }: ProjectRoleT
         description: error instanceof Error ? error.message : "Failed to delete role template",
         variant: "destructive"
       })
+    } finally {
+      setDeleteConfirmOpen(false)
+      setTemplateToDelete(null)
     }
+  }
+
+  const handleDeleteCancel = () => {
+    setDeleteConfirmOpen(false)
+    setTemplateToDelete(null)
   }
 
   const handleEdit = (template: ProjectRoleTemplate) => {
@@ -192,34 +210,31 @@ export function ProjectRoleTemplateManager({ projectId, onUpdate }: ProjectRoleT
     setIsDialogOpen(true)
   }
 
+  // Expose the handleNewTemplate function to parent
+  React.useImperativeHandle(ref, () => ({
+    openAddDialog: handleNewTemplate
+  }), [handleNewTemplate])
+
   if (loading) {
     return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-muted-foreground">Loading role templates...</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="p-6">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading role templates...</p>
+        </div>
+      </div>
     )
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Role Templates
-          </CardTitle>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={handleNewTemplate}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Role Template
-              </Button>
-            </DialogTrigger>
+    <>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogTrigger asChild>
+          <Button onClick={handleNewTemplate} style={{ display: 'none' }}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Role Template
+          </Button>
+        </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>
@@ -342,66 +357,98 @@ export function ProjectRoleTemplateManager({ projectId, onUpdate }: ProjectRoleT
               </div>
             </DialogContent>
           </Dialog>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {templates.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No role templates defined yet.</p>
-            <p className="text-sm">Add role templates to define pay rates and requirements for this project.</p>
-          </div>
-        ) : (
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Delete Role Template
+            </DialogTitle>
+          </DialogHeader>
           <div className="space-y-4">
-            {templates.map((template) => (
-              <div key={template.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <h3 className="font-medium">{template.display_name}</h3>
-                    <Badge variant="secondary">
-                      {roleOptions.find(r => r.value === template.role)?.label}
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete the <strong>{templateToDelete?.display_name}</strong> role template? 
+              This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button 
+                variant="outline" 
+                onClick={handleDeleteCancel}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleDeleteConfirm}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Template
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {templates.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground">
+          <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>No role templates defined yet.</p>
+          <p className="text-sm">Add role templates to define pay rates and requirements for this project.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {templates.map((template) => (
+            <div key={template.id} className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex-1">
+                <div className="flex items-center gap-3">
+                  <h3 className="font-medium">{template.display_name}</h3>
+                  <Badge variant="secondary">
+                    {roleOptions.find(r => r.value === template.role)?.label}
+                  </Badge>
+                  {template.is_default && (
+                    <Badge variant="default" className="text-xs">
+                      Default
                     </Badge>
-                    {template.is_default && (
-                      <Badge variant="default" className="text-xs">
-                        Default
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <DollarSign className="h-4 w-4" />
-                      ${template.base_pay_rate}{template.time_type === 'hourly' ? '/hr' : '/day'}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      {template.time_type}
-                    </div>
-                  </div>
-                  {template.description && (
-                    <p className="text-sm text-muted-foreground mt-1">{template.description}</p>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleEdit(template)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => handleDelete(template)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <DollarSign className="h-4 w-4" />
+                    ${template.base_pay_rate}{template.time_type === 'hourly' ? '/hr' : '/day'}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-4 w-4" />
+                    {template.time_type}
+                  </div>
                 </div>
+                {template.description && (
+                  <p className="text-sm text-muted-foreground mt-1">{template.description}</p>
+                )}
               </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleEdit(template)}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => handleDeleteClick(template)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
   )
-}
+})
+
+ProjectRoleTemplateManager.displayName = 'ProjectRoleTemplateManager'

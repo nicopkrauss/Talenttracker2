@@ -254,7 +254,7 @@ export default function TalentProfilePage() {
                     {talent.talent_project_assignments
                       ?.filter(a => a.status === 'active')
                       .map((assignment) => (
-                        <Badge key={assignment.id} variant="secondary">
+                        <Badge key={`${assignment.project_id}-${assignment.status}`} variant="secondary">
                           {assignment.projects?.name || "Unknown Project"}
                         </Badge>
                       ))}

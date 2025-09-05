@@ -13,7 +13,10 @@ export function useUserApproval() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   )
 
-  const approveUsers = async (userIds: string[]): Promise<void> => {
+  const approveUsers = async (
+    userIds: string[], 
+    roleUpdates?: Record<string, string>
+  ): Promise<void> => {
     if (userIds.length === 0) {
       throw new Error("No users selected for approval")
     }
@@ -21,17 +24,52 @@ export function useUserApproval() {
     setLoading(true)
     
     try {
-      // Update user statuses to active
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ 
-          status: "active",
-          updated_at: new Date().toISOString()
-        })
-        .in("id", userIds)
+      // If we have role updates, handle them individually
+      if (roleUpdates && Object.keys(roleUpdates).length > 0) {
+        // Update users with role changes
+        for (const [userId, newRole] of Object.entries(roleUpdates)) {
+          const { error: roleUpdateError } = await supabase
+            .from("profiles")
+            .update({ 
+              status: "active",
+              role: newRole,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", userId)
 
-      if (updateError) {
-        throw new Error(`Failed to approve users: ${updateError.message}`)
+          if (roleUpdateError) {
+            throw new Error(`Failed to approve user ${userId}: ${roleUpdateError.message}`)
+          }
+        }
+
+        // Update remaining users without role changes
+        const usersWithoutRoleChanges = userIds.filter(id => !roleUpdates[id])
+        if (usersWithoutRoleChanges.length > 0) {
+          const { error: updateError } = await supabase
+            .from("profiles")
+            .update({ 
+              status: "active",
+              updated_at: new Date().toISOString()
+            })
+            .in("id", usersWithoutRoleChanges)
+
+          if (updateError) {
+            throw new Error(`Failed to approve users: ${updateError.message}`)
+          }
+        }
+      } else {
+        // No role updates, just approve all users
+        const { error: updateError } = await supabase
+          .from("profiles")
+          .update({ 
+            status: "active",
+            updated_at: new Date().toISOString()
+          })
+          .in("id", userIds)
+
+        if (updateError) {
+          throw new Error(`Failed to approve users: ${updateError.message}`)
+        }
       }
 
       // Get user details for notifications
