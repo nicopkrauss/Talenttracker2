@@ -436,9 +436,9 @@ interface TalentAssignment {
   id: string;
   projectId: string;
   talentId: string;
-  escortId?: string;
-  status: 'assigned' | 'unassigned' | 'present' | 'not_arrived';
-  currentLocationId?: string;
+  status: 'active' | 'inactive';
+  assignedAt: Date;
+  assignedBy: string;
 }
 ```
 
@@ -517,6 +517,28 @@ interface StaffFilter {
 - Bulk selection and assignment capabilities
 - Assignment summary with cost calculations
 - Inline pay rate overrides and schedule notes
+
+#### TalentRosterTab Component
+```typescript
+interface TalentRosterTabProps {
+  project: EnhancedProject;
+  onImportComplete: () => void;
+  onFinalize: () => void;
+}
+
+interface ProjectTalent {
+  id: string;
+  firstName: string;
+  lastName: string;
+  profilePictureUrl?: string;
+  assignedAt: Date;
+}
+```
+- Simplified card-based grid layout similar to main talent page
+- Talent cards display only name and photo/avatar for clean interface
+- Search functionality filters by talent name only (first and last name)
+- CSV import and manual entry options for adding talent
+- Finalize button to mark talent roster as complete in project checklist
 
 #### OperationsDashboard Component
 ```typescript

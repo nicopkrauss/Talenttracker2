@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { talentProfileSchema } from '@/lib/types'
-import { hasAdminAccess } from '@/lib/role-utils'
 
-// GET /api/talent - List talent with search and filtering
-export async function GET(request: NextRequest) {
+// GET /api/projects/[id]/talent-roster - Fetch project talent roster
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const cookieStore = await cookies()
     const supabase = createServerClient(
@@ -30,39 +32,31 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get user profile to determine role and access
-    const { data: userProfile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, role, status')
-      .eq('id', user.id)
+    // Await params
+    const { id: projectId } = await params
+
+    // Check if user has access to this project
+    const { data: projectAccess, error: accessError } = await supabase
+      .from('projects')
+      .select('id, name, status')
+      .eq('id', projectId)
       .single()
 
-    if (profileError || !userProfile) {
+    if (accessError || !projectAccess) {
       return NextResponse.json(
-        { error: 'User profile not found', code: 'PROFILE_NOT_FOUND' },
+        { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
         { status: 404 }
       )
     }
 
-    // Check if user is approved/active
-    if (userProfile.status !== 'approved' && userProfile.status !== 'active') {
-      return NextResponse.json(
-        { error: 'Account not approved', code: 'ACCOUNT_NOT_APPROVED' },
-        { status: 403 }
-      )
-    }
-
-    // Parse query parameters for search and filtering
+    // Parse query parameters for filtering and sorting
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search') || ''
-    const projectId = searchParams.get('project_id')
-    const assignmentStatus = searchParams.get('assignment_status') || 'all'
+    const status = searchParams.get('status') || 'all'
     const sortBy = searchParams.get('sort_by') || 'first_name'
     const sortOrder = searchParams.get('sort_order') || 'asc'
-    const limit = parseInt(searchParams.get('limit') || '50')
-    const offset = parseInt(searchParams.get('offset') || '0')
 
-    // Build the base query
+    // Build the query for talent assigned to this project
     let talentQuery = supabase
       .from('talent')
       .select(`
@@ -75,95 +69,75 @@ export async function GET(request: NextRequest) {
         notes,
         created_at,
         updated_at,
-        talent_project_assignments(
+        talent_project_assignments!inner(
           id,
-          project_id,
           status,
-          assigned_at,
-          assigned_by,
-          escort_id,
-          projects(name, status)
+          assigned_at
         )
       `)
+      .eq('talent_project_assignments.project_id', projectId)
 
-    // Apply project filtering if specified
-    if (projectId) {
-      talentQuery = talentQuery.eq('talent_project_assignments.project_id', projectId)
+    // Apply status filtering
+    if (status !== 'all') {
+      talentQuery = talentQuery.eq('talent_project_assignments.status', status)
     }
 
-    // Apply assignment status filtering
-    if (assignmentStatus !== 'all') {
-      talentQuery = talentQuery.eq('talent_project_assignments.status', assignmentStatus)
-    }
-
-    // Apply search filtering
+    // Apply search filtering (name only for simplified interface)
     if (search) {
       talentQuery = talentQuery.or(`
         first_name.ilike.%${search}%,
-        last_name.ilike.%${search}%,
-        rep_name.ilike.%${search}%,
-        rep_email.ilike.%${search}%
+        last_name.ilike.%${search}%
       `)
     }
 
     // Apply sorting
-    const validSortFields = ['first_name', 'last_name', 'rep_name', 'created_at']
+    const validSortFields = ['first_name', 'last_name', 'created_at']
     const sortField = validSortFields.includes(sortBy) ? sortBy : 'first_name'
     const order = sortOrder === 'desc' ? false : true
     
-    talentQuery = talentQuery
-      .order(sortField, { ascending: order })
-      .range(offset, offset + limit - 1)
+    talentQuery = talentQuery.order(sortField, { ascending: order })
 
     const { data: talent, error: talentError } = await talentQuery
 
     if (talentError) {
-      console.error('Error fetching talent:', talentError)
+      console.error('Error fetching talent roster:', talentError)
       return NextResponse.json(
-        { error: 'Failed to fetch talent', code: 'FETCH_ERROR', details: talentError.message },
+        { error: 'Failed to fetch talent roster', code: 'FETCH_ERROR', details: talentError.message },
         { status: 500 }
       )
     }
 
-    // Get total count for pagination
-    let countQuery = supabase
-      .from('talent')
-      .select('id', { count: 'exact', head: true })
-
-    if (search) {
-      countQuery = countQuery.or(`
-        first_name.ilike.%${search}%,
-        last_name.ilike.%${search}%,
-        rep_name.ilike.%${search}%,
-        rep_email.ilike.%${search}%
-      `)
-    }
-
-    const { count, error: countError } = await countQuery
-
-    if (countError) {
-      console.error('Error getting talent count:', countError)
-    }
+    // Transform the data to flatten the assignment information
+    const transformedTalent = talent?.map(t => ({
+      id: t.id,
+      first_name: t.first_name,
+      last_name: t.last_name,
+      rep_name: t.rep_name,
+      rep_email: t.rep_email,
+      rep_phone: t.rep_phone,
+      notes: t.notes,
+      created_at: t.created_at,
+      updated_at: t.updated_at,
+      assignment: t.talent_project_assignments[0] // Should only be one per project
+    })) || []
 
     return NextResponse.json({
-      data: talent || [],
-      pagination: {
-        total: count || 0,
-        limit,
-        offset,
-        has_more: (count || 0) > offset + limit
+      data: transformedTalent,
+      project: {
+        id: projectAccess.id,
+        name: projectAccess.name,
+        status: projectAccess.status
       },
       filters: {
         search,
-        project_id: projectId,
-        assignment_status: assignmentStatus,
+        status,
         sort_by: sortField,
         sort_order: sortOrder
       }
     })
 
   } catch (error) {
-    console.error('Error in GET /api/talent:', error)
+    console.error('Error in GET /api/projects/[id]/talent-roster:', error)
     return NextResponse.json(
       { 
         error: 'Internal server error',
@@ -175,8 +149,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/talent - Create new talent
-export async function POST(request: NextRequest) {
+// POST /api/projects/[id]/talent-roster - Add talent to project (manual entry)
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const cookieStore = await cookies()
     const supabase = createServerClient(
@@ -215,12 +192,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if user has permission to create talent (Admin, In-House, Supervisor, Coordinator)
+    // Check if user has permission to manage talent (Admin, In-House, Supervisor, Coordinator)
     const allowedRoles = ['admin', 'in_house', 'supervisor', 'coordinator']
     if (!userProfile.role || !allowedRoles.includes(userProfile.role)) {
       return NextResponse.json(
-        { error: 'Insufficient permissions to create talent', code: 'INSUFFICIENT_PERMISSIONS' },
+        { error: 'Insufficient permissions to add talent', code: 'INSUFFICIENT_PERMISSIONS' },
         { status: 403 }
+      )
+    }
+
+    // Await params
+    const { id: projectId } = await params
+
+    // Verify project exists and user has access
+    const { data: project, error: projectError } = await supabase
+      .from('projects')
+      .select('id, name, status')
+      .eq('id', projectId)
+      .single()
+
+    if (projectError || !project) {
+      return NextResponse.json(
+        { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
+        { status: 404 }
       )
     }
 
@@ -241,8 +235,8 @@ export async function POST(request: NextRequest) {
 
     const talentData = validationResult.data
 
-    // Create the talent record
-    const { data: newTalent, error: createError } = await supabase
+    // Start a transaction to create talent and assignment
+    const { data: newTalent, error: createTalentError } = await supabase
       .from('talent')
       .insert({
         first_name: talentData.first_name,
@@ -250,28 +244,46 @@ export async function POST(request: NextRequest) {
         rep_name: talentData.rep_name,
         rep_email: talentData.rep_email,
         rep_phone: talentData.rep_phone,
-        notes: talentData.notes || null
+        notes: talentData.notes || null,
+        contact_info: {} // Initialize as empty object
       })
-      .select(`
-        id,
-        first_name,
-        last_name,
-        rep_name,
-        rep_email,
-        rep_phone,
-        notes,
-        created_at,
-        updated_at
-      `)
+      .select('id, first_name, last_name, rep_name, rep_email, rep_phone, notes, created_at, updated_at')
       .single()
 
-    if (createError) {
-      console.error('Error creating talent:', createError)
+    if (createTalentError) {
+      console.error('Error creating talent:', createTalentError)
       return NextResponse.json(
         { 
           error: 'Failed to create talent',
-          code: 'CREATE_ERROR',
-          details: createError.message
+          code: 'CREATE_TALENT_ERROR',
+          details: createTalentError.message
+        },
+        { status: 500 }
+      )
+    }
+
+    // Create project assignment
+    const { data: assignment, error: assignmentError } = await supabase
+      .from('talent_project_assignments')
+      .insert({
+        talent_id: newTalent.id,
+        project_id: projectId,
+        assigned_by: user.id,
+        status: 'active'
+      })
+      .select('id, status, assigned_at')
+      .single()
+
+    if (assignmentError) {
+      console.error('Error creating talent assignment:', assignmentError)
+      // Try to clean up the talent record if assignment failed
+      await supabase.from('talent').delete().eq('id', newTalent.id)
+      
+      return NextResponse.json(
+        { 
+          error: 'Failed to assign talent to project',
+          code: 'CREATE_ASSIGNMENT_ERROR',
+          details: assignmentError.message
         },
         { status: 500 }
       )
@@ -281,18 +293,21 @@ export async function POST(request: NextRequest) {
     await supabase
       .from('auth_logs')
       .insert({
-        event_type: 'talent_created',
+        event_type: 'talent_added_to_project',
         user_id: user.id,
-        details: `Created talent: ${talentData.first_name} ${talentData.last_name}`
+        details: `Added talent ${talentData.first_name} ${talentData.last_name} to project ${project.name}`
       })
 
     return NextResponse.json({
-      data: newTalent,
-      message: 'Talent created successfully'
+      data: {
+        ...newTalent,
+        assignment
+      },
+      message: 'Talent added to project successfully'
     }, { status: 201 })
 
   } catch (error) {
-    console.error('Error in POST /api/talent:', error)
+    console.error('Error in POST /api/projects/[id]/talent-roster:', error)
     return NextResponse.json(
       { 
         error: 'Internal server error',

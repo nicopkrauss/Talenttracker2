@@ -147,15 +147,15 @@ The Project Management system is a core feature that enables administrators and 
 
 ### Requirement 12
 
-**User Story:** As an Admin or In-House user, I want to manage talent roster and assignments through dedicated interfaces, so that I can efficiently organize talent for the project.
+**User Story:** As an Admin or In-House user, I want to manage talent roster through a simplified interface, so that I can efficiently view and organize talent for the project.
 
 #### Acceptance Criteria
 
-1. WHEN I access the Talent Roster tab THEN the system SHALL provide CSV import functionality and manual talent entry options
-2. WHEN managing talent THEN the system SHALL display a sortable and filterable talent table with name, contact, role, escort, and status
-3. WHEN I access the Assignments tab THEN the system SHALL provide a drag-and-drop interface for pairing talent with escorts
-4. WHEN making talent-escort assignments THEN the system SHALL provide "Randomize Remaining" and "Clear All Assignments" actions
-5. WHEN I finalize talent roster or assignments THEN the system SHALL mark the appropriate checklist items as complete
+1. WHEN I access the Talent Roster tab THEN the system SHALL display talent in a card-based grid layout similar to the main talent page
+2. WHEN viewing talent cards THEN the system SHALL show talent name and photo/avatar only for a clean, simplified interface
+3. WHEN searching talent THEN the system SHALL filter by talent name only (first name and last name)
+4. WHEN managing talent THEN the system SHALL provide CSV import functionality and manual talent entry options
+5. WHEN I finalize talent roster THEN the system SHALL mark the talent roster checklist item as complete
 
 ### Requirement 13
 

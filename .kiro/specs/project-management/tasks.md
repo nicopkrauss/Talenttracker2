@@ -171,17 +171,21 @@
   - _Follow wireframe: project-details-wireframe.md - Roles & Team Tab section_
   - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7, 11.8_
 
-- [ ] 19. Build Talent Roster tab with management functionality
+- [x] 19. Build simplified Talent Roster tab with card-based interface
+
+
+
+  - Create simplified talent roster interface based on main talent page design
+  - Display talent in card-based grid layout with name and photo/avatar only
+  - Implement name-only search functionality (first name and last name)
   - Create GET /api/projects/[id]/talent-roster route for fetching project talent
   - Create POST /api/projects/[id]/talent-roster route for adding talent (manual entry)
-  - Create PUT /api/projects/[id]/talent-roster/[talentId] route for updating talent
   - Create DELETE /api/projects/[id]/talent-roster/[talentId] route for removing talent
   - Create POST /api/projects/[id]/talent-roster/complete route for marking roster complete
-  - Build talent table with sorting and filtering capabilities
+  - Add CSV import functionality for bulk talent addition
   - Add manual talent entry form
-  - Implement bulk actions toolbar (export, remove, reassign escort)
   - Create "Finalize Talent Roster" button and checklist integration
-  - _Follow wireframe: project-details-wireframe.md - Talent Roster Tab section_
+  - _Copy and simplify the main talent page design for project-specific context_
   - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5_
 
 - [ ] 20. Create Assignments tab with drag-and-drop pairing
