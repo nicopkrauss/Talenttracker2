@@ -8,16 +8,16 @@ This feature enhances the Talent Tracker application to support multi-day produc
 
 ### Requirement 1
 
-**User Story:** As an Admin or In-House user, I want to define project schedules with rehearsal and show days during project creation, so that I can establish the production timeline and enable day-specific assignments.
+**User Story:** As an Admin or In-House user, I want the system to automatically calculate rehearsal and show days based on project start and end dates, so that I can establish the production timeline without manual day designation.
 
 #### Acceptance Criteria
 
-1. WHEN I create a new project THEN the system SHALL allow me to set multiple project dates
-2. WHEN I set project dates THEN the system SHALL allow me to click each date to designate it as "R" (Rehearsal) or "S" (Show)
-3. WHEN I designate project dates THEN the system SHALL display a simple legend showing "R = Rehearsal, S = Show"
-4. WHEN I save the project THEN the system SHALL store rehearsal dates and show dates separately
-5. WHEN I edit an existing project THEN the system SHALL allow me to modify the schedule designation of dates
-6. WHEN viewing project details THEN the system SHALL display the project schedule clearly
+1. WHEN I create a new project THEN the system SHALL automatically determine rehearsal and show days from the start and end dates
+2. WHEN I set project dates THEN the system SHALL designate the end date as the show day and all preceding days as rehearsal days
+3. WHEN I have a single-day project THEN the system SHALL designate that day as a show day
+4. WHEN I save the project THEN the system SHALL calculate and display the project schedule automatically
+5. WHEN I edit project dates THEN the system SHALL recalculate the rehearsal and show day designations
+6. WHEN viewing project details THEN the system SHALL display the calculated project schedule with clear rehearsal/show day indicators
 
 ### Requirement 2
 
@@ -102,17 +102,17 @@ This feature enhances the Talent Tracker application to support multi-day produc
 
 ### Requirement 8
 
-**User Story:** As a system administrator, I want the database to efficiently store multi-day scheduling and group data, so that the application performs well with complex assignment scenarios.
+**User Story:** As a system administrator, I want the database to efficiently store multi-day scheduling and group data using calculated schedules, so that the application performs well with complex assignment scenarios.
 
 #### Acceptance Criteria
 
-1. WHEN the system stores project schedules THEN it SHALL add rehearsal_dates and show_dates arrays to the projects table
+1. WHEN the system calculates project schedules THEN it SHALL derive rehearsal and show days from existing start_date and end_date columns
 2. WHEN the system tracks talent scheduling THEN it SHALL add scheduled_dates array to talent_project_assignments table
 3. WHEN the system manages staff availability THEN it SHALL add available_dates array to team_assignments table
 4. WHEN the system stores talent groups THEN it SHALL create a talent_groups table with project_id, group_name, members JSONB, scheduled_dates, and assigned_escort_id
 5. WHEN groups are created THEN the system SHALL also create corresponding entries in talent_project_assignments using the group's talent_id
 6. WHEN querying assignments THEN the system SHALL efficiently retrieve scheduling and availability data
-7. WHEN the system processes date arrays THEN it SHALL handle date comparisons and filtering efficiently
+7. WHEN the system processes date calculations THEN it SHALL handle date comparisons and filtering efficiently using computed rehearsal/show day logic
 
 ### Requirement 9
 

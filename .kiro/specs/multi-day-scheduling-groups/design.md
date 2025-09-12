@@ -16,7 +16,7 @@ The feature integrates with existing components:
 
 ### Data Flow
 
-1. **Project Setup**: Admin defines project dates and designates rehearsal/show days
+1. **Project Setup**: Admin defines project start and end dates, system automatically calculates rehearsal/show days
 2. **Team Confirmation**: Staff availability is captured during team confirmation process
 3. **Talent Scheduling**: Individual talent and groups are scheduled for specific days
 4. **Assignment Process**: Escorts are assigned to talent/groups on a day-by-day basis
@@ -28,8 +28,10 @@ The feature integrates with existing components:
 
 #### Projects Table Extensions
 ```sql
-ALTER TABLE projects ADD COLUMN rehearsal_dates DATE[];
-ALTER TABLE projects ADD COLUMN show_dates DATE[];
+-- No additional columns needed - rehearsal/show days calculated from existing start_date and end_date
+-- Rehearsal days: start_date to (end_date - 1 day)
+-- Show day: end_date
+-- For single-day projects: show day = start_date = end_date
 ```
 
 #### Team Assignments Availability
@@ -59,8 +61,7 @@ CREATE TABLE talent_groups (
 ### UI Component Architecture
 
 #### Project Creation Enhancement
-- **ScheduleDatePicker**: Interactive date selection with R/S designation
-- **ProjectScheduleDisplay**: Visual representation of project timeline
+- **ProjectScheduleDisplay**: Visual representation of calculated project timeline showing automatic rehearsal/show day designation
 
 #### Team Management Components
 - **PendingTeamAssignments**: Renamed section with confirmation workflow
@@ -83,9 +84,27 @@ CREATE TABLE talent_groups (
 ### Project Schedule Model
 ```typescript
 interface ProjectSchedule {
-  rehearsalDates: Date[];
-  showDates: Date[];
-  allDates: Date[]; // computed property
+  startDate: Date;
+  endDate: Date;
+  rehearsalDates: Date[]; // computed: start_date to (end_date - 1)
+  showDates: Date[]; // computed: [end_date]
+  allDates: Date[]; // computed: start_date to end_date
+}
+
+// Utility functions for schedule calculation
+function calculateRehearsalDates(startDate: Date, endDate: Date): Date[] {
+  if (startDate.getTime() === endDate.getTime()) return []; // Single day = show only
+  const dates = [];
+  const current = new Date(startDate);
+  while (current < endDate) {
+    dates.push(new Date(current));
+    current.setDate(current.getDate() + 1);
+  }
+  return dates;
+}
+
+function calculateShowDates(endDate: Date): Date[] {
+  return [new Date(endDate)];
 }
 ```
 

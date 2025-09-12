@@ -283,7 +283,9 @@ export function OperationsDashboard({ project }: OperationsDashboardProps) {
               <div className="text-2xl font-bold text-foreground">
                 {liveData?.kpis.activeEscorts || 0}
               </div>
-              <div className="text-sm text-muted-foreground">Active Escorts</div>
+              <div className="text-sm text-muted-foreground">
+                {(liveData?.kpis.activeEscorts || 0) === 1 ? 'Active Escort' : 'Active Escorts'}
+              </div>
             </div>
           </div>
           
@@ -291,11 +293,15 @@ export function OperationsDashboard({ project }: OperationsDashboardProps) {
           <div className="flex gap-4 mt-4 pt-4 border-t border-border">
             <div className="flex items-center gap-2 text-sm">
               <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-              <span>{liveData?.kpis.staffOvertime.over8Hours || 0} Staff over 8hrs</span>
+              <span>
+                {liveData?.kpis.staffOvertime.over8Hours || 0} {(liveData?.kpis.staffOvertime.over8Hours || 0) === 1 ? 'Staff member' : 'Staff'} over 8hrs
+              </span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
-              <span>{liveData?.kpis.staffOvertime.over12Hours || 0} Staff over 12hrs</span>
+              <span>
+                {liveData?.kpis.staffOvertime.over12Hours || 0} {(liveData?.kpis.staffOvertime.over12Hours || 0) === 1 ? 'Staff member' : 'Staff'} over 12hrs
+              </span>
             </div>
             <Button 
               size="sm" 

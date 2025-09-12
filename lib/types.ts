@@ -353,8 +353,8 @@ export const projectFormSchema = z.object({
       return !isNaN(parsedDate.getTime())
     }, "Please enter a valid end date")
 }).refine((data) => {
-  const startDate = new Date(data.start_date)
-  const endDate = new Date(data.end_date)
+  const startDate = new Date(data.start_date + 'T00:00:00')
+  const endDate = new Date(data.end_date + 'T00:00:00')
   return startDate < endDate
 }, {
   message: "End date must be after start date",
@@ -693,6 +693,8 @@ export interface TeamAssignment {
   role: ProjectRole
   pay_rate?: number
   schedule_notes?: string
+  available_dates?: string[] // ISO date strings for availability
+  confirmed_at?: string // When availability was confirmed
   created_at: string
   profiles: {
     id: string
@@ -794,3 +796,176 @@ export interface ProjectDetails extends Project {
   is_setup_complete: boolean
   can_activate: boolean
 }
+
+// Multi-Day Scheduling System Types
+
+// Project Schedule interface with calculated rehearsal and show dates
+export interface ProjectSchedule {
+  startDate: Date
+  endDate: Date
+  rehearsalDates: Date[] // computed: start_date to (end_date - 1)
+  showDates: Date[] // computed: [end_date]
+  allDates: Date[] // computed: start_date to end_date
+  isSingleDay: boolean // computed: startDate === endDate
+}
+
+// Staff Availability interface for team member availability tracking
+export interface StaffAvailability {
+  userId: string
+  projectId: string
+  availableDates: Date[]
+  confirmedAt: Date
+  updatedAt: Date
+}
+
+// Talent Scheduling interface for talent day assignments
+export interface TalentScheduling {
+  talentId: string
+  projectId: string
+  scheduledDates: Date[]
+  isGroup: boolean
+  updatedAt: Date
+}
+
+// Talent Group interface for group management
+export interface TalentGroup {
+  id: string
+  projectId: string
+  groupName: string
+  members: GroupMember[]
+  scheduledDates: Date[]
+  assignedEscortId?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+// Group Member interface for individual members within a group
+export interface GroupMember {
+  name: string
+  role: string
+}
+
+// Day Assignment interface for assignment tracking
+export interface DayAssignment {
+  date: Date
+  assignments: TalentEscortPair[]
+}
+
+// Talent-Escort Pair interface for assignment tracking
+export interface TalentEscortPair {
+  talentId: string
+  talentName: string
+  isGroup: boolean
+  escortId?: string
+  escortName?: string
+}
+
+// Enhanced Team Assignment with availability dates
+export interface EnhancedTeamAssignment extends TeamAssignment {
+  availableDates?: Date[]
+  isConfirmed: boolean
+}
+
+// Enhanced Talent Project Assignment with scheduling dates
+export interface EnhancedTalentProjectAssignment extends TalentProjectAssignment {
+  scheduledDates?: Date[]
+}
+
+// Assignment dropdown section types
+export type AssignmentDropdownSection = 'available' | 'rehearsal_assigned' | 'current_day_assigned'
+
+// Escort availability status for dropdowns
+export interface EscortAvailabilityStatus {
+  escortId: string
+  escortName: string
+  section: AssignmentDropdownSection
+  currentAssignment?: {
+    talentName: string
+    date: Date
+  }
+}
+
+// Form data interfaces for multi-day scheduling
+
+// Staff availability confirmation form data
+export interface StaffAvailabilityFormData {
+  userId: string
+  projectId: string
+  availableDates: string[] // ISO date strings
+}
+
+// Talent scheduling form data
+export interface TalentSchedulingFormData {
+  talentId: string
+  projectId: string
+  scheduledDates: string[] // ISO date strings
+}
+
+// Talent group creation form data
+export interface TalentGroupFormData {
+  projectId: string
+  groupName: string
+  members: GroupMember[]
+  scheduledDates: string[] // ISO date strings
+}
+
+// Assignment form data
+export interface AssignmentFormData {
+  date: string // ISO date string
+  assignments: {
+    talentId: string
+    escortId?: string
+  }[]
+}
+
+// Validation schemas for multi-day scheduling
+
+export const staffAvailabilitySchema = z.object({
+  userId: z.string().uuid("Invalid user ID"),
+  projectId: z.string().uuid("Invalid project ID"),
+  availableDates: z.array(z.string().datetime("Invalid date format"))
+    .min(1, "At least one available date is required")
+})
+
+export const talentSchedulingSchema = z.object({
+  talentId: z.string().uuid("Invalid talent ID"),
+  projectId: z.string().uuid("Invalid project ID"),
+  scheduledDates: z.array(z.string().datetime("Invalid date format"))
+    .min(1, "At least one scheduled date is required")
+})
+
+export const groupMemberSchema = z.object({
+  name: z.string()
+    .min(1, "Member name is required")
+    .max(100, "Member name must be 100 characters or less"),
+  role: z.string()
+    .min(1, "Member role is required")
+    .max(50, "Member role must be 50 characters or less")
+})
+
+export const talentGroupSchema = z.object({
+  projectId: z.string().uuid("Invalid project ID"),
+  groupName: z.string()
+    .min(1, "Group name is required")
+    .max(100, "Group name must be 100 characters or less"),
+  members: z.array(groupMemberSchema)
+    .min(1, "At least one group member is required")
+    .max(20, "Groups cannot have more than 20 members"),
+  scheduledDates: z.array(z.string().datetime("Invalid date format"))
+    .min(1, "At least one scheduled date is required")
+})
+
+export const assignmentSchema = z.object({
+  date: z.string().datetime("Invalid date format"),
+  assignments: z.array(z.object({
+    talentId: z.string().uuid("Invalid talent ID"),
+    escortId: z.string().uuid("Invalid escort ID").optional()
+  }))
+})
+
+// Type inference from new Zod schemas
+export type StaffAvailabilityInput = z.infer<typeof staffAvailabilitySchema>
+export type TalentSchedulingInput = z.infer<typeof talentSchedulingSchema>
+export type GroupMemberInput = z.infer<typeof groupMemberSchema>
+export type TalentGroupInput = z.infer<typeof talentGroupSchema>
+export type AssignmentInput = z.infer<typeof assignmentSchema>

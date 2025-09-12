@@ -180,3 +180,20 @@ The Project Management system is a core feature that enables administrators and 
 3. WHEN managing team status THEN the system SHALL display current shift states, time worked, and overtime warnings with color-coded alerts
 4. WHEN supervising staff THEN the system SHALL provide multi-select checkout controls for efficient shift management
 5. WHEN shift durations exceed thresholds THEN the system SHALL display yellow warnings at 8 hours and red alerts at 12 hours
+
+### Requirement 15
+
+**User Story:** As an Admin or In-House user, I want to track escort assignments for each project day in the project overview, so that I can ensure all talent have assigned escorts before each rehearsal and show day.
+
+#### Acceptance Criteria
+
+1. WHEN viewing the project overview THEN the system SHALL display an escort assignment tracker showing the status for each project day
+2. WHEN viewing escort assignment status THEN the system SHALL show day-by-day boxes indicating whether all talent have assigned escorts
+3. WHEN a day has complete escort assignments THEN the system SHALL display a green checkmark icon and green background
+4. WHEN a day has partial escort assignments THEN the system SHALL display a partially filled circle icon and amber background
+5. WHEN a day has no escort assignments THEN the system SHALL display an empty circle icon and muted background
+6. WHEN hovering over a day box THEN the system SHALL show a tooltip with assignment details (e.g., "3/5 escorts assigned")
+7. WHEN viewing assignment progress THEN the system SHALL display an overall status badge showing "All Assigned", "Partial", or "Not Started"
+8. WHEN escort assignments are incomplete THEN the system SHALL show how many escorts are still needed for each day
+9. WHEN talent roster and team assignments are not complete THEN the system SHALL display a message indicating these prerequisites must be completed first
+10. WHEN clicking on a day box THEN the system SHALL navigate to the detailed assignment interface (future implementation)

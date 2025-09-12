@@ -43,17 +43,20 @@ export default function NewProjectPage() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <div className="flex items-center gap-4 mb-6">
-        <Link href="/projects">
-          <Button variant="ghost" size="sm" className="gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Back to Projects
-          </Button>
-        </Link>
-        <h1 className="text-2xl font-bold">Create New Project</h1>
-      </div>
-      
-      <div className="max-w-2xl">
+      {/* Centered form container */}
+      <div className="max-w-2xl mx-auto">
+        {/* Header with back button (left) and centered title */}
+        <div className="relative flex items-center justify-center mb-6">
+          <div className="absolute left-0">
+            <Link href="/projects">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Projects
+              </Button>
+            </Link>
+          </div>
+          <h1 className="text-2xl font-bold">Create New Project</h1>
+        </div>
         <Suspense fallback={<LoadingSpinner />}>
           <ProjectForm 
             mode="create" 

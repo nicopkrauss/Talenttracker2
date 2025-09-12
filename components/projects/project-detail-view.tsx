@@ -26,6 +26,7 @@ import { Project, ProjectSetupChecklist } from '@/lib/types'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { useAuth } from '@/lib/auth-context'
 import { hasAdminAccess } from '@/lib/role-utils'
+import { formatDateStringDefault } from '@/lib/date-utils'
 
 interface ProjectDetailViewProps {
   projectId: string
@@ -181,11 +182,7 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
+    return formatDateStringDefault(dateString)
   }
 
   const getStatusBadgeVariant = (status: string) => {
@@ -490,7 +487,7 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
                 <p className="font-medium">Setup Complete</p>
                 <p className="text-sm text-green-600 dark:text-green-400">
                   Project was activated on {project.project_setup_checklist.completed_at ?
-                    new Date(project.project_setup_checklist.completed_at).toLocaleDateString() :
+                    formatDateStringDefault(project.project_setup_checklist.completed_at) :
                     'Unknown date'
                   }
                 </p>

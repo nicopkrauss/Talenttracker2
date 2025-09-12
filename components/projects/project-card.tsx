@@ -20,6 +20,7 @@ import {
 import { Project, UserRole } from "@/lib/types"
 import { hasAdminAccess } from "@/lib/role-utils"
 import { format, isAfter, isBefore } from "date-fns"
+import { parseLocalDate, formatDateStringShort, formatDateStringCompact } from "@/lib/date-utils"
 
 interface ProjectCardProps {
   project: Project
@@ -50,8 +51,8 @@ export function ProjectCard({
   const canArchive = isAdmin && project.status === 'active' && canAccessDetails
   
   // Calculate project status and progress
-  const startDate = new Date(project.start_date)
-  const endDate = new Date(project.end_date)
+  const startDate = parseLocalDate(project.start_date)
+  const endDate = parseLocalDate(project.end_date)
   const today = new Date()
   
   const isUpcoming = isBefore(today, startDate)
@@ -165,7 +166,7 @@ export function ProjectCard({
           <div className="flex items-center gap-2 text-sm text-foreground/80">
             <Calendar className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
             <span>
-              {format(startDate, 'MMM d')} - {format(endDate, 'MMM d, yyyy')}
+              {formatDateStringCompact(project.start_date)} - {formatDateStringShort(project.end_date)}
             </span>
           </div>
         </div>

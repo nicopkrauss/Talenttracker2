@@ -156,9 +156,45 @@ describe('RolesTeamTab', () => {
 
     // Check summary counts
     expect(screen.getByText('Supervisors')).toBeInTheDocument()
-    expect(screen.getByText('Coordinators')).toBeInTheDocument()
+    expect(screen.getByText('TLCs')).toBeInTheDocument()
     expect(screen.getByText('Escorts')).toBeInTheDocument()
     expect(screen.getByText('Est. Daily Cost')).toBeInTheDocument()
+  })
+
+  it('should display correct pluralization in assignment summary', async () => {
+    // Create a project with single assignments to test singular forms
+    const singleAssignmentProject = {
+      ...mockProject,
+      team_assignments: [
+        {
+          id: '1',
+          user_id: 'user1',
+          project_id: 'project1',
+          role: 'supervisor' as const,
+          pay_rate: 300,
+          profiles: {
+            id: 'user1',
+            full_name: 'John Doe',
+            email: 'john@example.com',
+            role: null,
+            status: 'active' as const,
+            created_at: '2024-01-01',
+            updated_at: '2024-01-01'
+          }
+        }
+      ]
+    }
+
+    render(<RolesTeamTab project={singleAssignmentProject} onProjectUpdate={mockOnProjectUpdate} />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Assignment Summary')).toBeInTheDocument()
+    })
+
+    // Check singular forms when count is 1
+    expect(screen.getByText('Supervisor')).toBeInTheDocument()
+    expect(screen.getByText('TLC')).toBeInTheDocument()
+    expect(screen.getByText('Escort')).toBeInTheDocument()
   })
 
   it('should handle staff selection', async () => {

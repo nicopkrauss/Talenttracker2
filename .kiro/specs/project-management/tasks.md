@@ -258,3 +258,16 @@
   - Implement talent presence tracking integration with talent_status table
   - Ensure WebSocket subscriptions work correctly for live project data updates
   - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5_
+
+- [x] 27. Implement escort assignment tracking in project overview
+
+
+  - Create EscortAssignmentTracker component with day-by-day status boxes
+  - Implement visual states for complete (green checkmark), partial (amber circle), and unassigned (empty circle) days
+  - Add hover tooltips showing assignment details (e.g., "3/5 escorts assigned")
+  - Create overall status badge showing "All Assigned", "Partial", or "Not Started"
+  - Display day type indicators (Rehearsal/Show) and missing escort counts
+  - Add prerequisite message when talent roster and team assignments are incomplete
+  - Integrate component into ProjectOverviewCard replacing the basic schedule display
+  - Prepare component structure for future integration with talent assignment system
+  - _Requirements: 15.1, 15.2, 15.3, 15.4, 15.5, 15.6, 15.7, 15.8, 15.9, 15.10_

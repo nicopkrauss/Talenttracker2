@@ -26,7 +26,7 @@ export const ProjectInput = forwardRef<HTMLInputElement, ProjectInputProps>(
           // Error state
           error && "border-destructive focus-visible:ring-destructive",
           // Success state
-          success && "border-green-600 focus-visible:ring-green-600 dark:border-green-400 dark:focus-visible:ring-green-400",
+          success && "border-white focus-visible:ring-white dark:border-white dark:focus-visible:ring-white",
           className
         )}
         {...props}
@@ -48,7 +48,7 @@ export const ProjectTextarea = forwardRef<HTMLTextAreaElement, ProjectTextareaPr
           // Error state
           error && "border-destructive focus-visible:ring-destructive",
           // Success state
-          success && "border-green-600 focus-visible:ring-green-600 dark:border-green-400 dark:focus-visible:ring-green-400",
+          success && "border-white focus-visible:ring-white dark:border-white dark:focus-visible:ring-white",
           className
         )}
         {...props}
@@ -77,7 +77,7 @@ export const ProjectDateInput = forwardRef<HTMLInputElement, ProjectDateInputPro
           // Error state
           error && "border-destructive focus-visible:ring-destructive",
           // Success state
-          success && "border-green-600 focus-visible:ring-green-600 dark:border-green-400 dark:focus-visible:ring-green-400",
+          success && "border-white focus-visible:ring-white dark:border-white dark:focus-visible:ring-white",
           className
         )}
         {...props}

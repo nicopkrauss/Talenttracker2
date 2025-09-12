@@ -1,32 +1,48 @@
 # Implementation Plan
 
-- [ ] 1. Create database schema migrations for multi-day scheduling
-  - Create migration to add rehearsal_dates and show_dates arrays to projects table
+- [x] 1. Create database schema migrations for multi-day scheduling
   - Create migration to add available_dates array to team_assignments table
   - Create migration to add scheduled_dates array to talent_project_assignments table
   - Create migration for talent_groups table with all required fields
   - Add necessary indexes for performance on date array columns
-  - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.6_
+  - Add utility functions for calculating rehearsal/show dates from existing start_date and end_date
+  - _Requirements: 8.2, 8.3, 8.4, 8.6, 8.7_
 
-- [ ] 2. Create TypeScript interfaces and data models
-  - Define ProjectSchedule interface with rehearsal and show dates
+- [x] 2. Create TypeScript interfaces and data models
+
+
+
+
+
+  - Define ProjectSchedule interface with calculated rehearsal and show dates
+  - Create utility functions for calculating rehearsal/show dates from start/end dates
   - Define StaffAvailability interface for team member availability tracking
   - Define TalentScheduling interface for talent day assignments
   - Define TalentGroup and GroupMember interfaces for group management
   - Define DayAssignment and TalentEscortPair interfaces for assignment tracking
   - Create form validation schemas for all new data structures
-  - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
+  - _Requirements: 8.2, 8.3, 8.4, 8.5, 8.7_
 
-- [ ] 3. Enhance project creation with schedule setup
-  - Modify project creation form to include multiple date selection
-  - Create ScheduleDatePicker component with R/S designation functionality
-  - Add date designation toggle logic (click to cycle R → S → unselected)
-  - Implement project schedule validation (dates within range, at least one date)
-  - Update project creation API to handle rehearsal_dates and show_dates
-  - Create ProjectScheduleDisplay component for showing project timeline
+- [x] 3. Enhance project creation with automatic schedule calculation
+
+
+
+
+
+  - Create ProjectScheduleDisplay component for showing calculated project timeline
+  - Implement automatic rehearsal/show day calculation from start and end dates
+  - Add visual indicators to distinguish rehearsal days (start to end-1) from show day (end date)
+  - Create schedule calculation utilities for single-day and multi-day projects
+  - Update project detail views to display calculated schedule information
+  - Add schedule preview in project creation form showing automatic designation
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6_
 
-- [ ] 4. Build team availability confirmation workflow
+- [x] 4. Build team availability confirmation workflow
+
+
+
+
+
   - Rename "Current Team Assignments" section to "Pending Team Assignments"
   - Add "Confirm" button to pending team member cards
   - Create AvailabilityPopup modal component for capturing staff availability
@@ -35,6 +51,29 @@
   - Update team assignment cards to show availability instead of location/flight info
   - Add edit functionality for confirmed team member availability
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7_
+
+- [x] 4.1. Enhance team member deletion workflow and availability display
+
+
+
+  - Replace direct delete action with popover menu offering "Remove from Project" and "Move to Pending" options
+  - Update availability display styling to individual date badges on same row with flex-wrap
+  - Implement unconfirm functionality that moves team member back to pending status
+  - Add optimistic UI for availability confirmation with instant feedback and background API calls
+  - Fix timezone issues in date parsing to display correct dates
+  - Update API endpoints to support unconfirm operation with proper null value handling
+  - _Requirements: 2.4, 2.5, 2.6_
+
+- [x] 4.2. Implement mass availability confirmation
+
+
+
+  - Add "Mass Confirm" button to pending team assignments section
+  - Create mass confirmation popup with list view of all pending team members
+  - Include name column and availability date selection for each team member
+  - Add "Confirm (x)" button that processes all selected availabilities
+  - Use optimistic UI pattern for instant feedback
+  - _Requirements: 2.4, 2.5, 2.6_
 
 - [ ] 5. Create talent groups management system
   - Add "Add Group" button to talent roster tab
@@ -97,14 +136,14 @@
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 
 - [ ] 11. Create comprehensive API routes for all new functionality
-  - Create GET/PUT /api/projects/[id]/schedule routes for project schedule management
+  - Create GET /api/projects/[id]/schedule routes for calculated project schedule information
   - Create GET/PUT /api/projects/[id]/team-availability routes for staff availability
   - Create GET/POST/PUT/DELETE /api/projects/[id]/talent-groups routes for group management
   - Create GET/PUT /api/projects/[id]/talent-scheduling routes for talent day assignments
   - Add proper error handling and validation to all new API routes
   - Implement transaction handling for multi-table operations
   - Add API documentation for all new endpoints
-  - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7_
+  - _Requirements: 8.2, 8.3, 8.4, 8.5, 8.6, 8.7_
 
 - [ ] 12. Integrate with existing project management workflows
   - Update project statistics to account for multi-day assignments

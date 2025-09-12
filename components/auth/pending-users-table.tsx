@@ -36,6 +36,7 @@ import { ApprovalConfirmationDialog } from "./approval-confirmation-dialog"
 import { useUserApproval } from "./use-user-approval"
 import type { PendingUser, SystemRole } from "@/lib/types"
 import { REGISTRATION_ROLE_LABELS } from "@/lib/types"
+import { formatDateStringDefault } from "@/lib/date-utils"
 
 interface PendingUsersTableProps {
   users: PendingUser[]
@@ -310,7 +311,7 @@ export function PendingUsersTable({
                     <TableCell>
                       <div className="text-sm flex items-center">
                         <Calendar className="w-3 h-3 mr-1" />
-                        {new Date(user.created_at).toLocaleDateString()}
+                        {formatDateStringDefault(user.created_at)}
                       </div>
                     </TableCell>
 

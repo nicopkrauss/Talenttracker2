@@ -85,7 +85,12 @@ export default function EditProjectPage({ params }: EditProjectPageProps) {
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-6">
-        <LoadingSpinner />
+        <div className="max-w-2xl mx-auto">
+          <div className="relative flex items-center justify-center mb-6">
+            <h1 className="text-2xl font-bold">Edit Project</h1>
+          </div>
+          <LoadingSpinner />
+        </div>
       </div>
     )
   }
@@ -93,27 +98,43 @@ export default function EditProjectPage({ params }: EditProjectPageProps) {
   if (error) {
     return (
       <div className="container mx-auto px-4 py-6">
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <div className="max-w-2xl mx-auto">
+          <div className="relative flex items-center justify-center mb-6">
+            <div className="absolute left-0">
+              <Link href="/projects">
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Projects
+                </Button>
+              </Link>
+            </div>
+            <h1 className="text-2xl font-bold">Edit Project</h1>
+          </div>
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <div className="flex items-center gap-4 mb-6">
-        <Link href={`/projects/${resolvedParams.id}`}>
-          <Button variant="ghost" size="sm" className="gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Back to Project
-          </Button>
-        </Link>
-        <h1 className="text-2xl font-bold">Edit Project</h1>
-      </div>
-      
-      <div className="max-w-2xl">
+      {/* Centered form container */}
+      <div className="max-w-2xl mx-auto">
+        {/* Header with back button (left) and centered title */}
+        <div className="relative flex items-center justify-center mb-6">
+          <div className="absolute left-0">
+            <Link href={`/projects/${resolvedParams.id}`}>
+              <Button variant="ghost" size="sm" className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Project
+              </Button>
+            </Link>
+          </div>
+          <h1 className="text-2xl font-bold">Edit Project</h1>
+        </div>
         <Suspense fallback={<LoadingSpinner />}>
           <ProjectForm 
             mode="edit" 

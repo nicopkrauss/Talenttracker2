@@ -17,8 +17,12 @@ import {
   Loader2,
   Edit
 } from 'lucide-react'
+import { ProjectScheduleDisplay } from './project-schedule-display'
+import { EscortAssignmentTracker } from './escort-assignment-tracker'
 import { EnhancedProject } from '@/lib/types'
-import { useState } from 'react'
+import { createProjectScheduleFromStrings } from '@/lib/schedule-utils'
+import { formatDateStringShort } from '@/lib/date-utils'
+import { useState, useMemo } from 'react'
 
 interface ProjectOverviewCardProps {
   project: EnhancedProject
@@ -38,12 +42,18 @@ export function ProjectOverviewCard({
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
+    return formatDateStringShort(dateString)
   }
+
+  // Calculate project schedule from dates
+  const projectSchedule = useMemo(() => {
+    try {
+      return createProjectScheduleFromStrings(project.start_date, project.end_date)
+    } catch (error) {
+      console.error('Error calculating project schedule:', error)
+      return null
+    }
+  }, [project.start_date, project.end_date])
 
   const calculateSetupProgress = () => {
     if (!project.project_setup_checklist) return 0
@@ -141,6 +151,13 @@ export function ProjectOverviewCard({
             )}
           </div>
         </div>
+
+        {/* Escort Assignment Tracking */}
+        {projectSchedule && (
+          <div className="pt-4 border-t">
+            <EscortAssignmentTracker projectSchedule={projectSchedule} />
+          </div>
+        )}
 
         {/* Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">

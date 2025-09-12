@@ -21,10 +21,14 @@ import {
   ProjectRoleTemplate
 } from '@/lib/types'
 import { getRoleDisplayName } from '@/lib/role-utils'
-import { Search, Users, DollarSign, Plus, X, Check, ArrowUp, ArrowDown, MapPin, Plane, ChevronDown, ChevronRight, Edit, Trash2, FileText, UserPlus } from 'lucide-react'
+import { Search, Users, DollarSign, Plus, X, Check, ArrowUp, ArrowDown, MapPin, Plane, ChevronDown, ChevronRight, Edit, Trash2, FileText, UserPlus, Calendar, CalendarDays } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { ProjectRoleTemplateManager, ProjectRoleTemplateManagerRef } from '@/components/projects/project-role-template-manager'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { AvailabilityPopup } from '@/components/projects/availability-popup'
+import { MassAvailabilityPopup } from '@/components/projects/mass-availability-popup'
+import { ProjectSchedule } from '@/lib/types'
+import { createProjectScheduleFromStrings } from '@/lib/schedule-utils'
 
 interface RolesTeamTabProps {
   project: EnhancedProject
@@ -82,6 +86,17 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
   // Collapsible section states
   const [isAssignStaffExpanded, setIsAssignStaffExpanded] = useState(true)
   const [isCurrentAssignmentsExpanded, setIsCurrentAssignmentsExpanded] = useState(true)
+  const [isConfirmedAssignmentsExpanded, setIsConfirmedAssignmentsExpanded] = useState(true)
+
+  // Availability popup state
+  const [availabilityPopupOpen, setAvailabilityPopupOpen] = useState(false)
+  const [selectedTeamMember, setSelectedTeamMember] = useState<TeamAssignment | null>(null)
+  const [projectSchedule, setProjectSchedule] = useState<ProjectSchedule | null>(null)
+  const [isConfirmingAvailability, setIsConfirmingAvailability] = useState(false)
+
+  // Mass confirm popup state
+  const [massConfirmPopupOpen, setMassConfirmPopupOpen] = useState(false)
+  const [isMassConfirming, setIsMassConfirming] = useState(false)
 
   // Assignment filters and selection
   const [assignmentFilters, setAssignmentFilters] = useState({
@@ -94,6 +109,11 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
   })
   const [selectedAssignments, setSelectedAssignments] = useState<Set<string>>(new Set())
   const [bulkPayRate, setBulkPayRate] = useState<number | ''>('')
+  const [deleteMenuOpen, setDeleteMenuOpen] = useState<string | null>(null)
+
+  // Confirmed team member bulk selection
+  const [selectedConfirmedAssignments, setSelectedConfirmedAssignments] = useState<Set<string>>(new Set())
+  const [isBulkActionInProgress, setIsBulkActionInProgress] = useState(false)
 
   // Role definitions based on role templates
   const roleDefinitions: RoleDefinition[] = useMemo(() => {
@@ -195,9 +215,71 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
     return filtered
   }, [availableStaff, filters])
 
-  // Filtered and sorted assignments
-  const filteredAssignments = useMemo(() => {
+  // Filtered and sorted assignments (pending only for this section)
+  const filteredPendingAssignments = useMemo(() => {
     let filtered = assignments.filter(assignment => {
+      // Only show pending assignments (not confirmed)
+      if (assignment.confirmed_at) return false
+      const matchesSearch = assignmentFilters.search === '' ||
+        assignment.profiles.full_name.toLowerCase().includes(assignmentFilters.search.toLowerCase()) ||
+        assignment.profiles.email.toLowerCase().includes(assignmentFilters.search.toLowerCase())
+
+      const matchesRole = assignmentFilters.role === 'all' || assignment.role === assignmentFilters.role
+
+      const matchesCity = assignmentFilters.city === 'all' ||
+        assignment.profiles.nearest_major_city === assignmentFilters.city
+
+      const matchesFlight = assignmentFilters.flight_willingness === 'all' ||
+        (assignmentFilters.flight_willingness === 'yes' && assignment.profiles.willing_to_fly) ||
+        (assignmentFilters.flight_willingness === 'no' && !assignment.profiles.willing_to_fly)
+
+      return matchesSearch && matchesRole && matchesCity && matchesFlight
+    })
+
+    // Sort assignments
+    filtered.sort((a, b) => {
+      let aValue: any, bValue: any
+
+      switch (assignmentFilters.sort_by) {
+        case 'name':
+          aValue = a.profiles.full_name
+          bValue = b.profiles.full_name
+          break
+        case 'role':
+          aValue = a.role
+          bValue = b.role
+          break
+        case 'pay_rate':
+          aValue = a.pay_rate || 0
+          bValue = b.pay_rate || 0
+          break
+        case 'city':
+          aValue = a.profiles.nearest_major_city || ''
+          bValue = b.profiles.nearest_major_city || ''
+          break
+        default:
+          aValue = a.profiles.full_name
+          bValue = b.profiles.full_name
+      }
+
+      if (typeof aValue === 'string') {
+        aValue = aValue.toLowerCase()
+        bValue = bValue.toLowerCase()
+      }
+
+      const comparison = aValue < bValue ? -1 : aValue > bValue ? 1 : 0
+      return assignmentFilters.sort_order === 'asc' ? comparison : -comparison
+    })
+
+    return filtered
+  }, [assignments, assignmentFilters])
+
+  // Filtered and sorted confirmed assignments
+  const filteredConfirmedAssignments = useMemo(() => {
+    let filtered = assignments.filter(assignment => {
+      // Only show confirmed assignments
+      if (!assignment.confirmed_at) return false
+      
       const matchesSearch = assignmentFilters.search === '' ||
         assignment.profiles.full_name.toLowerCase().includes(assignmentFilters.search.toLowerCase()) ||
         assignment.profiles.email.toLowerCase().includes(assignmentFilters.search.toLowerCase())
@@ -268,7 +350,17 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
   // Load team assignments and available staff
   useEffect(() => {
     loadData()
-  }, [project.id])
+    
+    // Calculate project schedule
+    if (project.start_date && project.end_date) {
+      try {
+        const schedule = createProjectScheduleFromStrings(project.start_date, project.end_date)
+        setProjectSchedule(schedule)
+      } catch (error) {
+        console.error('Error creating project schedule:', error)
+      }
+    }
+  }, [project.id, project.start_date, project.end_date])
 
   const loadData = async () => {
     try {
@@ -592,6 +684,13 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
     const assignmentToRemove = assignments.find(a => a.id === assignmentId)
     if (!assignmentToRemove) return
 
+    // Remove from bulk selection if selected
+    setSelectedConfirmedAssignments(prev => {
+      const newSet = new Set(prev)
+      newSet.delete(assignmentId)
+      return newSet
+    })
+
     // Optimistically remove from assignments
     setAssignments(prev => prev.filter(a => a.id !== assignmentId))
 
@@ -633,6 +732,63 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
       toast({
         title: "Error",
         description: "Failed to remove staff member",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleUnconfirmAssignment = async (assignmentId: string) => {
+    // Find the assignment being unconfirmed
+    const assignmentToUnconfirm = assignments.find(a => a.id === assignmentId)
+    if (!assignmentToUnconfirm) return
+
+    // Remove from bulk selection if selected
+    setSelectedConfirmedAssignments(prev => {
+      const newSet = new Set(prev)
+      newSet.delete(assignmentId)
+      return newSet
+    })
+
+    // Optimistically update the assignment to remove confirmation
+    setAssignments(prev => prev.map(a => 
+      a.id === assignmentId 
+        ? { ...a, confirmed_at: null, available_dates: null }
+        : a
+    ))
+
+    try {
+      const response = await fetch(`/api/projects/${project.id}/team-assignments/${assignmentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          confirmed_at: null,
+          available_dates: null
+        })
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Team member moved back to pending status",
+        })
+        // Silent refresh to sync any server-side changes
+        await reloadDataSilently()
+      } else {
+        throw new Error('Failed to unconfirm assignment')
+      }
+    } catch (error) {
+      console.error('Error unconfirming assignment:', error)
+
+      // Revert optimistic updates on error
+      setAssignments(prev => prev.map(a => 
+        a.id === assignmentId 
+          ? assignmentToUnconfirm
+          : a
+      ))
+
+      toast({
+        title: "Error",
+        description: "Failed to unconfirm team member",
         variant: "destructive"
       })
     }
@@ -792,6 +948,118 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
     }
   }
 
+  // Bulk actions for confirmed team members
+  const handleBulkMoveToPending = async () => {
+    if (selectedConfirmedAssignments.size === 0) return
+
+    setIsBulkActionInProgress(true)
+
+    const assignmentsToUpdate = Array.from(selectedConfirmedAssignments).map(id =>
+      assignments.find(a => a.id === id)
+    ).filter(Boolean)
+
+    // Optimistic update - move confirmed assignments back to pending
+    setAssignments(prev => prev.map(a =>
+      selectedConfirmedAssignments.has(a.id) 
+        ? { ...a, confirmed_at: null, available_dates: null }
+        : a
+    ))
+    setSelectedConfirmedAssignments(new Set())
+
+    try {
+      const promises = Array.from(selectedConfirmedAssignments).map(assignmentId =>
+        fetch(`/api/projects/${project.id}/team-assignments/${assignmentId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ available_dates: null })
+        })
+      )
+
+      await Promise.all(promises)
+
+      toast({
+        title: "Success",
+        description: `Moved ${assignmentsToUpdate.length} team member${assignmentsToUpdate.length === 1 ? '' : 's'} to pending`,
+      })
+
+      await reloadDataSilently()
+    } catch (error) {
+      console.error('Error bulk moving to pending:', error)
+
+      // Revert optimistic updates on error
+      setAssignments(prev => prev.map(a => {
+        const original = assignmentsToUpdate.find(orig => orig.id === a.id)
+        return original ? { ...a, confirmed_at: original.confirmed_at, available_dates: original.available_dates } : a
+      }))
+
+      toast({
+        title: "Error",
+        description: "Failed to move team members to pending",
+        variant: "destructive"
+      })
+    } finally {
+      setIsBulkActionInProgress(false)
+    }
+  }
+
+  const handleBulkRemoveConfirmed = async () => {
+    if (selectedConfirmedAssignments.size === 0) return
+
+    setIsBulkActionInProgress(true)
+
+    const assignmentsToRemove = Array.from(selectedConfirmedAssignments).map(id =>
+      assignments.find(a => a.id === id)
+    ).filter(Boolean)
+
+    // Create staff objects to restore to available list
+    const staffToRestore = assignmentsToRemove.map(assignment => ({
+      id: assignment.user_id,
+      full_name: assignment.profiles.full_name,
+      email: assignment.profiles.email,
+      role: assignment.role,
+      nearest_major_city: assignment.profiles.nearest_major_city,
+      willing_to_fly: assignment.profiles.willing_to_fly,
+      status: 'active',
+      created_at: new Date().toISOString()
+    }))
+
+    // Optimistic update - remove from assignments and add back to available staff
+    setAssignments(prev => prev.filter(a => !selectedConfirmedAssignments.has(a.id)))
+    setAvailableStaff(prev => [...prev, ...staffToRestore])
+    setSelectedConfirmedAssignments(new Set())
+
+    try {
+      const promises = Array.from(selectedConfirmedAssignments).map(assignmentId =>
+        fetch(`/api/projects/${project.id}/team-assignments/${assignmentId}`, {
+          method: 'DELETE'
+        })
+      )
+
+      await Promise.all(promises)
+
+      toast({
+        title: "Success",
+        description: `Removed ${assignmentsToRemove.length} team member${assignmentsToRemove.length === 1 ? '' : 's'} from project`,
+      })
+
+      await reloadDataSilently()
+    } catch (error) {
+      console.error('Error bulk removing confirmed assignments:', error)
+
+      // Revert optimistic updates on error
+      setAssignments(prev => [...prev, ...assignmentsToRemove])
+      setAvailableStaff(prev => prev.filter(s => !staffToRestore.some(staff => staff.id === s.id)))
+
+      toast({
+        title: "Error",
+        description: "Failed to remove team members from project",
+        variant: "destructive"
+      })
+    } finally {
+      setIsBulkActionInProgress(false)
+    }
+  }
+
   const clearAssignmentFilters = () => {
     setAssignmentFilters({
       search: '',
@@ -813,6 +1081,178 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
       sort_by: 'full_name',
       sort_order: 'asc'
     })
+  }
+
+  const handleConfirmAvailability = (teamMember: TeamAssignment) => {
+    if (!projectSchedule) {
+      toast({
+        title: "Error",
+        description: "Project schedule not available",
+        variant: "destructive"
+      })
+      return
+    }
+    
+    setSelectedTeamMember(teamMember)
+    setAvailabilityPopupOpen(true)
+  }
+
+  const handleAvailabilityConfirm = async (availableDates: Date[]) => {
+    if (!selectedTeamMember) return
+
+    // Convert dates to ISO strings
+    const availableDateStrings = availableDates.map(date => 
+      date.toISOString().split('T')[0]
+    )
+
+    // Store original assignment for potential rollback
+    const originalAssignment = selectedTeamMember
+
+    // OPTIMISTIC UI UPDATES - Happen immediately
+    // 1. Close popup immediately
+    setAvailabilityPopupOpen(false)
+    setSelectedTeamMember(null)
+    setIsConfirmingAvailability(false)
+
+    // 2. Optimistically update the assignment to confirmed status
+    setAssignments(prev => prev.map(assignment => 
+      assignment.id === originalAssignment.id 
+        ? {
+            ...assignment,
+            confirmed_at: new Date().toISOString(),
+            available_dates: availableDateStrings
+          }
+        : assignment
+    ))
+
+    // 3. Show success toast immediately
+    toast({
+      title: "Success",
+      description: `Availability confirmed for ${originalAssignment.profiles.full_name}`,
+    })
+
+    // BACKGROUND API CALL - Happens after UI updates
+    try {
+      const response = await fetch(`/api/projects/${project.id}/team-assignments/${originalAssignment.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          available_dates: availableDateStrings
+        })
+      })
+
+      if (response.ok) {
+        // Silent refresh to sync any server-side changes
+        await reloadDataSilently()
+      } else {
+        throw new Error('Failed to confirm availability')
+      }
+    } catch (error) {
+      console.error('Error confirming availability:', error)
+
+      // ROLLBACK OPTIMISTIC UPDATES on error
+      setAssignments(prev => prev.map(assignment => 
+        assignment.id === originalAssignment.id 
+          ? originalAssignment // Restore original state
+          : assignment
+      ))
+
+      toast({
+        title: "Error",
+        description: "Failed to confirm availability. Please try again.",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleEditAvailability = (teamMember: TeamAssignment) => {
+    if (!projectSchedule) return
+    
+    setSelectedTeamMember(teamMember)
+    setAvailabilityPopupOpen(true)
+  }
+
+  const handleMassConfirm = async (confirmations: { assignmentId: string; availableDates: Date[] }[]) => {
+    if (confirmations.length === 0) return
+
+    setIsMassConfirming(true)
+
+    // Store original assignments for potential rollback
+    const originalAssignments = assignments.filter(a => 
+      confirmations.some(c => c.assignmentId === a.id)
+    )
+
+    // OPTIMISTIC UI UPDATES - Happen immediately
+    // 1. Close popup immediately
+    setMassConfirmPopupOpen(false)
+
+    // 2. Clear selected assignments since they're being confirmed
+    setSelectedAssignments(new Set())
+
+    // 3. Optimistically update all assignments to confirmed status
+    setAssignments(prev => prev.map(assignment => {
+      const confirmation = confirmations.find(c => c.assignmentId === assignment.id)
+      if (confirmation) {
+        const availableDateStrings = confirmation.availableDates.map(date => 
+          date.toISOString().split('T')[0]
+        )
+        return {
+          ...assignment,
+          confirmed_at: new Date().toISOString(),
+          available_dates: availableDateStrings
+        }
+      }
+      return assignment
+    }))
+
+    // 4. Show success toast immediately
+    toast({
+      title: "Success",
+      description: `Confirmed availability for ${confirmations.length} team member${confirmations.length === 1 ? '' : 's'}`,
+    })
+
+    // BACKGROUND API CALLS - Happen after UI updates
+    try {
+      // Process all confirmations in parallel
+      const updatePromises = confirmations.map(async (confirmation) => {
+        const availableDateStrings = confirmation.availableDates.map(date => 
+          date.toISOString().split('T')[0]
+        )
+        
+        const response = await fetch(`/api/projects/${project.id}/team-assignments/${confirmation.assignmentId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            available_dates: availableDateStrings
+          })
+        })
+
+        if (!response.ok) {
+          throw new Error(`Failed to confirm ${confirmation.assignmentId}`)
+        }
+      })
+
+      await Promise.all(updatePromises)
+      
+      // Silent refresh to sync any server-side changes
+      await reloadDataSilently()
+    } catch (error) {
+      console.error('Error in mass confirmation:', error)
+
+      // ROLLBACK OPTIMISTIC UPDATES on error
+      setAssignments(prev => prev.map(assignment => {
+        const originalAssignment = originalAssignments.find(orig => orig.id === assignment.id)
+        return originalAssignment || assignment
+      }))
+
+      toast({
+        title: "Error",
+        description: "Failed to confirm some team members. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsMassConfirming(false)
+    }
   }
 
   const handleSortChange = (sortBy: string) => {
@@ -1269,19 +1709,25 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
         )}
       </Card>
 
-      {/* Current Assignments */}
-      {assignments.length > 0 && (
+      {/* Pending Team Assignments */}
+      {assignments.filter(a => !a.confirmed_at).length > 0 && (
         <Card>
-          <CardHeader className="cursor-pointer" onClick={() => setIsCurrentAssignmentsExpanded(!isCurrentAssignmentsExpanded)}>
-            <CardTitle className="flex items-center gap-2">
-              {isCurrentAssignmentsExpanded ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
-              <Users className="h-5 w-5" />
-              Current Team Assignments
-            </CardTitle>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle 
+                className="flex items-center gap-2 cursor-pointer" 
+                onClick={() => setIsCurrentAssignmentsExpanded(!isCurrentAssignmentsExpanded)}
+              >
+                {isCurrentAssignmentsExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+                <Users className="h-5 w-5" />
+                Pending Team Assignments
+              </CardTitle>
+
+            </div>
           </CardHeader>
           {isCurrentAssignmentsExpanded && (
             <CardContent className="space-y-4">
@@ -1385,14 +1831,14 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        if (selectedAssignments.size === filteredAssignments.length && filteredAssignments.length > 0) {
+                        if (selectedAssignments.size === filteredPendingAssignments.length && filteredPendingAssignments.length > 0) {
                           setSelectedAssignments(new Set())
                         } else {
-                          setSelectedAssignments(new Set(filteredAssignments.map(a => a.id)))
+                          setSelectedAssignments(new Set(filteredPendingAssignments.map(a => a.id)))
                         }
                       }}
                     >
-                      {selectedAssignments.size === filteredAssignments.length && filteredAssignments.length > 0 ? 'Deselect All' : 'Select All'} ({filteredAssignments.length})
+                      {selectedAssignments.size === filteredPendingAssignments.length && filteredPendingAssignments.length > 0 ? 'Deselect All' : 'Select All'} ({filteredPendingAssignments.length})
                     </Button>
                     {selectedAssignments.size > 0 && (
                       <>
@@ -1415,7 +1861,7 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
                     <div className="flex items-center gap-2">
                       <Input
                         type="number"
-                        placeholder="New pay rate..."
+                        placeholder="New pay rate"
                         value={bulkPayRate}
                         onChange={(e) => setBulkPayRate(e.target.value ? Number(e.target.value) : '')}
                         className="w-32"
@@ -1426,6 +1872,16 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
                         size="sm"
                       >
                         Update Rate
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          // Filter selected assignments to only include the ones that are selected
+                          const selectedPendingAssignments = filteredPendingAssignments.filter(a => selectedAssignments.has(a.id))
+                          setMassConfirmPopupOpen(true)
+                        }}
+                        size="sm"
+                      >
+                        Confirm Selected
                       </Button>
                       <Button
                         onClick={handleBulkRemoveAssignments}
@@ -1440,7 +1896,7 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[440px] overflow-y-auto overflow-x-hidden custom-scrollbar">
-                {filteredAssignments.map((assignment) => {
+                {filteredPendingAssignments.map((assignment) => {
                   const isSelected = selectedAssignments.has(assignment.id)
                   return (
                     <Card
@@ -1506,87 +1962,17 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
                             </div>
 
                             <div className="ml-2 flex gap-1">
-                              <Popover
-                                open={editPopoverOpen === assignment.id}
-                                onOpenChange={(open) => {
-                                  if (open) {
-                                    setEditPopoverOpen(assignment.id)
-                                    setEditingAssignment(assignment.id)
-                                    setEditValues({
-                                      pay_rate: assignment.pay_rate || undefined,
-                                      schedule_notes: assignment.schedule_notes || undefined
-                                    })
-                                  } else {
-                                    setEditPopoverOpen(null)
-                                    setEditingAssignment(null)
-                                    setEditValues({})
-                                  }
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleConfirmAvailability(assignment)
                                 }}
+                                className="h-7 px-3 text-xs"
                               >
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-7 w-7 p-0"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <Edit className="h-3 w-3" />
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-64 p-3" align="start">
-                                  <div className="space-y-3">
-                                    <div className="text-sm font-medium">Edit {assignment.profiles.full_name}</div>
-
-                                    <div className="space-y-2">
-                                      <Label className="text-xs">Pay Rate Override</Label>
-                                      <Input
-                                        type="number"
-                                        placeholder="Enter pay rate..."
-                                        value={editValues.pay_rate || ''}
-                                        onChange={(e) => setEditValues(prev => ({
-                                          ...prev,
-                                          pay_rate: e.target.value ? Number(e.target.value) : undefined
-                                        }))}
-                                        className="h-8"
-                                      />
-                                    </div>
-
-                                    <div className="space-y-2">
-                                      <Label className="text-xs">Schedule Notes</Label>
-                                      <Input
-                                        placeholder="Enter schedule notes..."
-                                        value={editValues.schedule_notes || ''}
-                                        onChange={(e) => setEditValues(prev => ({
-                                          ...prev,
-                                          schedule_notes: e.target.value
-                                        }))}
-                                        className="h-8"
-                                      />
-                                    </div>
-
-                                    <div className="flex gap-2">
-                                      <Button
-                                        size="sm"
-                                        onClick={() => {
-                                          handleUpdateAssignment(assignment.id)
-                                          setEditPopoverOpen(null)
-                                        }}
-                                        className="flex-1"
-                                      >
-                                        Save
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => setEditPopoverOpen(null)}
-                                        className="flex-1"
-                                      >
-                                        Cancel
-                                      </Button>
-                                    </div>
-                                  </div>
-                                </PopoverContent>
-                              </Popover>
+                                <Check className="h-3 w-3 mr-1" />
+                                Confirm
+                              </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -1607,17 +1993,268 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
                 })}
               </div>
 
-              {filteredAssignments.length === 0 && assignments.length > 0 && (
+              {filteredPendingAssignments.length === 0 && assignments.filter(a => !a.confirmed_at).length > 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No assignments match your current filters</p>
+                  <p>No pending assignments match your current filters</p>
                 </div>
               )}
 
-              {assignments.length === 0 && (
+              {assignments.filter(a => !a.confirmed_at).length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No team assignments yet</p>
+                  <p>No pending team assignments</p>
+                </div>
+              )}
+            </CardContent>
+          )}
+        </Card>
+      )}
+
+      {/* Confirmed Team Members */}
+      {assignments.filter(a => a.confirmed_at).length > 0 && (
+        <Card>
+          <CardHeader className="cursor-pointer" onClick={() => setIsConfirmedAssignmentsExpanded(!isConfirmedAssignmentsExpanded)}>
+            <CardTitle className="flex items-center gap-2">
+              {isConfirmedAssignmentsExpanded ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+              <Users className="h-5 w-5" />
+              Confirmed Team Members
+            </CardTitle>
+          </CardHeader>
+          {isConfirmedAssignmentsExpanded && (
+            <CardContent className="space-y-4">
+              {/* Bulk Selection Controls */}
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (selectedConfirmedAssignments.size === filteredConfirmedAssignments.length && filteredConfirmedAssignments.length > 0) {
+                        setSelectedConfirmedAssignments(new Set())
+                      } else {
+                        setSelectedConfirmedAssignments(new Set(filteredConfirmedAssignments.map(a => a.id)))
+                      }
+                    }}
+                  >
+                    {selectedConfirmedAssignments.size === filteredConfirmedAssignments.length && filteredConfirmedAssignments.length > 0 ? 'Deselect All' : 'Select All'} ({filteredConfirmedAssignments.length})
+                  </Button>
+                  {selectedConfirmedAssignments.size > 0 && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedConfirmedAssignments(new Set())}
+                      >
+                        Clear Selected
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        {selectedConfirmedAssignments.size} selected
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                {/* Bulk Actions */}
+                {selectedConfirmedAssignments.size > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={handleBulkMoveToPending}
+                      variant="outline"
+                      size="sm"
+                      disabled={isBulkActionInProgress}
+                    >
+                      {isBulkActionInProgress ? 'Moving...' : 'Move to Pending'}
+                    </Button>
+                    <Button
+                      onClick={handleBulkRemoveConfirmed}
+                      variant="destructive"
+                      size="sm"
+                      disabled={isBulkActionInProgress}
+                    >
+                      {isBulkActionInProgress ? 'Removing...' : 'Remove from Project'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[440px] overflow-y-auto overflow-x-hidden custom-scrollbar">
+                {filteredConfirmedAssignments.map((assignment) => {
+                  const availableDates = assignment.available_dates ? 
+                    assignment.available_dates.map(dateStr => {
+                      // Parse date string as local date to avoid timezone issues
+                      const [year, month, day] = dateStr.split('-').map(Number)
+                      return new Date(year, month - 1, day) // month is 0-indexed
+                    }) : []
+                  
+                  const isSelected = selectedConfirmedAssignments.has(assignment.id)
+                  
+                  return (
+                    <Card
+                      key={assignment.id}
+                      className={`relative transition-all cursor-pointer border-2 py-0 ${isSelected
+                        ? 'bg-card border-primary shadow-md'
+                        : 'hover:shadow-md border-border hover:border-muted-foreground/20'
+                        }`}
+                      onClick={() => {
+                        const newSelected = new Set(selectedConfirmedAssignments)
+                        if (isSelected) {
+                          newSelected.delete(assignment.id)
+                        } else {
+                          newSelected.add(assignment.id)
+                        }
+                        setSelectedConfirmedAssignments(newSelected)
+                      }}
+                    >
+                      <CardContent className="px-4 py-3">
+                        <div className="space-y-2.5">
+                          <div>
+                            <h4 className={`font-medium text-base leading-tight ${isSelected ? 'text-foreground' : ''}`}>
+                              {assignment.profiles.full_name}
+                            </h4>
+                            <p className="text-sm truncate text-muted-foreground">
+                              {assignment.profiles.email}
+                            </p>
+                          </div>
+
+                          {/* Role and Pay Rate - Full Width */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline" className={`text-sm ${getRoleColor(assignment.role)}`}>
+                              {roleTemplates.find(t => t.role === assignment.role && t.is_default)?.display_name || getRoleDisplayName(assignment.role)}
+                            </Badge>
+                            {assignment.pay_rate && (
+                              <Badge variant="outline" className="text-sm">
+                                ${assignment.pay_rate}
+                              </Badge>
+                            )}
+                          </div>
+
+                          {/* Availability Display - Full Width */}
+                          {projectSchedule && availableDates.length > 0 && (
+                            <div className="flex items-start gap-2 flex-wrap">
+                              <div className="flex items-center gap-1 text-sm font-medium text-muted-foreground shrink-0">
+                                <CalendarDays className="h-3.5 w-3.5" />
+                                Availability:
+                              </div>
+                              <div className="flex items-center gap-1 flex-wrap">
+                                {availableDates
+                                  .sort((a, b) => a.getTime() - b.getTime())
+                                  .map((date) => {
+                                    const month = date.getMonth() + 1
+                                    const day = date.getDate()
+                                    return (
+                                      <Badge 
+                                        key={date.getTime()} 
+                                        variant="outline" 
+                                        className="text-xs px-1.5 py-0.5"
+                                      >
+                                        {month}/{day}
+                                      </Badge>
+                                    )
+                                  })}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Schedule Notes - Full Width */}
+                          {assignment.schedule_notes && (
+                            <div className="text-xs text-muted-foreground bg-muted/50 p-1 rounded">
+                              {assignment.schedule_notes}
+                            </div>
+                          )}
+
+                          {/* Location and Buttons Row - Only this row has columns */}
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              {assignment.profiles.nearest_major_city && (
+                                <>
+                                  <MapPin className="h-3.5 w-3.5" />
+                                  <span>{assignment.profiles.nearest_major_city}</span>
+                                </>
+                              )}
+                            </div>
+
+                            <div className="flex gap-1 shrink-0">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleEditAvailability(assignment)
+                                      }}
+                                      className="h-7 w-7 p-0"
+                                    >
+                                      <CalendarDays className="h-3 w-3" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Edit availability schedule</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <Popover 
+                                open={deleteMenuOpen === assignment.id} 
+                                onOpenChange={(open) => setDeleteMenuOpen(open ? assignment.id : null)}
+                              >
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-48 p-2" align="end">
+                                  <div className="space-y-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="w-full justify-start hover:bg-muted"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleUnconfirmAssignment(assignment.id)
+                                        setDeleteMenuOpen(null)
+                                      }}
+                                    >
+                                      Move to Pending
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleRemoveAssignment(assignment.id)
+                                        setDeleteMenuOpen(null)
+                                      }}
+                                    >
+                                      Remove from Project
+                                    </Button>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+
+              {filteredConfirmedAssignments.length === 0 && assignments.filter(a => a.confirmed_at).length > 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No confirmed assignments match your current filters</p>
                 </div>
               )}
             </CardContent>
@@ -1637,15 +2274,21 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold">{assignmentSummary.supervisorCount}</div>
-              <div className="text-sm text-muted-foreground">Supervisors</div>
+              <div className="text-sm text-muted-foreground">
+                {assignmentSummary.supervisorCount === 1 ? 'Supervisor' : 'Supervisors'}
+              </div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold">{assignmentSummary.tlcCount}</div>
-              <div className="text-sm text-muted-foreground">TLCs</div>
+              <div className="text-sm text-muted-foreground">
+                {assignmentSummary.tlcCount === 1 ? 'TLC' : 'TLCs'}
+              </div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold">{assignmentSummary.escortCount}</div>
-              <div className="text-sm text-muted-foreground">Escorts</div>
+              <div className="text-sm text-muted-foreground">
+                {assignmentSummary.escortCount === 1 ? 'Escort' : 'Escorts'}
+              </div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold">${assignmentSummary.estimatedDailyCost.toLocaleString()}</div>
@@ -1666,6 +2309,36 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
           Finalize Team Assignments
         </Button>
       </div>
+
+      {/* Availability Popup */}
+      {selectedTeamMember && projectSchedule && (
+        <AvailabilityPopup
+          isOpen={availabilityPopupOpen}
+          onClose={() => {
+            setAvailabilityPopupOpen(false)
+            setSelectedTeamMember(null)
+          }}
+          onConfirm={handleAvailabilityConfirm}
+          teamMember={selectedTeamMember}
+          projectSchedule={projectSchedule}
+          initialAvailability={
+            selectedTeamMember.available_dates 
+              ? selectedTeamMember.available_dates.map(dateStr => new Date(dateStr))
+              : []
+          }
+          isLoading={isConfirmingAvailability}
+        />
+      )}
+
+      {/* Mass Availability Confirmation Popup */}
+      <MassAvailabilityPopup
+        open={massConfirmPopupOpen}
+        onOpenChange={setMassConfirmPopupOpen}
+        pendingAssignments={filteredPendingAssignments.filter(a => selectedAssignments.has(a.id))}
+        projectSchedule={projectSchedule}
+        onConfirm={handleMassConfirm}
+        isConfirming={isMassConfirming}
+      />
     </div>
   )
 }

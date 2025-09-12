@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator"
 import { Plus, X, AlertTriangle, CheckCircle } from "lucide-react"
 import type { TalentProfile, TalentProjectAssignment } from "@/lib/types"
 import { talentProjectAssignmentSchema } from "@/lib/types"
+import { formatDateStringDefault } from "@/lib/date-utils"
 
 interface Project {
   id: string
@@ -236,7 +237,7 @@ export function TalentProjectManager({ talent, onUpdate }: TalentProjectManagerP
                       {assignment.projects?.name || "Unknown Project"}
                     </Badge>
                     <span className="text-sm text-muted-foreground">
-                      Assigned {new Date(assignment.assigned_at).toLocaleDateString()}
+                      Assigned {formatDateStringDefault(assignment.assigned_at)}
                     </span>
                   </div>
                   <Button

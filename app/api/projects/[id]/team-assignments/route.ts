@@ -35,6 +35,8 @@ export async function GET(
         role,
         pay_rate,
         schedule_notes,
+        available_dates,
+        confirmed_at,
         created_at,
         profiles!inner(
           id,
@@ -120,6 +122,8 @@ export async function POST(
         role,
         pay_rate,
         schedule_notes,
+        available_dates,
+        confirmed_at,
         created_at,
         profiles!inner(
           id,
