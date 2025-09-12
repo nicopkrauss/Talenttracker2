@@ -401,6 +401,7 @@ model profiles {
   projects                                                                    projects[]
   shifts                                                                      shifts[]
   system_settings                                                             system_settings[]
+  talent_groups                                                               talent_groups[]
   talent_project_assignments_talent_project_assignments_assigned_byToprofiles talent_project_assignments[] @relation("talent_project_assignments_assigned_byToprofiles")
   talent_project_assignments_talent_project_assignments_escort_idToprofiles   talent_project_assignments[] @relation("talent_project_assignments_escort_idToprofiles")
   talent_status                                                               talent_status[]
@@ -486,6 +487,7 @@ model projects {
   project_setup_checklist    project_setup_checklist?
   profiles                   profiles?                    @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   shifts                     shifts[]
+  talent_groups              talent_groups[]
   talent_project_assignments talent_project_assignments[]
   team_assignments           team_assignments[]
   timecards                  timecards[]
@@ -596,6 +598,8 @@ model talent_project_assignments {
   assigned_by                                               String?   @db.Uuid
   status                                                    String?   @default("active") @db.VarChar(20)
   escort_id                                                 String?   @db.Uuid
+  display_order                                             Int?      @default(0)
+  scheduled_dates                                           String[]  @default([])
   created_at                                                DateTime? @default(now()) @db.Timestamptz(6)
   updated_at                                                DateTime? @default(now()) @db.Timestamptz(6)
   profiles_talent_project_assignments_assigned_byToprofiles profiles? @relation("talent_project_assignments_assigned_byToprofiles", fields: [assigned_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -604,6 +608,7 @@ model talent_project_assignments {
   talent                                                    talent    @relation(fields: [talent_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([talent_id, project_id, status])
+  @@index([project_id, display_order], map: "idx_talent_project_assignments_display_order")
   @@schema("public")
 }
 
@@ -619,12 +624,37 @@ model talent_status {
   @@schema("public")
 }
 
+model talent_groups {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  project_id             String    @db.Uuid
+  group_name             String    @db.VarChar(255)
+  members                Json      @default("[]")
+  scheduled_dates        String[]  @default([])
+  assigned_escort_id     String?   @db.Uuid
+  display_order          Int?      @default(0)
+  point_of_contact_name  String?   @db.VarChar(255)
+  point_of_contact_phone String?   @db.VarChar(20)
+  created_at             DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime? @default(now()) @db.Timestamptz(6)
+  
+  projects            projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  assigned_escort     profiles? @relation(fields: [assigned_escort_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  
+  @@unique([project_id, group_name], map: "unique_group_name_per_project")
+  @@index([project_id], map: "idx_talent_groups_project_id")
+  @@index([assigned_escort_id], map: "idx_talent_groups_assigned_escort")
+  @@index([project_id, display_order], map: "idx_talent_groups_display_order")
+  @@schema("public")
+}
+
 model team_assignments {
   id             String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   project_id     String?      @db.Uuid
   user_id        String?      @db.Uuid
   pay_rate       Decimal?     @db.Decimal(10, 2)
   schedule_notes String?
+  available_dates String[]    @default([])
+  confirmed_at   DateTime?    @db.Timestamptz(6)
   created_at     DateTime?    @default(now()) @db.Timestamptz(6)
   role           project_role
   projects       projects?    @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)

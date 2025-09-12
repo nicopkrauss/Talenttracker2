@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Trash2, Users } from 'lucide-react'
+import { Plus, Users } from 'lucide-react'
+import { TrashButton } from '@/components/ui/trash-button'
 import { useToast } from '@/hooks/use-toast'
 import { TalentGroupInput, GroupMemberInput } from '@/lib/types'
 
@@ -29,9 +30,13 @@ export function GroupCreationModal({
   const [formData, setFormData] = useState<{
     groupName: string
     members: GroupMemberInput[]
+    pointOfContactName: string
+    pointOfContactPhone: string
   }>({
     groupName: '',
-    members: [{ name: '', role: '' }]
+    members: [{ name: '', role: '' }],
+    pointOfContactName: '',
+    pointOfContactPhone: ''
   })
 
   const handleAddMember = () => {
@@ -103,7 +108,9 @@ export function GroupCreationModal({
         projectId,
         groupName: formData.groupName.trim(),
         members: validMembers,
-        scheduledDates: [] // Will be set later in scheduling interface
+        scheduledDates: [], // Will be set later in scheduling interface
+        pointOfContactName: formData.pointOfContactName.trim() || undefined,
+        pointOfContactPhone: formData.pointOfContactPhone.trim() || undefined
       }
 
       const response = await fetch(`/api/projects/${projectId}/talent-groups`, {
@@ -121,7 +128,9 @@ export function GroupCreationModal({
         // Reset form
         setFormData({
           groupName: '',
-          members: [{ name: '', role: '' }]
+          members: [{ name: '', role: '' }],
+          pointOfContactName: '',
+          pointOfContactPhone: ''
         })
         
         onOpenChange(false)
@@ -145,7 +154,9 @@ export function GroupCreationModal({
   const handleCancel = () => {
     setFormData({
       groupName: '',
-      members: [{ name: '', role: '' }]
+      members: [{ name: '', role: '' }],
+      pointOfContactName: '',
+      pointOfContactPhone: ''
     })
     onOpenChange(false)
   }
@@ -171,6 +182,28 @@ export function GroupCreationModal({
               placeholder="e.g., The Beatles, Dance Troupe A"
               className="mt-1"
             />
+          </div>
+
+          {/* Point of Contact */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Point of Contact (Optional)</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Input
+                  placeholder="Contact name"
+                  value={formData.pointOfContactName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, pointOfContactName: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Input
+                  placeholder="Phone number"
+                  value={formData.pointOfContactPhone}
+                  onChange={(e) => setFormData(prev => ({ ...prev, pointOfContactPhone: e.target.value }))}
+                  type="tel"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Group Members */}
@@ -213,16 +246,10 @@ export function GroupCreationModal({
                         data-field="role"
                       />
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
+                    <TrashButton
                       onClick={() => handleRemoveMember(index)}
                       disabled={formData.members.length === 1}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    />
                   </div>
                 </div>
               ))}

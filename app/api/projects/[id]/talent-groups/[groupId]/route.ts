@@ -44,6 +44,8 @@ export async function GET(
         members,
         scheduled_dates,
         assigned_escort_id,
+        point_of_contact_name,
+        point_of_contact_phone,
         created_at,
         updated_at,
         assigned_escort:profiles!talent_groups_assigned_escort_id_fkey(
@@ -70,6 +72,8 @@ export async function GET(
       members: group.members,
       scheduledDates: group.scheduled_dates,
       assignedEscortId: group.assigned_escort_id,
+      pointOfContactName: group.point_of_contact_name,
+      pointOfContactPhone: group.point_of_contact_phone,
       createdAt: group.created_at,
       updatedAt: group.updated_at,
       assignedEscort: group.assigned_escort
@@ -136,7 +140,7 @@ export async function PUT(
       )
     }
 
-    const { groupName, members, scheduledDates = [] } = validationResult.data
+    const { groupName, members, scheduledDates = [], pointOfContactName, pointOfContactPhone } = validationResult.data
 
     // Update the talent group
     const { data: updatedGroup, error: updateError } = await supabase
@@ -144,7 +148,17 @@ export async function PUT(
       .update({
         group_name: groupName,
         members: members,
-        scheduled_dates: scheduledDates.length > 0 ? scheduledDates.map(date => new Date(date).toISOString().split('T')[0]) : [],
+        scheduled_dates: scheduledDates.length > 0 ? scheduledDates.map(date => {
+          // Ensure we maintain the date as-is without timezone conversion
+          if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            return date // Already in YYYY-MM-DD format
+          }
+          // Convert Date object to local date string
+          const dateObj = new Date(date)
+          return dateObj.toISOString().split('T')[0]
+        }) : [],
+        point_of_contact_name: pointOfContactName || null,
+        point_of_contact_phone: pointOfContactPhone || null,
         updated_at: new Date().toISOString()
       })
       .eq('id', groupId)
@@ -156,6 +170,8 @@ export async function PUT(
         members,
         scheduled_dates,
         assigned_escort_id,
+        point_of_contact_name,
+        point_of_contact_phone,
         created_at,
         updated_at
       `)
@@ -189,7 +205,15 @@ export async function PUT(
     const { error: assignmentUpdateError } = await supabase
       .from('talent_project_assignments')
       .update({
-        scheduled_dates: scheduledDates.length > 0 ? scheduledDates.map(date => new Date(date).toISOString().split('T')[0]) : []
+        scheduled_dates: scheduledDates.length > 0 ? scheduledDates.map(date => {
+          // Ensure we maintain the date as-is without timezone conversion
+          if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            return date // Already in YYYY-MM-DD format
+          }
+          // Convert Date object to local date string
+          const dateObj = new Date(date)
+          return dateObj.toISOString().split('T')[0]
+        }) : []
       })
       .eq('talent_id', groupId)
       .eq('project_id', projectId)
@@ -207,6 +231,8 @@ export async function PUT(
       members: updatedGroup.members,
       scheduledDates: updatedGroup.scheduled_dates,
       assignedEscortId: updatedGroup.assigned_escort_id,
+      pointOfContactName: updatedGroup.point_of_contact_name,
+      pointOfContactPhone: updatedGroup.point_of_contact_phone,
       createdAt: updatedGroup.created_at,
       updatedAt: updatedGroup.updated_at
     }

@@ -58,6 +58,8 @@ export async function GET(
         members,
         scheduled_dates,
         assigned_escort_id,
+        point_of_contact_name,
+        point_of_contact_phone,
         created_at,
         updated_at,
         assigned_escort:profiles!talent_groups_assigned_escort_id_fkey(
@@ -84,6 +86,8 @@ export async function GET(
       members: group.members,
       scheduledDates: group.scheduled_dates,
       assignedEscortId: group.assigned_escort_id,
+      pointOfContactName: group.point_of_contact_name,
+      pointOfContactPhone: group.point_of_contact_phone,
       createdAt: group.created_at,
       updatedAt: group.updated_at,
       assignedEscort: group.assigned_escort
@@ -167,7 +171,7 @@ export async function POST(
       )
     }
 
-    const { groupName, members, scheduledDates = [] } = validationResult.data
+    const { groupName, members, scheduledDates = [], pointOfContactName, pointOfContactPhone } = validationResult.data
 
     // Create the talent group
     const { data: newGroup, error: createError } = await supabase
@@ -176,7 +180,17 @@ export async function POST(
         project_id: projectId,
         group_name: groupName,
         members: members,
-        scheduled_dates: scheduledDates.length > 0 ? scheduledDates.map(date => new Date(date).toISOString().split('T')[0]) : []
+        scheduled_dates: scheduledDates.length > 0 ? scheduledDates.map(date => {
+          // Ensure we maintain the date as-is without timezone conversion
+          if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            return date // Already in YYYY-MM-DD format
+          }
+          // Convert Date object to local date string
+          const dateObj = new Date(date)
+          return dateObj.toISOString().split('T')[0]
+        }) : [],
+        point_of_contact_name: pointOfContactName || null,
+        point_of_contact_phone: pointOfContactPhone || null
       })
       .select(`
         id,
@@ -185,6 +199,8 @@ export async function POST(
         members,
         scheduled_dates,
         assigned_escort_id,
+        point_of_contact_name,
+        point_of_contact_phone,
         created_at,
         updated_at
       `)
@@ -216,7 +232,15 @@ export async function POST(
         project_id: projectId,
         assigned_by: user.id,
         status: 'active',
-        scheduled_dates: scheduledDates.length > 0 ? scheduledDates.map(date => new Date(date).toISOString().split('T')[0]) : []
+        scheduled_dates: scheduledDates.length > 0 ? scheduledDates.map(date => {
+          // Ensure we maintain the date as-is without timezone conversion
+          if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            return date // Already in YYYY-MM-DD format
+          }
+          // Convert Date object to local date string
+          const dateObj = new Date(date)
+          return dateObj.toISOString().split('T')[0]
+        }) : []
       })
 
     if (assignmentError) {
@@ -233,6 +257,8 @@ export async function POST(
       members: newGroup.members,
       scheduledDates: newGroup.scheduled_dates,
       assignedEscortId: newGroup.assigned_escort_id,
+      pointOfContactName: newGroup.point_of_contact_name,
+      pointOfContactPhone: newGroup.point_of_contact_phone,
       createdAt: newGroup.created_at,
       updatedAt: newGroup.updated_at
     }

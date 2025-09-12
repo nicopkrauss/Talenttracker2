@@ -16,7 +16,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Plus, Save, X, Edit2, Trash2, GripVertical, Check, Palette } from 'lucide-react'
+import { Plus, Save, X, Edit2, GripVertical, Check, Palette } from 'lucide-react'
+import { TrashButton } from '@/components/ui/trash-button'
 import { EnhancedProject, ProjectLocation } from '@/lib/types'
 import { useAuth } from '@/lib/auth-context'
 
@@ -646,14 +647,11 @@ export function InfoTab({ project, onProjectUpdate }: InfoTabProps) {
                             <Edit2 className="h-4 w-4" />
                           </Button>
                           {!location.is_default && (
-                            <Button 
+                            <TrashButton
                               onClick={() => handleDeleteLocation(location.id)}
-                              size="sm"
                               variant="outline"
                               disabled={isSubmitting}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            />
                           )}
                         </>
                       )}

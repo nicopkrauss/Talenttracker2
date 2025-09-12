@@ -56,73 +56,130 @@ export async function GET(
     const sortBy = searchParams.get('sort_by') || 'first_name'
     const sortOrder = searchParams.get('sort_order') || 'asc'
 
-    // Build the query for talent assigned to this project
-    let talentQuery = supabase
-      .from('talent')
-      .select(`
-        id,
-        first_name,
-        last_name,
-        rep_name,
-        rep_email,
-        rep_phone,
-        notes,
-        created_at,
-        updated_at,
-        talent_project_assignments!inner(
+    // Fetch both talent assignments and groups in parallel
+    const [talentResult, groupsResult] = await Promise.all([
+      // Fetch talent assignments
+      supabase
+        .from('talent_project_assignments')
+        .select(`
           id,
           status,
-          assigned_at
-        )
-      `)
-      .eq('talent_project_assignments.project_id', projectId)
+          assigned_at,
+          scheduled_dates,
+          display_order,
+          talent:talent_id (
+            id,
+            first_name,
+            last_name,
+            rep_name,
+            rep_email,
+            rep_phone,
+            notes,
+            created_at,
+            updated_at
+          )
+        `)
+        .eq('project_id', projectId)
+        .eq('status', status !== 'all' ? status : 'active')
+        .order('display_order', { ascending: true }),
+      
+      // Fetch talent groups with display_order
+      supabase
+        .from('talent_groups')
+        .select(`
+          id,
+          group_name,
+          members,
+          scheduled_dates,
+          assigned_escort_id,
+          display_order,
+          created_at,
+          updated_at,
+          assigned_escort:assigned_escort_id (
+            id,
+            full_name
+          )
+        `)
+        .eq('project_id', projectId)
+        .order('display_order', { ascending: true, nullsFirst: false })
+    ])
 
-    // Apply status filtering
-    if (status !== 'all') {
-      talentQuery = talentQuery.eq('talent_project_assignments.status', status)
-    }
-
-    // Apply search filtering (name only for simplified interface)
-    if (search) {
-      talentQuery = talentQuery.or(`
-        first_name.ilike.%${search}%,
-        last_name.ilike.%${search}%
-      `)
-    }
-
-    // Apply sorting
-    const validSortFields = ['first_name', 'last_name', 'created_at']
-    const sortField = validSortFields.includes(sortBy) ? sortBy : 'first_name'
-    const order = sortOrder === 'desc' ? false : true
-    
-    talentQuery = talentQuery.order(sortField, { ascending: order })
-
-    const { data: talent, error: talentError } = await talentQuery
-
-    if (talentError) {
-      console.error('Error fetching talent roster:', talentError)
+    if (talentResult.error) {
+      console.error('Error fetching talent roster:', talentResult.error)
       return NextResponse.json(
-        { error: 'Failed to fetch talent roster', code: 'FETCH_ERROR', details: talentError.message },
+        { error: 'Failed to fetch talent roster', code: 'FETCH_ERROR', details: talentResult.error.message },
         { status: 500 }
       )
     }
 
-    // Transform the data to flatten the assignment information
-    const transformedTalent = talent?.map(t => ({
-      id: t.id,
-      first_name: t.first_name,
-      last_name: t.last_name,
-      rep_name: t.rep_name,
-      rep_email: t.rep_email,
-      rep_phone: t.rep_phone,
-      notes: t.notes,
-      created_at: t.created_at,
-      updated_at: t.updated_at,
-      assignment: t.talent_project_assignments[0] // Should only be one per project
+    if (groupsResult.error) {
+      console.error('Error fetching talent groups:', groupsResult.error)
+      return NextResponse.json(
+        { error: 'Failed to fetch talent groups', code: 'FETCH_ERROR', details: groupsResult.error.message },
+        { status: 500 }
+      )
+    }
+
+    // Transform talent assignments
+    let transformedTalent = talentResult.data?.map(assignment => ({
+      id: assignment.talent.id,
+      first_name: assignment.talent.first_name,
+      last_name: assignment.talent.last_name,
+      rep_name: assignment.talent.rep_name,
+      rep_email: assignment.talent.rep_email,
+      rep_phone: assignment.talent.rep_phone,
+      notes: assignment.talent.notes,
+      created_at: assignment.talent.created_at,
+      updated_at: assignment.talent.updated_at,
+      assignment: {
+        id: assignment.id,
+        status: assignment.status,
+        assigned_at: assignment.assigned_at,
+        scheduled_dates: assignment.scheduled_dates,
+        display_order: assignment.display_order || 0
+      }
     })) || []
 
+    // Transform talent groups
+    let transformedGroups = groupsResult.data?.map(group => ({
+      id: group.id,
+      groupName: group.group_name,
+      group_name: group.group_name, // backward compatibility
+      members: group.members || [],
+      scheduledDates: group.scheduled_dates || [],
+      scheduled_dates: group.scheduled_dates || [], // backward compatibility
+      assignedEscortId: group.assigned_escort_id,
+      assigned_escort_id: group.assigned_escort_id, // backward compatibility
+      displayOrder: group.display_order || 0,
+      display_order: group.display_order || 0, // backward compatibility
+      createdAt: group.created_at,
+      created_at: group.created_at, // backward compatibility
+      updatedAt: group.updated_at,
+      updated_at: group.updated_at, // backward compatibility
+      assignedEscort: group.assigned_escort
+    })) || []
+
+    // Apply search filtering if provided
+    if (search) {
+      const searchLower = search.toLowerCase()
+      
+      // Filter talent by name
+      transformedTalent = transformedTalent.filter(person => {
+        const fullName = `${person.first_name} ${person.last_name}`.toLowerCase()
+        return fullName.includes(searchLower)
+      })
+      
+      // Filter groups by name
+      transformedGroups = transformedGroups.filter(group => {
+        return group.groupName.toLowerCase().includes(searchLower)
+      })
+    }
+
     return NextResponse.json({
-      data: transformedTalent,
+      data: {
+        talent: transformedTalent,
+        groups: transformedGroups
+      },
       project: {
         id: projectAccess.id,
         name: projectAccess.name,
@@ -131,7 +188,7 @@ export async function GET(
       filters: {
         search,
         status,
-        sort_by: sortField,
+        sort_by: sortBy,
         sort_order: sortOrder
       }
     })
@@ -262,6 +319,17 @@ export async function POST(
       )
     }
 
+    // Get the next display_order value
+    const { data: maxOrderResult } = await supabase
+      .from('talent_project_assignments')
+      .select('display_order')
+      .eq('project_id', projectId)
+      .order('display_order', { ascending: false })
+      .limit(1)
+      .single()
+
+    const nextDisplayOrder = (maxOrderResult?.display_order || 0) + 1
+
     // Create project assignment
     const { data: assignment, error: assignmentError } = await supabase
       .from('talent_project_assignments')
@@ -269,9 +337,10 @@ export async function POST(
         talent_id: newTalent.id,
         project_id: projectId,
         assigned_by: user.id,
-        status: 'active'
+        status: 'active',
+        display_order: nextDisplayOrder
       })
-      .select('id, status, assigned_at')
+      .select('id, status, assigned_at, display_order')
       .single()
 
     if (assignmentError) {

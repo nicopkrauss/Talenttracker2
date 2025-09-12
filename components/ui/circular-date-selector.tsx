@@ -12,6 +12,7 @@ interface CircularDateSelectorProps {
   className?: string
   size?: 'sm' | 'md' | 'lg'
   disabled?: boolean
+  showDayDefault?: boolean // Enable show day default behavior
 }
 
 export function CircularDateSelector({
@@ -20,7 +21,8 @@ export function CircularDateSelector({
   onDateToggle,
   className,
   size = 'md',
-  disabled = false
+  disabled = false,
+  showDayDefault = false
 }: CircularDateSelectorProps) {
   const sizeClasses = {
     sm: 'w-8 h-8 text-xs',
@@ -34,6 +36,20 @@ export function CircularDateSelector({
     )
   }
 
+  // Helper function to determine if show day should be greyed out (suggested but not selected)
+  const isShowDayGreyedOut = (date: Date) => {
+    if (!showDayDefault) return false
+    
+    const isShowDay = schedule.showDates.some(showDate => 
+      showDate.getTime() === date.getTime()
+    )
+    
+    const isSelected = isDateSelected(date)
+    
+    // Show day is greyed out if it's a show day, not selected, and no other dates are selected
+    return isShowDay && !isSelected && selectedDates.length === 0
+  }
+
   const formatDateDisplay = (date: Date) => {
     const month = date.getMonth() + 1
     const day = date.getDate()
@@ -44,7 +60,11 @@ export function CircularDateSelector({
     <div className={cn("flex flex-wrap gap-2", className)}>
       {schedule.allDates.map((date, index) => {
         const isSelected = isDateSelected(date)
+        const isGreyedOut = isShowDayGreyedOut(date)
         const dayType = getDayType(date, schedule)
+        const isShowDay = schedule.showDates.some(showDate => 
+          showDate.getTime() === date.getTime()
+        )
         
         return (
           <button
@@ -60,9 +80,14 @@ export function CircularDateSelector({
                 : "cursor-pointer hover:scale-105",
               isSelected 
                 ? "bg-primary border-primary text-primary-foreground"
+                : isGreyedOut
+                ? "bg-muted/50 border-muted text-muted-foreground"
                 : "bg-transparent border-border text-foreground hover:border-primary/50"
             )}
-            title={date.toLocaleDateString()}
+            title={showDayDefault && isShowDay 
+              ? `${date.toLocaleDateString()} (Show Day)` 
+              : date.toLocaleDateString()
+            }
           >
             {formatDateDisplay(date)}
           </button>

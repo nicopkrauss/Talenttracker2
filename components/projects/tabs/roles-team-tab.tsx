@@ -21,7 +21,8 @@ import {
   ProjectRoleTemplate
 } from '@/lib/types'
 import { getRoleDisplayName } from '@/lib/role-utils'
-import { Search, Users, DollarSign, Plus, X, Check, ArrowUp, ArrowDown, MapPin, Plane, ChevronDown, ChevronRight, Edit, Trash2, FileText, UserPlus, Calendar, CalendarDays } from 'lucide-react'
+import { Search, Users, DollarSign, Plus, X, Check, ArrowUp, ArrowDown, MapPin, Plane, ChevronDown, ChevronRight, Edit, FileText, UserPlus, Calendar, CalendarDays } from 'lucide-react'
+import { TrashButton } from '@/components/ui/trash-button'
 import { useToast } from '@/hooks/use-toast'
 import { ProjectRoleTemplateManager, ProjectRoleTemplateManagerRef } from '@/components/projects/project-role-template-manager'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -1973,17 +1974,13 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
                                 <Check className="h-3 w-3 mr-1" />
                                 Confirm
                               </Button>
-                              <Button
-                                size="sm"
+                              <TrashButton
                                 variant="outline"
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   handleRemoveAssignment(assignment.id)
                                 }}
-                                className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
+                              />
                             </div>
                           </div>
                         </div>
@@ -2204,14 +2201,10 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
                                 onOpenChange={(open) => setDeleteMenuOpen(open ? assignment.id : null)}
                               >
                                 <PopoverTrigger asChild>
-                                  <Button
-                                    size="sm"
+                                  <TrashButton
                                     variant="outline"
-                                    className="h-7 w-7 p-0 text-destructive hover:text-destructive"
                                     onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
+                                  />
                                 </PopoverTrigger>
                                 <PopoverContent className="w-48 p-2" align="end">
                                   <div className="space-y-1">

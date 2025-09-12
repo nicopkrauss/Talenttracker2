@@ -835,6 +835,9 @@ export interface TalentGroup {
   members: GroupMember[]
   scheduledDates: string[] // Date strings from database
   assignedEscortId?: string
+  displayOrder?: number // For unified ordering with talent
+  pointOfContactName?: string // Optional point of contact name
+  pointOfContactPhone?: string // Optional point of contact phone
   createdAt: string // ISO date string from database
   updatedAt: string // ISO date string from database
   assignedEscort?: {
@@ -845,6 +848,9 @@ export interface TalentGroup {
   group_name?: string
   project_id?: string
   assigned_escort_id?: string
+  display_order?: number
+  point_of_contact_name?: string
+  point_of_contact_phone?: string
   created_at?: string
   updated_at?: string
 }
@@ -853,6 +859,14 @@ export interface TalentGroup {
 export interface GroupMember {
   name: string
   role: string
+}
+
+// Unified roster item for drag-and-drop ordering
+export interface RosterItem {
+  id: string
+  type: 'talent' | 'group'
+  displayOrder: number
+  data: TalentProfile | TalentGroup
 }
 
 // Day Assignment interface for assignment tracking
@@ -917,6 +931,8 @@ export interface TalentGroupFormData {
   groupName: string
   members: GroupMember[]
   scheduledDates: string[] // ISO date strings
+  pointOfContactName?: string // Optional point of contact name
+  pointOfContactPhone?: string // Optional point of contact phone
 }
 
 // Assignment form data
@@ -964,7 +980,14 @@ export const talentGroupSchema = z.object({
     .max(20, "Groups cannot have more than 20 members"),
   scheduledDates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"))
     .optional()
-    .default([])
+    .default([]),
+  pointOfContactName: z.string()
+    .max(255, "Point of contact name must be 255 characters or less")
+    .optional(),
+  pointOfContactPhone: z.string()
+    .max(20, "Phone number must be 20 characters or less")
+    .regex(/^[\d\s\-\(\)\+\.]*$/, "Invalid phone number format")
+    .optional()
 })
 
 export const assignmentSchema = z.object({

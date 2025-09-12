@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,12 +11,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
-import { EnhancedProject, TalentProfile, TalentGroup } from '@/lib/types'
-import { Plus, Search, Users, Check, Trash2, UserPlus, ChevronDown, ChevronRight } from 'lucide-react'
+import { EnhancedProject, TalentProfile, TalentGroup, ProjectSchedule } from '@/lib/types'
+import { Plus, Search, Users, Check, UserPlus, ChevronDown, ChevronRight } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { CSVImportDialog } from '@/components/talent/csv-import-dialog'
 import { GroupCreationModal } from '@/components/projects/group-creation-modal'
+import { GroupEditModal } from '@/components/projects/group-edit-modal'
 import { GroupBadge } from '@/components/projects/group-badge'
+import { TalentScheduleColumn } from '@/components/projects/talent-schedule-column'
+import { DraggableTalentList } from '@/components/projects/draggable-talent-list'
+import { createProjectScheduleFromStrings } from '@/lib/schedule-utils'
 
 interface TalentRosterTabProps {
   project: EnhancedProject
@@ -28,6 +32,7 @@ interface ProjectTalent extends TalentProfile {
     id: string
     status: string
     assigned_at: string
+    scheduled_dates?: string[]
   }
 }
 
@@ -45,8 +50,22 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
   const [availableSearchQuery, setAvailableSearchQuery] = useState("")
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showGroupDialog, setShowGroupDialog] = useState(false)
+  const [showGroupEditDialog, setShowGroupEditDialog] = useState(false)
+  const [selectedGroupForEdit, setSelectedGroupForEdit] = useState<TalentGroup | null>(null)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  // Calculate project schedule for date selectors
+  const projectSchedule: ProjectSchedule = createProjectScheduleFromStrings(
+    project.start_date,
+    project.end_date
+  )
+  
+  // Track pending changes for confirm all functionality
+  const [pendingChanges, setPendingChanges] = useState<Set<string>>(new Set())
+  
+  // Track expanded groups
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
   
   // Collapsible section states
   const [isAssignTalentExpanded, setIsAssignTalentExpanded] = useState(true)
@@ -62,28 +81,23 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
     notes: ''
   })
 
-  // Load talent roster and available talent
-  useEffect(() => {
-    loadData()
-  }, [project.id])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true)
       
-      // Load assigned talent roster
+      // Load assigned talent roster and groups (now unified)
       const rosterResponse = await fetch(`/api/projects/${project.id}/talent-roster`)
       let rosterData = null
       if (rosterResponse.ok) {
         rosterData = await rosterResponse.json()
-        setAssignedTalent(rosterData.data || [])
-      }
-
-      // Load talent groups
-      const groupsResponse = await fetch(`/api/projects/${project.id}/talent-groups`)
-      if (groupsResponse.ok) {
-        const groupsData = await groupsResponse.json()
-        setTalentGroups(groupsData.data || [])
+        // Handle new unified response format
+        if (rosterData.data && typeof rosterData.data === 'object') {
+          setAssignedTalent(rosterData.data.talent || [])
+          setTalentGroups(rosterData.data.groups || [])
+        } else {
+          // Fallback for old format
+          setAssignedTalent(rosterData.data || [])
+        }
       }
 
       // Load available talent from general database
@@ -91,7 +105,7 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
       if (availableResponse.ok) {
         const availableData = await availableResponse.json()
         // Filter out talent already assigned to this project
-        const assignedIds = new Set((rosterData?.data || []).map((t: ProjectTalent) => t.id))
+        const assignedIds = new Set((rosterData?.data?.talent || rosterData?.data || []).map((t: ProjectTalent) => t.id))
         const unassignedTalent = (availableData.data || []).filter((t: AvailableTalent) => !assignedIds.has(t.id))
         setAvailableTalent(unassignedTalent)
       }
@@ -105,24 +119,29 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
     } finally {
       setLoading(false)
     }
-  }
+  }, [project.id])
+
+  // Load talent roster and available talent
+  useEffect(() => {
+    loadData()
+  }, [loadData])
 
   // Reload data without showing loading spinner
-  const reloadDataSilently = async () => {
+  const reloadDataSilently = useCallback(async () => {
     try {
-      // Load assigned talent roster
+      // Load assigned talent roster and groups (now unified)
       const rosterResponse = await fetch(`/api/projects/${project.id}/talent-roster`)
       let rosterData = null
       if (rosterResponse.ok) {
         rosterData = await rosterResponse.json()
-        setAssignedTalent(rosterData.data || [])
-      }
-
-      // Load talent groups
-      const groupsResponse = await fetch(`/api/projects/${project.id}/talent-groups`)
-      if (groupsResponse.ok) {
-        const groupsData = await groupsResponse.json()
-        setTalentGroups(groupsData.data || [])
+        // Handle new unified response format
+        if (rosterData.data && typeof rosterData.data === 'object') {
+          setAssignedTalent(rosterData.data.talent || [])
+          setTalentGroups(rosterData.data.groups || [])
+        } else {
+          // Fallback for old format
+          setAssignedTalent(rosterData.data || [])
+        }
       }
 
       // Load available talent from general database
@@ -130,14 +149,14 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
       if (availableResponse.ok) {
         const availableData = await availableResponse.json()
         // Filter out talent already assigned to this project
-        const assignedIds = new Set((rosterData?.data || []).map((t: ProjectTalent) => t.id))
+        const assignedIds = new Set((rosterData?.data?.talent || rosterData?.data || []).map((t: ProjectTalent) => t.id))
         const unassignedTalent = (availableData.data || []).filter((t: AvailableTalent) => !assignedIds.has(t.id))
         setAvailableTalent(unassignedTalent)
       }
     } catch (error) {
       console.error('Error reloading talent data:', error)
     }
-  }
+  }, [project.id])
 
   // Filter assigned talent by name only
   const filteredAssignedTalent = assignedTalent.filter((person) => {
@@ -357,6 +376,79 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
     }
   }
 
+  const handleEditGroup = (groupId: string) => {
+    const group = talentGroups.find(g => g.id === groupId)
+    if (group) {
+      setSelectedGroupForEdit(group)
+      setShowGroupEditDialog(true)
+    }
+  }
+
+  const handlePendingChange = useCallback((talentId: string, hasPendingChanges: boolean) => {
+    setPendingChanges(prev => {
+      const newSet = new Set(prev)
+      if (hasPendingChanges) {
+        newSet.add(talentId)
+      } else {
+        newSet.delete(talentId)
+      }
+      return newSet
+    })
+  }, [])
+
+  // Store confirm functions for each talent/group
+  const [confirmFunctions, setConfirmFunctions] = useState<Map<string, () => Promise<void>>>(new Map())
+
+  const registerConfirmFunction = useCallback((talentId: string, confirmFn: () => Promise<void>) => {
+    setConfirmFunctions(prev => {
+      const newMap = new Map(prev)
+      newMap.set(talentId, confirmFn)
+      return newMap
+    })
+  }, [])
+
+  const unregisterConfirmFunction = useCallback((talentId: string) => {
+    setConfirmFunctions(prev => {
+      const newMap = new Map(prev)
+      newMap.delete(talentId)
+      return newMap
+    })
+  }, [])
+
+  const handleConfirmAll = useCallback(async () => {
+    const pendingIds = Array.from(pendingChanges)
+    const promises = pendingIds.map(id => {
+      const confirmFn = confirmFunctions.get(id)
+      return confirmFn ? confirmFn() : Promise.resolve()
+    })
+    
+    try {
+      await Promise.all(promises)
+      toast({
+        title: "Success",
+        description: `Confirmed ${pendingIds.length} schedule changes`
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Some schedule updates failed",
+        variant: "destructive"
+      })
+    }
+  }, [pendingChanges, confirmFunctions])
+
+  const toggleGroupExpansion = (groupId: string) => {
+    setExpandedGroups(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(groupId)) {
+        newSet.delete(groupId)
+      } else {
+        newSet.add(groupId)
+      }
+      return newSet
+    })
+  }
+
   const handleFinalizeTalentRoster = async () => {
     try {
       const response = await fetch(`/api/projects/${project.id}/talent-roster/complete`, {
@@ -510,15 +602,46 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
 
       {/* Current Talent Assignments Section */}
       <Card>
-        <CardHeader className="cursor-pointer" onClick={() => setIsCurrentTalentAssignmentsExpanded(!isCurrentTalentAssignmentsExpanded)}>
-          <CardTitle className="flex items-center gap-2">
-            {isCurrentTalentAssignmentsExpanded ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )}
-            <Users className="h-5 w-5" />
-            Current Talent Assignments
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div 
+              className="flex items-center gap-2 cursor-pointer flex-1" 
+              onClick={() => setIsCurrentTalentAssignmentsExpanded(!isCurrentTalentAssignmentsExpanded)}
+            >
+              {isCurrentTalentAssignmentsExpanded ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+              <Users className="h-5 w-5" />
+              Current Talent Assignments
+            </div>
+            {/* Fixed button area to prevent layout shift */}
+            <div className="flex items-center gap-2">
+              {pendingChanges.size > 0 ? (
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleConfirmAll();
+                  }}
+                  className="gap-2"
+                  size="sm"
+                >
+                  <Check className="h-4 w-4" />
+                  Confirm All ({pendingChanges.size})
+                </Button>
+              ) : (
+                // Invisible placeholder with exact button dimensions to maintain layout
+                <Button
+                  className="gap-2 invisible"
+                  size="sm"
+                  disabled
+                >
+                  <Check className="h-4 w-4" />
+                  Confirm All (0)
+                </Button>
+              )}
+            </div>
           </CardTitle>
         </CardHeader>
         {isCurrentTalentAssignmentsExpanded && (
@@ -536,117 +659,37 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
             </div>
           </div>
 
+
+
           {/* Assigned Talent Table */}
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Representative</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAssignedTalent.length === 0 && filteredTalentGroups.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                    {assignedTalent.length === 0 && talentGroups.length === 0 ? (
-                      <div>
-                        <p>No talent or groups assigned to this project yet.</p>
-                        <p className="text-sm mt-1">Assign talent from the available talent above or add new talent/groups.</p>
-                      </div>
-                    ) : (
-                      <p>No assigned talent or groups match your search.</p>
-                    )}
-                  </TableCell>
-                </TableRow>
+          <DraggableTalentList
+            talent={filteredAssignedTalent}
+            projectId={project.id}
+            projectSchedule={projectSchedule}
+            isRosterCompleted={project.project_setup_checklist?.talent_roster_completed}
+            onRemoveTalent={handleRemoveTalent}
+            onPendingChange={handlePendingChange}
+            onRegisterConfirm={registerConfirmFunction}
+            onUnregisterConfirm={unregisterConfirmFunction}
+            talentGroups={filteredTalentGroups}
+            expandedGroups={expandedGroups}
+            onToggleGroupExpansion={toggleGroupExpansion}
+            onRemoveGroup={handleRemoveGroup}
+            onEditGroup={handleEditGroup}
+            onReorderComplete={undefined}
+            showEmptyState={filteredAssignedTalent.length === 0 && filteredTalentGroups.length === 0}
+            emptyStateMessage={
+              assignedTalent.length === 0 && talentGroups.length === 0 ? (
+                <div>
+                  <p>No talent or groups assigned to this project yet.</p>
+                  <p className="text-sm mt-1">Assign talent from the available talent above or add new talent/groups.</p>
+                </div>
               ) : (
-                <>
-                  {/* Render individual talent */}
-                  {filteredAssignedTalent.map((person) => (
-                    <TableRow key={`talent-${person.id}`}>
-                      <TableCell>
-                        <div className="flex items-center space-x-3">
-                          <Avatar className="w-8 h-8">
-                            <AvatarFallback>
-                              {`${person.first_name?.[0] || ''}${person.last_name?.[0] || ''}`}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium">{person.first_name} {person.last_name}</div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{person.rep_name}</div>
-                          <div className="text-sm text-muted-foreground">{person.rep_email}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="default">
-                          {person.assignment?.status || 'active'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveTalent(person.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  
-                  {/* Render talent groups */}
-                  {filteredTalentGroups.map((group) => (
-                    <TableRow key={`group-${group.id}`}>
-                      <TableCell>
-                        <div className="flex items-center space-x-3">
-                          <Avatar className="w-8 h-8">
-                            <AvatarFallback>
-                              <Users className="h-4 w-4" />
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <div className="font-medium">{group.groupName || group.group_name}</div>
-                              <GroupBadge />
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {group.members.length} members
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm text-muted-foreground">
-                          {group.members.slice(0, 2).map(member => member.name).join(', ')}
-                          {group.members.length > 2 && ` +${group.members.length - 2} more`}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="default">active</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveGroup(group.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </>
-              )}
-            </TableBody>
-          </Table>
+                <p>No assigned talent or groups match your search.</p>
+              )
+            }
+          />
+
         </CardContent>
         )}
       </Card>
@@ -773,6 +816,15 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
         onOpenChange={setShowGroupDialog}
         projectId={project.id}
         onGroupCreated={reloadDataSilently}
+      />
+
+      {/* Group Edit Modal */}
+      <GroupEditModal
+        open={showGroupEditDialog}
+        onOpenChange={setShowGroupEditDialog}
+        projectId={project.id}
+        group={selectedGroupForEdit}
+        onGroupUpdated={reloadDataSilently}
       />
 
     </div>

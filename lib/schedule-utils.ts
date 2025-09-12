@@ -155,9 +155,10 @@ export function datesToISOStrings(dates: Date[]): string[] {
 
 /**
  * Convert ISO string array to Date array from API responses
+ * Creates dates in local timezone to match project schedule dates
  */
 export function isoStringsToDates(dateStrings: string[]): Date[] {
-  return dateStrings.map(dateStr => new Date(dateStr))
+  return dateStrings.map(dateStr => new Date(dateStr + 'T00:00:00'))
 }
 
 /**

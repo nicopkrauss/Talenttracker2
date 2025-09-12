@@ -111,6 +111,17 @@ export async function POST(
       )
     }
 
+    // Get the next display_order value
+    const { data: maxOrderResult } = await supabase
+      .from('talent_project_assignments')
+      .select('display_order')
+      .eq('project_id', projectId)
+      .order('display_order', { ascending: false })
+      .limit(1)
+      .single()
+
+    const nextDisplayOrder = (maxOrderResult?.display_order || 0) + 1
+
     // Create project assignment
     const { data: assignment, error: assignmentError } = await supabase
       .from('talent_project_assignments')
@@ -118,9 +129,10 @@ export async function POST(
         talent_id: talent_id,
         project_id: projectId,
         assigned_by: user.id,
-        status: 'active'
+        status: 'active',
+        display_order: nextDisplayOrder
       })
-      .select('id, status, assigned_at')
+      .select('id, status, assigned_at, display_order')
       .single()
 
     if (assignmentError) {
