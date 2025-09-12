@@ -75,7 +75,12 @@
   - Use optimistic UI pattern for instant feedback
   - _Requirements: 2.4, 2.5, 2.6_
 
-- [ ] 5. Create talent groups management system
+- [x] 5. Create talent groups management system
+
+
+
+
+
   - Add "Add Group" button to talent roster tab
   - Create GroupCreationModal component with group name and member management
   - Implement add/remove functionality for group members with name and role fields

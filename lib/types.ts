@@ -833,10 +833,20 @@ export interface TalentGroup {
   projectId: string
   groupName: string
   members: GroupMember[]
-  scheduledDates: Date[]
+  scheduledDates: string[] // Date strings from database
   assignedEscortId?: string
-  createdAt: Date
-  updatedAt: Date
+  createdAt: string // ISO date string from database
+  updatedAt: string // ISO date string from database
+  assignedEscort?: {
+    id: string
+    full_name: string
+  }
+  // For backward compatibility with database response
+  group_name?: string
+  project_id?: string
+  assigned_escort_id?: string
+  created_at?: string
+  updated_at?: string
 }
 
 // Group Member interface for individual members within a group
@@ -939,8 +949,9 @@ export const groupMemberSchema = z.object({
     .min(1, "Member name is required")
     .max(100, "Member name must be 100 characters or less"),
   role: z.string()
-    .min(1, "Member role is required")
     .max(50, "Member role must be 50 characters or less")
+    .optional()
+    .default("")
 })
 
 export const talentGroupSchema = z.object({
@@ -951,8 +962,9 @@ export const talentGroupSchema = z.object({
   members: z.array(groupMemberSchema)
     .min(1, "At least one group member is required")
     .max(20, "Groups cannot have more than 20 members"),
-  scheduledDates: z.array(z.string().datetime("Invalid date format"))
-    .min(1, "At least one scheduled date is required")
+  scheduledDates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"))
+    .optional()
+    .default([])
 })
 
 export const assignmentSchema = z.object({

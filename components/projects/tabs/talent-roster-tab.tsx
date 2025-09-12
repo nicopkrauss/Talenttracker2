@@ -11,10 +11,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
-import { EnhancedProject, TalentProfile } from '@/lib/types'
+import { EnhancedProject, TalentProfile, TalentGroup } from '@/lib/types'
 import { Plus, Search, Users, Check, Trash2, UserPlus, ChevronDown, ChevronRight } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { CSVImportDialog } from '@/components/talent/csv-import-dialog'
+import { GroupCreationModal } from '@/components/projects/group-creation-modal'
+import { GroupBadge } from '@/components/projects/group-badge'
 
 interface TalentRosterTabProps {
   project: EnhancedProject
@@ -37,10 +39,12 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
   const { toast } = useToast()
   const [assignedTalent, setAssignedTalent] = useState<ProjectTalent[]>([])
   const [availableTalent, setAvailableTalent] = useState<AvailableTalent[]>([])
+  const [talentGroups, setTalentGroups] = useState<TalentGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [availableSearchQuery, setAvailableSearchQuery] = useState("")
   const [showAddDialog, setShowAddDialog] = useState(false)
+  const [showGroupDialog, setShowGroupDialog] = useState(false)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   
@@ -75,6 +79,13 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
         setAssignedTalent(rosterData.data || [])
       }
 
+      // Load talent groups
+      const groupsResponse = await fetch(`/api/projects/${project.id}/talent-groups`)
+      if (groupsResponse.ok) {
+        const groupsData = await groupsResponse.json()
+        setTalentGroups(groupsData.data || [])
+      }
+
       // Load available talent from general database
       const availableResponse = await fetch('/api/talent')
       if (availableResponse.ok) {
@@ -107,6 +118,13 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
         setAssignedTalent(rosterData.data || [])
       }
 
+      // Load talent groups
+      const groupsResponse = await fetch(`/api/projects/${project.id}/talent-groups`)
+      if (groupsResponse.ok) {
+        const groupsData = await groupsResponse.json()
+        setTalentGroups(groupsData.data || [])
+      }
+
       // Load available talent from general database
       const availableResponse = await fetch('/api/talent')
       if (availableResponse.ok) {
@@ -125,6 +143,13 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
   const filteredAssignedTalent = assignedTalent.filter((person) => {
     const fullName = `${person.first_name} ${person.last_name}`
     return fullName.toLowerCase().includes(searchQuery.toLowerCase())
+  })
+
+  // Filter talent groups by name
+  const filteredTalentGroups = talentGroups.filter((group) => {
+    // Handle both camelCase (groupName) and snake_case (group_name) for compatibility
+    const groupName = group.groupName || group.group_name || ''
+    return groupName.toLowerCase().includes(searchQuery.toLowerCase())
   })
 
   // Filter available talent by name only
@@ -294,6 +319,44 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
     }
   }
 
+  const handleRemoveGroup = async (groupId: string) => {
+    // Find the group being removed
+    const groupToRemove = talentGroups.find(g => g.id === groupId)
+    if (!groupToRemove) return
+
+    // Optimistically remove from groups
+    setTalentGroups(prev => prev.filter(g => g.id !== groupId))
+
+    try {
+      const response = await fetch(`/api/projects/${project.id}/talent-groups/${groupId}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Talent group removed from project"
+        })
+        // Silent refresh to sync any server-side changes
+        await reloadDataSilently()
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to remove talent group')
+      }
+    } catch (error) {
+      console.error('Error removing talent group:', error)
+      
+      // Revert optimistic update on error
+      setTalentGroups(prev => [...prev, groupToRemove])
+      
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to remove talent group",
+        variant: "destructive"
+      })
+    }
+  }
+
   const handleFinalizeTalentRoster = async () => {
     try {
       const response = await fetch(`/api/projects/${project.id}/talent-roster/complete`, {
@@ -354,11 +417,24 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
               <UserPlus className="h-5 w-5" />
               Assign Talent
               <Badge variant="secondary">{assignedTalent.length} assigned</Badge>
+              <Badge variant="outline">{talentGroups.length} groups</Badge>
             </div>
             <div className="flex items-center gap-2">
               {isAssignTalentExpanded && (
                 <>
                   <CSVImportDialog onImportComplete={reloadDataSilently} />
+                  <Button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowGroupDialog(true);
+                    }} 
+                    size="sm" 
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    <Users className="h-4 w-4" />
+                    Add Group
+                  </Button>
                   <Button 
                     onClick={(e) => {
                       e.stopPropagation();
@@ -471,57 +547,103 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredAssignedTalent.length === 0 ? (
+              {filteredAssignedTalent.length === 0 && filteredTalentGroups.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                    {assignedTalent.length === 0 ? (
+                    {assignedTalent.length === 0 && talentGroups.length === 0 ? (
                       <div>
-                        <p>No talent assigned to this project yet.</p>
-                        <p className="text-sm mt-1">Assign talent from the available talent above or add new talent.</p>
+                        <p>No talent or groups assigned to this project yet.</p>
+                        <p className="text-sm mt-1">Assign talent from the available talent above or add new talent/groups.</p>
                       </div>
                     ) : (
-                      <p>No assigned talent match your search.</p>
+                      <p>No assigned talent or groups match your search.</p>
                     )}
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredAssignedTalent.map((person) => (
-                  <TableRow key={person.id}>
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="w-8 h-8">
-                          <AvatarFallback>
-                            {`${person.first_name?.[0] || ''}${person.last_name?.[0] || ''}`}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">{person.first_name} {person.last_name}</div>
+                <>
+                  {/* Render individual talent */}
+                  {filteredAssignedTalent.map((person) => (
+                    <TableRow key={`talent-${person.id}`}>
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="w-8 h-8">
+                            <AvatarFallback>
+                              {`${person.first_name?.[0] || ''}${person.last_name?.[0] || ''}`}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium">{person.first_name} {person.last_name}</div>
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{person.rep_name}</div>
-                        <div className="text-sm text-muted-foreground">{person.rep_email}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="default">
-                        {person.assignment?.status || 'active'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveTalent(person.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{person.rep_name}</div>
+                          <div className="text-sm text-muted-foreground">{person.rep_email}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="default">
+                          {person.assignment?.status || 'active'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveTalent(person.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  
+                  {/* Render talent groups */}
+                  {filteredTalentGroups.map((group) => (
+                    <TableRow key={`group-${group.id}`}>
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="w-8 h-8">
+                            <AvatarFallback>
+                              <Users className="h-4 w-4" />
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <div className="font-medium">{group.groupName || group.group_name}</div>
+                              <GroupBadge />
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {group.members.length} members
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-muted-foreground">
+                          {group.members.slice(0, 2).map(member => member.name).join(', ')}
+                          {group.members.length > 2 && ` +${group.members.length - 2} more`}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="default">active</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveGroup(group.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </>
               )}
             </TableBody>
           </Table>
@@ -533,7 +655,7 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
       <div className="flex justify-center">
         <Button 
           onClick={handleFinalizeTalentRoster}
-          disabled={assignedTalent.length === 0 || project.project_setup_checklist?.talent_roster_completed}
+          disabled={(assignedTalent.length === 0 && talentGroups.length === 0) || project.project_setup_checklist?.talent_roster_completed}
           className="gap-2"
         >
           {project.project_setup_checklist?.talent_roster_completed ? (
@@ -645,6 +767,13 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
         </DialogContent>
       </Dialog>
 
+      {/* Group Creation Modal */}
+      <GroupCreationModal
+        open={showGroupDialog}
+        onOpenChange={setShowGroupDialog}
+        projectId={project.id}
+        onGroupCreated={reloadDataSilently}
+      />
 
     </div>
   )
