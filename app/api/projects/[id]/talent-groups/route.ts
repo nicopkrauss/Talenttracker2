@@ -173,6 +173,29 @@ export async function POST(
 
     const { groupName, members, scheduledDates = [], pointOfContactName, pointOfContactPhone } = validationResult.data
 
+    // Get the next display_order value by checking both talent assignments and groups
+    const [talentMaxResult, groupMaxResult] = await Promise.all([
+      supabase
+        .from('talent_project_assignments')
+        .select('display_order')
+        .eq('project_id', projectId)
+        .order('display_order', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      
+      supabase
+        .from('talent_groups')
+        .select('display_order')
+        .eq('project_id', projectId)
+        .order('display_order', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    ])
+
+    const maxTalentOrder = talentMaxResult.data?.display_order || 0
+    const maxGroupOrder = groupMaxResult.data?.display_order || 0
+    const nextDisplayOrder = Math.max(maxTalentOrder, maxGroupOrder) + 1
+
     // Create the talent group
     const { data: newGroup, error: createError } = await supabase
       .from('talent_groups')
@@ -190,7 +213,8 @@ export async function POST(
           return dateObj.toISOString().split('T')[0]
         }) : [],
         point_of_contact_name: pointOfContactName || null,
-        point_of_contact_phone: pointOfContactPhone || null
+        point_of_contact_phone: pointOfContactPhone || null,
+        display_order: nextDisplayOrder
       })
       .select(`
         id,
@@ -232,6 +256,7 @@ export async function POST(
         project_id: projectId,
         assigned_by: user.id,
         status: 'active',
+        display_order: nextDisplayOrder,
         scheduled_dates: scheduledDates.length > 0 ? scheduledDates.map(date => {
           // Ensure we maintain the date as-is without timezone conversion
           if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {

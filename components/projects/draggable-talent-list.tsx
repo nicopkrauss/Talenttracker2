@@ -23,7 +23,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { GripVertical, Users, ChevronDown, ChevronRight, Edit } from 'lucide-react'
+import { GripVertical, Users, ChevronDown, ChevronRight, Edit, Check } from 'lucide-react'
 import { TrashButton } from '@/components/ui/trash-button'
 import { TalentScheduleColumn } from '@/components/projects/talent-schedule-column'
 import { ProjectSchedule, TalentGroup } from '@/lib/types'
@@ -69,6 +69,12 @@ interface DraggableTalentListProps {
   onReorderComplete?: () => Promise<void>
   showEmptyState?: boolean
   emptyStateMessage?: React.ReactNode
+  // New props for confirm all functionality
+  pendingChanges?: Set<string>
+  onConfirmAll?: () => void
+  // Request state props
+  isRequestActive?: (id: string) => boolean
+  activeRequests?: Map<string, any>
 }
 
 interface SortableTalentRowProps {
@@ -128,11 +134,10 @@ function SortableTalentRow({
           </Avatar>
           <div>
             <div className="font-medium">{talent.first_name} {talent.last_name}</div>
-            <div className="text-sm text-muted-foreground">{talent.rep_name}</div>
           </div>
         </div>
       </TableCell>
-      <TableCell className="text-center">
+      <TableCell className="text-left">
         <TalentScheduleColumn
           talentId={talent.id}
           projectId={projectId}
@@ -145,7 +150,7 @@ function SortableTalentRow({
           onUnregisterConfirm={onUnregisterConfirm}
         />
       </TableCell>
-      <TableCell>
+      <TableCell className="w-48">
         <div className="flex items-center justify-end">
           <TrashButton onClick={() => onRemoveTalent(talent.id)} variant="outline" />
         </div>
@@ -222,25 +227,14 @@ function SortableGroupRow({
             >
               <GroupBadge showTooltip />
               <div className="font-medium">{group.groupName || group.group_name}</div>
+              <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-medium text-muted-foreground bg-muted rounded-full">
+                {group.members.length}
+              </span>
             </div>
-            {!isExpanded && (
-              <div className="text-sm text-muted-foreground">
-                {group.pointOfContactName || group.point_of_contact_name ? (
-                  <>
-                    {group.pointOfContactName || group.point_of_contact_name}
-                    {(group.pointOfContactPhone || group.point_of_contact_phone) && (
-                      <span className="ml-2">• {group.pointOfContactPhone || group.point_of_contact_phone}</span>
-                    )}
-                  </>
-                ) : (
-                  group.members.length > 0 ? group.members[0].name : 'No members'
-                )}
-              </div>
-            )}
           </div>
         </div>
       </TableCell>
-      <TableCell className="text-center">
+      <TableCell className="text-left">
         <TalentScheduleColumn
           talentId={group.id}
           projectId={projectId}
@@ -253,7 +247,7 @@ function SortableGroupRow({
           onUnregisterConfirm={onUnregisterConfirm}
         />
       </TableCell>
-      <TableCell>
+      <TableCell className="w-48">
         <div className="flex items-center gap-1 justify-end">
           {onEditGroup && (
             <Button
@@ -288,6 +282,10 @@ export function DraggableTalentList({
   onReorderComplete,
   showEmptyState = false,
   emptyStateMessage,
+  pendingChanges = new Set(),
+  onConfirmAll,
+  isRequestActive,
+  activeRequests,
 }: DraggableTalentListProps) {
   const { toast } = useToast()
   const [isReordering, setIsReordering] = useState(false)
@@ -315,8 +313,8 @@ export function DraggableTalentList({
       data: group
     }))
 
-    // Combine and sort by display order
-    return [...talentItems, ...groupItems].sort((a, b) => a.displayOrder - b.displayOrder)
+    // Combine and sort by display order (descending - highest numbers first)
+    return [...talentItems, ...groupItems].sort((a, b) => b.displayOrder - a.displayOrder)
   }, [talent, talentGroups])
 
   // Local state for optimistic updates
@@ -349,11 +347,11 @@ export function DraggableTalentList({
       const newItems = arrayMove(rosterItems, oldIndex, newIndex)
       setRosterItems(newItems)
 
-      // Update display orders based on new positions
+      // Update display orders based on new positions (descending order)
       const updatedItems = newItems.map((item, index) => ({
         id: item.id,
         type: item.type,
-        displayOrder: index + 1 // Start from 1
+        displayOrder: newItems.length - index // Highest number for first item
       }))
 
       // Disable parent sync during drag operation
@@ -378,8 +376,11 @@ export function DraggableTalentList({
           description: "Roster order updated successfully"
         })
 
-        // Don't call onReorderComplete - we'll stay with our optimistic state
-        // The database is updated correctly, we just won't sync back
+        // Re-enable parent sync after successful reorder so new assignments can appear
+        // Use setTimeout to avoid interfering with the current drag state
+        setTimeout(() => {
+          allowParentSync.current = true
+        }, 100)
 
       } catch (error) {
         console.error('Error reordering roster:', error)
@@ -408,8 +409,19 @@ export function DraggableTalentList({
           <TableRow>
             <TableHead className="w-8"></TableHead>
             <TableHead>Name</TableHead>
-            <TableHead className="text-center min-w-[140px]">Schedule</TableHead>
-            <TableHead className="w-12"></TableHead>
+            <TableHead className="text-left min-w-[140px]">Schedule</TableHead>
+            <TableHead className="w-48 text-right">
+              {pendingChanges.size > 0 && onConfirmAll && (
+                <Button
+                  onClick={onConfirmAll}
+                  className="gap-2"
+                  size="sm"
+                >
+                  <Check className="h-4 w-4" />
+                  Confirm All ({pendingChanges.size})
+                </Button>
+              )}
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -464,16 +476,9 @@ export function DraggableTalentList({
                               {/* Empty cell for drag handle column */}
                             </TableCell>
                             <TableCell className="pl-12">
-                              <div className="flex items-center space-x-3">
-                                <Avatar className="w-6 h-6">
-                                  <AvatarFallback className="text-xs">
-                                    {member.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <div className="text-sm font-medium">{member.name}</div>
-                                  <div className="text-xs text-muted-foreground">{member.role}</div>
-                                </div>
+                              <div>
+                                <div className="text-sm font-medium">{member.name}</div>
+                                <div className="text-xs text-muted-foreground">{member.role}</div>
                               </div>
                             </TableCell>
                             <TableCell className="text-center">

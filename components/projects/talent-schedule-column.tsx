@@ -119,7 +119,8 @@ export function TalentScheduleColumn({
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to update schedule')
+        const errorMessage = errorData.error || 'Failed to update schedule'
+        throw new Error(errorMessage)
       }
 
       // Update the original dates to match current selection
@@ -132,17 +133,18 @@ export function TalentScheduleColumn({
         description: "Schedule updated successfully"
       })
     } catch (error) {
-      console.error('Error updating schedule:', error)
-      
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to update schedule",
         variant: "destructive"
       })
+      
+      // Re-throw the error so it can be caught by Promise.allSettled in handleConfirmAll
+      throw error
     } finally {
       setIsUpdating(false)
     }
-  }, [isGroup, projectId, talentId, scheduledDates, originalScheduledDates, onScheduleUpdate, toast])
+  }, [isGroup, projectId, talentId, scheduledDates, onScheduleUpdate, toast])
 
   // Register/unregister confirm function (after handleConfirm is defined)
   useEffect(() => {
@@ -155,7 +157,7 @@ export function TalentScheduleColumn({
     return () => {
       onUnregisterConfirm?.(talentId)
     }
-  }, [hasPendingChanges, talentId, onRegisterConfirm, onUnregisterConfirm, handleConfirm])
+  }, [hasPendingChanges, talentId, onRegisterConfirm, onUnregisterConfirm])
 
   const handleCancel = () => {
     // Revert to original dates
@@ -163,7 +165,7 @@ export function TalentScheduleColumn({
   }
 
   return (
-    <div className="flex items-center justify-center gap-2 min-w-[140px]">
+    <div className="flex items-center justify-start gap-2 min-w-[140px]">
       <CircularDateSelector
         schedule={projectSchedule}
         selectedDates={scheduledDates}

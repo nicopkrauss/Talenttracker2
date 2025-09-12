@@ -12,8 +12,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 import { EnhancedProject, TalentProfile, TalentGroup, ProjectSchedule } from '@/lib/types'
-import { Plus, Search, Users, Check, UserPlus, ChevronDown, ChevronRight } from 'lucide-react'
+import { Plus, Search, Users, Check, UserPlus, ChevronDown, ChevronRight, Loader2, UserCheck } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { useRequestQueue } from '@/hooks/use-request-queue'
+import { useOptimisticState } from '@/hooks/use-optimistic-state'
 import { CSVImportDialog } from '@/components/talent/csv-import-dialog'
 import { GroupCreationModal } from '@/components/projects/group-creation-modal'
 import { GroupEditModal } from '@/components/projects/group-edit-modal'
@@ -42,9 +44,44 @@ interface AvailableTalent extends TalentProfile {
 
 export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabProps) {
   const { toast } = useToast()
-  const [assignedTalent, setAssignedTalent] = useState<ProjectTalent[]>([])
-  const [availableTalent, setAvailableTalent] = useState<AvailableTalent[]>([])
-  const [talentGroups, setTalentGroups] = useState<TalentGroup[]>([])
+  
+  // Enhanced state management with optimistic updates and request queuing
+  const [serverAssignedTalent, setServerAssignedTalent] = useState<ProjectTalent[]>([])
+  const [serverAvailableTalent, setServerAvailableTalent] = useState<AvailableTalent[]>([])
+  const [serverTalentGroups, setServerTalentGroups] = useState<TalentGroup[]>([])
+  
+  const {
+    data: assignedTalent,
+    applyOptimisticUpdate: applyTalentOptimisticUpdate,
+    forceSync: forceTalentSync,
+    hasPendingOperations: hasPendingTalentOperations
+  } = useOptimisticState(serverAssignedTalent, { syncDelayMs: 1500 })
+  
+  const {
+    data: availableTalent,
+    applyOptimisticUpdate: applyAvailableOptimisticUpdate,
+    forceSync: forceAvailableSync
+  } = useOptimisticState(serverAvailableTalent, { syncDelayMs: 1500 })
+  
+  const {
+    data: talentGroups,
+    applyOptimisticUpdate: applyGroupOptimisticUpdate,
+    forceSync: forceGroupSync,
+    hasPendingOperations: hasPendingGroupOperations
+  } = useOptimisticState(serverTalentGroups, { syncDelayMs: 1500 })
+  
+  const {
+    enqueueRequest,
+    isRequestActive,
+    cancelRequest,
+    isProcessing,
+    activeRequests
+  } = useRequestQueue({
+    maxConcurrent: 2,
+    debounceMs: 200,
+    retryAttempts: 2
+  })
+  
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [availableSearchQuery, setAvailableSearchQuery] = useState("")
@@ -52,6 +89,9 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
   const [showGroupDialog, setShowGroupDialog] = useState(false)
   const [showGroupEditDialog, setShowGroupEditDialog] = useState(false)
   const [selectedGroupForEdit, setSelectedGroupForEdit] = useState<TalentGroup | null>(null)
+  
+  // Selection state for multi-select talent assignment
+  const [selectedTalent, setSelectedTalent] = useState<Set<string>>(new Set())
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   
@@ -92,11 +132,11 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
         rosterData = await rosterResponse.json()
         // Handle new unified response format
         if (rosterData.data && typeof rosterData.data === 'object') {
-          setAssignedTalent(rosterData.data.talent || [])
-          setTalentGroups(rosterData.data.groups || [])
+          setServerAssignedTalent(rosterData.data.talent || [])
+          setServerTalentGroups(rosterData.data.groups || [])
         } else {
           // Fallback for old format
-          setAssignedTalent(rosterData.data || [])
+          setServerAssignedTalent(rosterData.data || [])
         }
       }
 
@@ -107,7 +147,7 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
         // Filter out talent already assigned to this project
         const assignedIds = new Set((rosterData?.data?.talent || rosterData?.data || []).map((t: ProjectTalent) => t.id))
         const unassignedTalent = (availableData.data || []).filter((t: AvailableTalent) => !assignedIds.has(t.id))
-        setAvailableTalent(unassignedTalent)
+        setServerAvailableTalent(unassignedTalent)
       }
     } catch (error) {
       console.error('Error loading talent data:', error)
@@ -136,11 +176,11 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
         rosterData = await rosterResponse.json()
         // Handle new unified response format
         if (rosterData.data && typeof rosterData.data === 'object') {
-          setAssignedTalent(rosterData.data.talent || [])
-          setTalentGroups(rosterData.data.groups || [])
+          setServerAssignedTalent(rosterData.data.talent || [])
+          setServerTalentGroups(rosterData.data.groups || [])
         } else {
           // Fallback for old format
-          setAssignedTalent(rosterData.data || [])
+          setServerAssignedTalent(rosterData.data || [])
         }
       }
 
@@ -151,7 +191,7 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
         // Filter out talent already assigned to this project
         const assignedIds = new Set((rosterData?.data?.talent || rosterData?.data || []).map((t: ProjectTalent) => t.id))
         const unassignedTalent = (availableData.data || []).filter((t: AvailableTalent) => !assignedIds.has(t.id))
-        setAvailableTalent(unassignedTalent)
+        setServerAvailableTalent(unassignedTalent)
       }
     } catch (error) {
       console.error('Error reloading talent data:', error)
@@ -177,117 +217,190 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
     return fullName.toLowerCase().includes(availableSearchQuery.toLowerCase())
   })
 
-  const handleAssignTalent = async (talentId: string) => {
+  const handleAssignTalent = useCallback(async (talentId: string) => {
     const talent = availableTalent.find(t => t.id === talentId)
-    if (!talent) return
+    if (!talent || isRequestActive(talentId)) return
 
-    // Optimistic update - create temporary assignment
-    const optimisticAssignment = {
-      id: `temp-${talentId}`,
-      first_name: talent.first_name,
-      last_name: talent.last_name,
-      rep_name: talent.rep_name,
-      rep_email: talent.rep_email,
-      rep_phone: talent.rep_phone,
-      notes: talent.notes,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      assignment: {
-        id: `temp-assignment-${talentId}`,
-        status: 'active',
-        assigned_at: new Date().toISOString()
-      }
-    }
+    enqueueRequest(
+      talentId,
+      async () => {
+        // Calculate the next display_order (highest current + 1) from both talent and groups
+        const maxTalentOrder = Math.max(
+          ...assignedTalent.map(t => t.assignment?.display_order || 0),
+          0
+        )
+        const maxGroupOrder = Math.max(
+          ...talentGroups.map(g => g.display_order || g.displayOrder || 0),
+          0
+        )
+        const maxDisplayOrder = Math.max(maxTalentOrder, maxGroupOrder)
+        
+        const optimisticAssignment: ProjectTalent = {
+          id: talent.id, // Use real ID for optimistic update
+          first_name: talent.first_name,
+          last_name: talent.last_name,
+          rep_name: talent.rep_name,
+          rep_email: talent.rep_email,
+          rep_phone: talent.rep_phone,
+          notes: talent.notes,
+          created_at: talent.created_at,
+          updated_at: talent.updated_at,
+          assignment: {
+            id: `temp-assignment-${talentId}`,
+            status: 'active',
+            assigned_at: new Date().toISOString(),
+            display_order: maxDisplayOrder + 1
+          }
+        }
 
-    // Add optimistic assignment and remove from available talent
-    setAssignedTalent(prev => [...prev, optimisticAssignment])
-    setAvailableTalent(prev => prev.filter(t => t.id !== talentId))
+        // Apply optimistic updates to both lists
+        const assignedPromise = applyTalentOptimisticUpdate(
+          `assign-${talentId}`,
+          'add',
+          (current) => [...current, optimisticAssignment],
+          (current) => current.filter(t => t.id !== talentId),
+          async () => {
+            const response = await fetch(`/api/projects/${project.id}/talent-roster/assign`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ talent_id: talentId })
+            })
 
-    try {
-      const response = await fetch(`/api/projects/${project.id}/talent-roster/assign`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ talent_id: talentId })
-      })
+            if (!response.ok) {
+              const errorData = await response.json()
+              throw new Error(errorData.error || 'Failed to assign talent')
+            }
 
-      if (response.ok) {
+            return response.json()
+          }
+        )
+
+        const availablePromise = applyAvailableOptimisticUpdate(
+          `remove-available-${talentId}`,
+          'remove',
+          (current) => current.filter(t => t.id !== talentId),
+          (current) => [...current, talent],
+          async () => Promise.resolve() // No server operation needed for available list
+        )
+
+        await Promise.all([assignedPromise, availablePromise])
+
         toast({
           title: "Success",
           description: "Talent assigned to project"
         })
-        // Silent refresh to get real IDs and sync server state
-        await reloadDataSilently()
-      } else {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to assign talent')
-      }
-    } catch (error) {
-      console.error('Error assigning talent:', error)
-      
-      // Revert optimistic updates on error
-      setAssignedTalent(prev => prev.filter(t => t.id !== `temp-${talentId}`))
-      setAvailableTalent(prev => [...prev, talent])
-      
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to assign talent",
-        variant: "destructive"
-      })
-    }
-  }
 
-  const handleRemoveTalent = async (talentId: string) => {
-    // Find the talent being removed
+        // Trigger silent refresh after a delay to sync server state
+        setTimeout(reloadDataSilently, 2000)
+      },
+      'add'
+    )
+  }, [availableTalent, assignedTalent, isRequestActive, enqueueRequest, applyTalentOptimisticUpdate, applyAvailableOptimisticUpdate, project.id, toast, reloadDataSilently])
+
+  const handleRemoveTalent = useCallback(async (talentId: string) => {
     const talentToRemove = assignedTalent.find(t => t.id === talentId)
-    if (!talentToRemove) return
+    if (!talentToRemove || isRequestActive(talentId)) return
 
-    // Optimistically remove from assigned talent
-    setAssignedTalent(prev => prev.filter(t => t.id !== talentId))
-    
-    // Optimistically add back to available talent
-    const talentToRestore = {
-      id: talentToRemove.id,
-      first_name: talentToRemove.first_name,
-      last_name: talentToRemove.last_name,
-      rep_name: talentToRemove.rep_name,
-      rep_email: talentToRemove.rep_email,
-      rep_phone: talentToRemove.rep_phone,
-      notes: talentToRemove.notes,
-      created_at: talentToRemove.created_at,
-      updated_at: talentToRemove.updated_at
-    }
-    setAvailableTalent(prev => [...prev, talentToRestore])
+    enqueueRequest(
+      talentId,
+      async () => {
+        // Create talent to restore to available list
+        const talentToRestore: AvailableTalent = {
+          id: talentToRemove.id,
+          first_name: talentToRemove.first_name,
+          last_name: talentToRemove.last_name,
+          rep_name: talentToRemove.rep_name,
+          rep_email: talentToRemove.rep_email,
+          rep_phone: talentToRemove.rep_phone,
+          notes: talentToRemove.notes,
+          created_at: talentToRemove.created_at,
+          updated_at: talentToRemove.updated_at
+        }
 
-    try {
-      const response = await fetch(`/api/projects/${project.id}/talent-roster/${talentId}`, {
-        method: 'DELETE'
-      })
+        // Apply optimistic updates to both lists
+        const assignedPromise = applyTalentOptimisticUpdate(
+          `remove-${talentId}`,
+          'remove',
+          (current) => current.filter(t => t.id !== talentId),
+          (current) => [...current, talentToRemove],
+          async () => {
+            const response = await fetch(`/api/projects/${project.id}/talent-roster/${talentId}`, {
+              method: 'DELETE'
+            })
 
-      if (response.ok) {
+            if (!response.ok) {
+              const errorData = await response.json()
+              throw new Error(errorData.error || 'Failed to remove talent')
+            }
+
+            return response.json()
+          }
+        )
+
+        const availablePromise = applyAvailableOptimisticUpdate(
+          `restore-available-${talentId}`,
+          'add',
+          (current) => [...current, talentToRestore],
+          (current) => current.filter(t => t.id !== talentId),
+          async () => Promise.resolve() // No server operation needed for available list
+        )
+
+        await Promise.all([assignedPromise, availablePromise])
+
         toast({
           title: "Success",
           description: "Talent removed from project"
         })
-        // Silent refresh to sync any server-side changes
-        await reloadDataSilently()
-      } else {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to remove talent')
+
+        // Trigger silent refresh after a delay to sync server state
+        setTimeout(reloadDataSilently, 2000)
+      },
+      'remove'
+    )
+  }, [assignedTalent, isRequestActive, enqueueRequest, applyTalentOptimisticUpdate, applyAvailableOptimisticUpdate, project.id, toast, reloadDataSilently])
+
+  const handleBulkAssignTalent = useCallback(async () => {
+    if (selectedTalent.size === 0) return
+
+    const selectedTalentArray = Array.from(selectedTalent)
+    
+    // Clear selection immediately for better UX
+    setSelectedTalent(new Set())
+
+    // Process assignments sequentially to avoid overwhelming the system
+    let successCount = 0
+    let errorCount = 0
+
+    for (const talentId of selectedTalentArray) {
+      try {
+        await handleAssignTalent(talentId)
+        successCount++
+      } catch (error) {
+        console.error(`Error assigning talent ${talentId}:`, error)
+        errorCount++
       }
-    } catch (error) {
-      console.error('Error removing talent:', error)
-      
-      // Revert optimistic updates on error
-      setAssignedTalent(prev => [...prev, talentToRemove])
-      setAvailableTalent(prev => prev.filter(t => t.id !== talentId))
-      
+    }
+
+    // Show appropriate toast message
+    if (errorCount === 0) {
+      toast({
+        title: "Success",
+        description: `Assigned ${successCount} talent to project`
+      })
+    } else if (successCount === 0) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to remove talent",
+        description: `Failed to assign ${errorCount} talent. Please try again.`,
+        variant: "destructive"
+      })
+    } else {
+      toast({
+        title: "Partial Success",
+        description: `Assigned ${successCount} talent, ${errorCount} failed`,
         variant: "destructive"
       })
     }
-  }
+  }, [selectedTalent, handleAssignTalent, toast])
 
   const handleAddTalent = async () => {
     if (!formData.first_name || !formData.last_name || !formData.rep_name || !formData.rep_email || !formData.rep_phone) {
@@ -338,43 +451,43 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
     }
   }
 
-  const handleRemoveGroup = async (groupId: string) => {
-    // Find the group being removed
+  const handleRemoveGroup = useCallback(async (groupId: string) => {
     const groupToRemove = talentGroups.find(g => g.id === groupId)
-    if (!groupToRemove) return
+    if (!groupToRemove || isRequestActive(groupId)) return
 
-    // Optimistically remove from groups
-    setTalentGroups(prev => prev.filter(g => g.id !== groupId))
+    enqueueRequest(
+      groupId,
+      async () => {
+        await applyGroupOptimisticUpdate(
+          `remove-group-${groupId}`,
+          'remove',
+          (current) => current.filter(g => g.id !== groupId),
+          (current) => [...current, groupToRemove],
+          async () => {
+            const response = await fetch(`/api/projects/${project.id}/talent-groups/${groupId}`, {
+              method: 'DELETE'
+            })
 
-    try {
-      const response = await fetch(`/api/projects/${project.id}/talent-groups/${groupId}`, {
-        method: 'DELETE'
-      })
+            if (!response.ok) {
+              const errorData = await response.json()
+              throw new Error(errorData.error || 'Failed to remove talent group')
+            }
 
-      if (response.ok) {
+            return response.json()
+          }
+        )
+
         toast({
           title: "Success",
           description: "Talent group removed from project"
         })
-        // Silent refresh to sync any server-side changes
-        await reloadDataSilently()
-      } else {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to remove talent group')
-      }
-    } catch (error) {
-      console.error('Error removing talent group:', error)
-      
-      // Revert optimistic update on error
-      setTalentGroups(prev => [...prev, groupToRemove])
-      
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to remove talent group",
-        variant: "destructive"
-      })
-    }
-  }
+
+        // Trigger silent refresh after a delay to sync server state
+        setTimeout(reloadDataSilently, 2000)
+      },
+      'remove'
+    )
+  }, [talentGroups, isRequestActive, enqueueRequest, applyGroupOptimisticUpdate, project.id, toast, reloadDataSilently])
 
   const handleEditGroup = (groupId: string) => {
     const group = talentGroups.find(g => g.id === groupId)
@@ -417,25 +530,50 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
 
   const handleConfirmAll = useCallback(async () => {
     const pendingIds = Array.from(pendingChanges)
-    const promises = pendingIds.map(id => {
-      const confirmFn = confirmFunctions.get(id)
-      return confirmFn ? confirmFn() : Promise.resolve()
-    })
     
-    try {
-      await Promise.all(promises)
+    if (pendingIds.length === 0) {
+      toast({
+        title: "No Changes",
+        description: "No pending schedule changes to confirm",
+        variant: "default"
+      })
+      return
+    }
+
+    const results = await Promise.allSettled(
+      pendingIds.map(async (id) => {
+        const confirmFn = confirmFunctions.get(id)
+        if (!confirmFn) {
+          throw new Error(`No confirm function registered for ${id}`)
+        }
+        
+        await confirmFn()
+        return { id, success: true }
+      })
+    )
+
+    const successful = results.filter(result => result.status === 'fulfilled')
+    const failed = results.filter(result => result.status === 'rejected')
+
+    if (failed.length === 0) {
       toast({
         title: "Success",
-        description: `Confirmed ${pendingIds.length} schedule changes`
+        description: `Confirmed ${successful.length} schedule changes`
       })
-    } catch (error) {
+    } else if (successful.length === 0) {
       toast({
         title: "Error",
-        description: "Some schedule updates failed",
+        description: `All ${failed.length} schedule updates failed`,
+        variant: "destructive"
+      })
+    } else {
+      toast({
+        title: "Partial Success",
+        description: `${successful.length} confirmed, ${failed.length} failed`,
         variant: "destructive"
       })
     }
-  }, [pendingChanges, confirmFunctions])
+  }, [pendingChanges, confirmFunctions, toast])
 
   const toggleGroupExpansion = (groupId: string) => {
     setExpandedGroups(prev => {
@@ -515,29 +653,32 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
               {isAssignTalentExpanded && (
                 <>
                   <CSVImportDialog onImportComplete={reloadDataSilently} />
-                  <Button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowGroupDialog(true);
-                    }} 
-                    size="sm" 
-                    variant="outline"
-                    className="gap-2"
-                  >
-                    <Users className="h-4 w-4" />
-                    Add Group
-                  </Button>
-                  <Button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowAddDialog(true);
-                    }} 
-                    size="sm" 
-                    className="gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add New Talent
-                  </Button>
+
+                  {selectedTalent.size > 0 ? (
+                    <Button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleBulkAssignTalent();
+                      }} 
+                      size="sm" 
+                      className="gap-2"
+                    >
+                      <UserCheck className="h-4 w-4" />
+                      Assign Selected ({selectedTalent.size})
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowAddDialog(true);
+                      }} 
+                      size="sm" 
+                      className="gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add New Talent
+                    </Button>
+                  )}
                 </>
               )}
             </div>
@@ -558,6 +699,41 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
             </div>
           </div>
 
+          {/* Selection Controls */}
+          {filteredAvailableTalent.length > 0 && (
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (selectedTalent.size === filteredAvailableTalent.length && filteredAvailableTalent.length > 0) {
+                      setSelectedTalent(new Set())
+                    } else {
+                      setSelectedTalent(new Set(filteredAvailableTalent.map(t => t.id)))
+                    }
+                  }}
+                >
+                  {selectedTalent.size === filteredAvailableTalent.length && filteredAvailableTalent.length > 0 ? 'Deselect All' : 'Select All'} ({filteredAvailableTalent.length})
+                </Button>
+                {selectedTalent.size > 0 && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedTalent(new Set())}
+                    >
+                      Clear Selected
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      {selectedTalent.size} selected
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Available Talent Grid */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 max-h-[440px] overflow-y-auto">
             {filteredAvailableTalent.length === 0 ? (
@@ -569,31 +745,60 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
                 )}
               </div>
             ) : (
-              filteredAvailableTalent.map((person) => (
-                <Card key={person.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="px-4 py-3">
-                    <div className="flex items-center space-x-3">
-                      <Avatar className="w-10 h-10">
-                        <AvatarFallback>
-                          {`${person.first_name?.[0] || ''}${person.last_name?.[0] || ''}`}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-base leading-tight">
-                          {person.first_name} {person.last_name}
-                        </h4>
+              filteredAvailableTalent.map((person) => {
+                const isSelected = selectedTalent.has(person.id)
+                return (
+                  <Card 
+                    key={person.id} 
+                    className={`relative transition-all cursor-pointer border-2 py-0 ${isSelected
+                      ? 'bg-card border-primary shadow-md'
+                      : 'hover:shadow-md border-border hover:border-muted-foreground/20'
+                    }`}
+                    onClick={() => {
+                      const newSelected = new Set(selectedTalent)
+                      if (isSelected) {
+                        newSelected.delete(person.id)
+                      } else {
+                        newSelected.add(person.id)
+                      }
+                      setSelectedTalent(newSelected)
+                    }}
+                  >
+                    <CardContent className="px-4 py-4">
+                      <div className="flex items-center space-x-3">
+                        <Avatar className="w-10 h-10">
+                          <AvatarFallback>
+                            {`${person.first_name?.[0] || ''}${person.last_name?.[0] || ''}`}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-base leading-tight">
+                            {person.first_name} {person.last_name}
+                          </h4>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          className="h-7 text-xs px-3"
+                          onClick={(e) => {
+                            e.stopPropagation() // Prevent card selection when clicking assign button
+                            handleAssignTalent(person.id)
+                          }}
+                          disabled={isRequestActive(person.id)}
+                        >
+                          {isRequestActive(person.id) ? (
+                            <>
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                              Assigning...
+                            </>
+                          ) : (
+                            'Assign'
+                          )}
+                        </Button>
                       </div>
-                      <Button 
-                        size="sm" 
-                        className="h-7 text-xs px-3"
-                        onClick={() => handleAssignTalent(person.id)}
-                      >
-                        Assign
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+                    </CardContent>
+                  </Card>
+                )
+              })
             )}
           </div>
         </CardContent>
@@ -618,29 +823,25 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
             </div>
             {/* Fixed button area to prevent layout shift */}
             <div className="flex items-center gap-2">
-              {pendingChanges.size > 0 ? (
-                <Button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleConfirmAll();
-                  }}
-                  className="gap-2"
-                  size="sm"
-                >
-                  <Check className="h-4 w-4" />
-                  Confirm All ({pendingChanges.size})
-                </Button>
-              ) : (
-                // Invisible placeholder with exact button dimensions to maintain layout
-                <Button
-                  className="gap-2 invisible"
-                  size="sm"
-                  disabled
-                >
-                  <Check className="h-4 w-4" />
-                  Confirm All (0)
-                </Button>
+              {/* Show processing indicator */}
+              {(isProcessing || hasPendingTalentOperations || hasPendingGroupOperations) && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Processing...
+                </div>
               )}
+              
+              <Button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowGroupDialog(true);
+                }} 
+                size="sm" 
+                className="gap-2"
+              >
+                <Users className="h-4 w-4" />
+                Add Group
+              </Button>
             </div>
           </CardTitle>
         </CardHeader>
@@ -688,6 +889,12 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
                 <p>No assigned talent or groups match your search.</p>
               )
             }
+            // Pass request state for better UX
+            isRequestActive={isRequestActive}
+            activeRequests={activeRequests}
+            // New props for confirm all functionality
+            pendingChanges={pendingChanges}
+            onConfirmAll={handleConfirmAll}
           />
 
         </CardContent>

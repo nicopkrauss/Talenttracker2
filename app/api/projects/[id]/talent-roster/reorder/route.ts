@@ -124,12 +124,12 @@ export async function PUT(
       )
     }
 
-    // Update display_order for each talent assignment
+    // Update display_order for each talent assignment (descending order)
     const updatePromises = talentIds.map((talentId, index) => {
       return supabase
         .from('talent_project_assignments')
         .update({ 
-          display_order: index + 1,
+          display_order: talentIds.length - index,
           updated_at: new Date().toISOString()
         })
         .eq('project_id', projectId)
@@ -162,7 +162,7 @@ export async function PUT(
         )
       `)
       .eq('project_id', projectId)
-      .order('display_order', { ascending: true })
+      .order('display_order', { ascending: false })
 
     if (fetchError) {
       console.error('Error fetching updated assignments:', fetchError)

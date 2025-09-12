@@ -81,7 +81,7 @@ export async function GET(
         `)
         .eq('project_id', projectId)
         .eq('status', status !== 'all' ? status : 'active')
-        .order('display_order', { ascending: true }),
+        .order('display_order', { ascending: false }),
       
       // Fetch talent groups with display_order
       supabase
@@ -101,7 +101,7 @@ export async function GET(
           )
         `)
         .eq('project_id', projectId)
-        .order('display_order', { ascending: true, nullsFirst: false })
+        .order('display_order', { ascending: false, nullsFirst: false })
     ])
 
     if (talentResult.error) {

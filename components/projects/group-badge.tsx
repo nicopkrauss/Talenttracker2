@@ -1,8 +1,8 @@
 "use client"
 
 import { Badge } from '@/components/ui/badge'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Users } from 'lucide-react'
+import { SimpleTooltip } from '@/components/ui/simple-tooltip'
 
 interface GroupBadgeProps {
   className?: string
@@ -25,13 +25,8 @@ export function GroupBadge({ className, showTooltip = false }: GroupBadgeProps) 
   }
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        {badge}
-      </TooltipTrigger>
-      <TooltipContent>
-        <p>Click to show all members</p>
-      </TooltipContent>
-    </Tooltip>
+    <SimpleTooltip content="Click to show all members">
+      {badge}
+    </SimpleTooltip>
   )
 }

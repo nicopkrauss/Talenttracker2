@@ -111,16 +111,28 @@ export async function POST(
       )
     }
 
-    // Get the next display_order value
-    const { data: maxOrderResult } = await supabase
-      .from('talent_project_assignments')
-      .select('display_order')
-      .eq('project_id', projectId)
-      .order('display_order', { ascending: false })
-      .limit(1)
-      .single()
+    // Get the next display_order value by checking both talent assignments and groups
+    const [talentMaxResult, groupMaxResult] = await Promise.all([
+      supabase
+        .from('talent_project_assignments')
+        .select('display_order')
+        .eq('project_id', projectId)
+        .order('display_order', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      
+      supabase
+        .from('talent_groups')
+        .select('display_order')
+        .eq('project_id', projectId)
+        .order('display_order', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    ])
 
-    const nextDisplayOrder = (maxOrderResult?.display_order || 0) + 1
+    const maxTalentOrder = talentMaxResult.data?.display_order || 0
+    const maxGroupOrder = groupMaxResult.data?.display_order || 0
+    const nextDisplayOrder = Math.max(maxTalentOrder, maxGroupOrder) + 1
 
     // Create project assignment
     const { data: assignment, error: assignmentError } = await supabase
