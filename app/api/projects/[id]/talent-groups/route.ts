@@ -56,7 +56,6 @@ export async function GET(
         project_id,
         group_name,
         members,
-        scheduled_dates,
         assigned_escort_id,
         point_of_contact_name,
         point_of_contact_phone,
@@ -78,13 +77,40 @@ export async function GET(
       )
     }
 
+    // Get scheduled dates for all groups from the unified daily assignments table
+    const groupIds = groups?.map(g => g.id) || []
+    let groupScheduledDates: Record<string, string[]> = {}
+    
+    if (groupIds.length > 0) {
+      const { data: dailyAssignments } = await supabase
+        .from('group_daily_assignments')
+        .select('group_id, assignment_date')
+        .eq('project_id', projectId)
+        .in('group_id', groupIds)
+
+      if (dailyAssignments) {
+        groupScheduledDates = dailyAssignments.reduce((acc, da) => {
+          if (!acc[da.group_id]) {
+            acc[da.group_id] = []
+          }
+          acc[da.group_id].push(da.assignment_date)
+          return acc
+        }, {} as Record<string, string[]>)
+
+        // Sort dates for each group
+        Object.keys(groupScheduledDates).forEach(groupId => {
+          groupScheduledDates[groupId].sort()
+        })
+      }
+    }
+
     // Transform the response to match the TalentGroup interface (camelCase)
     const transformedGroups = (groups || []).map(group => ({
       id: group.id,
       projectId: group.project_id,
       groupName: group.group_name,
       members: group.members,
-      scheduledDates: group.scheduled_dates,
+      scheduledDates: groupScheduledDates[group.id] || [],
       assignedEscortId: group.assigned_escort_id,
       pointOfContactName: group.point_of_contact_name,
       pointOfContactPhone: group.point_of_contact_phone,
@@ -196,22 +222,13 @@ export async function POST(
     const maxGroupOrder = groupMaxResult.data?.display_order || 0
     const nextDisplayOrder = Math.max(maxTalentOrder, maxGroupOrder) + 1
 
-    // Create the talent group
+    // Create the talent group (without scheduled_dates column)
     const { data: newGroup, error: createError } = await supabase
       .from('talent_groups')
       .insert({
         project_id: projectId,
         group_name: groupName,
         members: members,
-        scheduled_dates: scheduledDates.length > 0 ? scheduledDates.map(date => {
-          // Ensure we maintain the date as-is without timezone conversion
-          if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-            return date // Already in YYYY-MM-DD format
-          }
-          // Convert Date object to local date string
-          const dateObj = new Date(date)
-          return dateObj.toISOString().split('T')[0]
-        }) : [],
         point_of_contact_name: pointOfContactName || null,
         point_of_contact_phone: pointOfContactPhone || null,
         display_order: nextDisplayOrder
@@ -221,7 +238,6 @@ export async function POST(
         project_id,
         group_name,
         members,
-        scheduled_dates,
         assigned_escort_id,
         point_of_contact_name,
         point_of_contact_phone,
@@ -247,32 +263,60 @@ export async function POST(
       )
     }
 
+    // Create scheduled dates in the unified daily assignments system
+    if (scheduledDates && scheduledDates.length > 0) {
+      const normalizedDates = scheduledDates.map(date => {
+        if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          return date // Already in YYYY-MM-DD format
+        }
+        // Convert Date object to local date string
+        const dateObj = new Date(date)
+        return dateObj.toISOString().split('T')[0]
+      })
+
+      const assignmentRecords = normalizedDates.map(date => ({
+        group_id: newGroup.id,
+        project_id: projectId,
+        assignment_date: date,
+        escort_id: null // No escort assigned initially
+      }))
+
+      const { error: assignmentError } = await supabase
+        .from('group_daily_assignments')
+        .insert(assignmentRecords)
+
+      if (assignmentError) {
+        console.error('Error creating group daily assignments:', assignmentError)
+        // Don't fail the whole operation, but log the error
+      }
+    }
+
     // Also create a corresponding talent_project_assignments entry for the group
     // This allows the group to appear in the talent roster and be scheduled
-    const { error: assignmentError } = await supabase
+    const { error: talentAssignmentError } = await supabase
       .from('talent_project_assignments')
       .insert({
         talent_id: newGroup.id, // Use group ID as talent ID for groups
         project_id: projectId,
         assigned_by: user.id,
         status: 'active',
-        display_order: nextDisplayOrder,
-        scheduled_dates: scheduledDates.length > 0 ? scheduledDates.map(date => {
-          // Ensure we maintain the date as-is without timezone conversion
-          if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-            return date // Already in YYYY-MM-DD format
-          }
-          // Convert Date object to local date string
-          const dateObj = new Date(date)
-          return dateObj.toISOString().split('T')[0]
-        }) : []
+        display_order: nextDisplayOrder
       })
 
-    if (assignmentError) {
-      console.error('Error creating talent assignment for group:', assignmentError)
+    if (talentAssignmentError) {
+      console.error('Error creating talent assignment for group:', talentAssignmentError)
       // Don't fail the whole operation, but log the error
       // The group is still created successfully
     }
+
+    // Get the final scheduled dates from the unified system
+    const { data: dailyAssignments } = await supabase
+      .from('group_daily_assignments')
+      .select('assignment_date')
+      .eq('group_id', newGroup.id)
+      .eq('project_id', projectId)
+
+    const finalScheduledDates = dailyAssignments?.map(da => da.assignment_date).sort() || []
 
     // Transform the response to match the TalentGroup interface (camelCase)
     const transformedGroup = {
@@ -280,7 +324,7 @@ export async function POST(
       projectId: newGroup.project_id,
       groupName: newGroup.group_name,
       members: newGroup.members,
-      scheduledDates: newGroup.scheduled_dates,
+      scheduledDates: finalScheduledDates,
       assignedEscortId: newGroup.assigned_escort_id,
       pointOfContactName: newGroup.point_of_contact_name,
       pointOfContactPhone: newGroup.point_of_contact_phone,

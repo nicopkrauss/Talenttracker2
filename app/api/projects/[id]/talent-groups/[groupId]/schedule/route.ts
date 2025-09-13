@@ -69,11 +69,48 @@ export async function PUT(
       return dateObj.toISOString().split('T')[0]
     }) : []
 
-    // Update only the scheduled_dates field of the talent group
+    // Update scheduling using the unified daily assignment system
+    // First, remove all existing scheduling entries for this group
+    const { error: deleteError } = await supabase
+      .from('group_daily_assignments')
+      .delete()
+      .eq('project_id', projectId)
+      .eq('group_id', groupId)
+
+    if (deleteError) {
+      console.error('Error clearing existing schedule:', deleteError)
+      return NextResponse.json(
+        { error: 'Failed to clear existing schedule', code: 'DELETE_ERROR', details: deleteError.message },
+        { status: 500 }
+      )
+    }
+
+    // Insert new scheduling entries (with escort_id = null for scheduling without assignment)
+    if (processedDates.length > 0) {
+      const schedulingRecords = processedDates.map(date => ({
+        group_id: groupId,
+        project_id: projectId,
+        assignment_date: date,
+        escort_id: null // Scheduled but not assigned
+      }))
+
+      const { error: insertError } = await supabase
+        .from('group_daily_assignments')
+        .insert(schedulingRecords)
+
+      if (insertError) {
+        console.error('Error creating schedule entries:', insertError)
+        return NextResponse.json(
+          { error: 'Failed to create schedule entries', code: 'INSERT_ERROR', details: insertError.message },
+          { status: 500 }
+        )
+      }
+    }
+
+    // Update the talent group timestamp and get updated data
     const { data: updatedGroup, error: updateError } = await supabase
       .from('talent_groups')
       .update({
-        scheduled_dates: processedDates,
         updated_at: new Date().toISOString()
       })
       .eq('id', groupId)
@@ -83,7 +120,6 @@ export async function PUT(
         project_id,
         group_name,
         members,
-        scheduled_dates,
         assigned_escort_id,
         point_of_contact_name,
         point_of_contact_phone,
@@ -93,9 +129,9 @@ export async function PUT(
       .single()
 
     if (updateError) {
-      console.error('Error updating talent group schedule:', updateError)
+      console.error('Error updating group timestamp:', updateError)
       return NextResponse.json(
-        { error: 'Failed to update talent group schedule', code: 'UPDATE_ERROR', details: updateError.message },
+        { error: 'Failed to update group timestamp', code: 'UPDATE_ERROR', details: updateError.message },
         { status: 500 }
       )
     }
@@ -107,27 +143,13 @@ export async function PUT(
       )
     }
 
-    // Also update the corresponding talent_project_assignments entry
-    const { error: assignmentUpdateError } = await supabase
-      .from('talent_project_assignments')
-      .update({
-        scheduled_dates: processedDates
-      })
-      .eq('talent_id', groupId)
-      .eq('project_id', projectId)
-
-    if (assignmentUpdateError) {
-      console.error('Error updating talent assignment for group:', assignmentUpdateError)
-      // Don't fail the whole operation, but log the error
-    }
-
     // Transform the response to match the TalentGroup interface (camelCase)
     const transformedGroup = {
       id: updatedGroup.id,
       projectId: updatedGroup.project_id,
       groupName: updatedGroup.group_name,
       members: updatedGroup.members,
-      scheduledDates: updatedGroup.scheduled_dates,
+      scheduledDates: processedDates,
       assignedEscortId: updatedGroup.assigned_escort_id,
       pointOfContactName: updatedGroup.point_of_contact_name,
       pointOfContactPhone: updatedGroup.point_of_contact_phone,

@@ -65,7 +65,6 @@ export async function GET(
           id,
           status,
           assigned_at,
-          scheduled_dates,
           display_order,
           talent:talent_id (
             id,
@@ -90,7 +89,6 @@ export async function GET(
           id,
           group_name,
           members,
-          scheduled_dates,
           assigned_escort_id,
           display_order,
           created_at,
@@ -120,6 +118,48 @@ export async function GET(
       )
     }
 
+    // Fetch scheduled dates from unified daily assignment tables
+    const talentIds = talentResult.data?.map(t => t.talent.id) || []
+    const groupIds = groupsResult.data?.map(g => g.id) || []
+    
+    // Get talent scheduled dates
+    const talentScheduledDates: Record<string, string[]> = {}
+    if (talentIds.length > 0) {
+      const { data: talentDailyAssignments } = await supabase
+        .from('talent_daily_assignments')
+        .select('talent_id, assignment_date')
+        .eq('project_id', projectId)
+        .in('talent_id', talentIds)
+      
+      if (talentDailyAssignments) {
+        for (const assignment of talentDailyAssignments) {
+          if (!talentScheduledDates[assignment.talent_id]) {
+            talentScheduledDates[assignment.talent_id] = []
+          }
+          talentScheduledDates[assignment.talent_id].push(assignment.assignment_date)
+        }
+      }
+    }
+    
+    // Get group scheduled dates
+    const groupScheduledDates: Record<string, string[]> = {}
+    if (groupIds.length > 0) {
+      const { data: groupDailyAssignments } = await supabase
+        .from('group_daily_assignments')
+        .select('group_id, assignment_date')
+        .eq('project_id', projectId)
+        .in('group_id', groupIds)
+      
+      if (groupDailyAssignments) {
+        for (const assignment of groupDailyAssignments) {
+          if (!groupScheduledDates[assignment.group_id]) {
+            groupScheduledDates[assignment.group_id] = []
+          }
+          groupScheduledDates[assignment.group_id].push(assignment.assignment_date)
+        }
+      }
+    }
+
     // Transform talent assignments
     let transformedTalent = talentResult.data?.map(assignment => ({
       id: assignment.talent.id,
@@ -135,7 +175,7 @@ export async function GET(
         id: assignment.id,
         status: assignment.status,
         assigned_at: assignment.assigned_at,
-        scheduled_dates: assignment.scheduled_dates,
+        scheduled_dates: talentScheduledDates[assignment.talent.id] || [],
         display_order: assignment.display_order || 0
       }
     })) || []
@@ -146,8 +186,8 @@ export async function GET(
       groupName: group.group_name,
       group_name: group.group_name, // backward compatibility
       members: group.members || [],
-      scheduledDates: group.scheduled_dates || [],
-      scheduled_dates: group.scheduled_dates || [], // backward compatibility
+      scheduledDates: groupScheduledDates[group.id] || [],
+      scheduled_dates: groupScheduledDates[group.id] || [], // backward compatibility
       assignedEscortId: group.assigned_escort_id,
       assigned_escort_id: group.assigned_escort_id, // backward compatibility
       displayOrder: group.display_order || 0,

@@ -28,6 +28,7 @@ These migrations are ready to be applied:
 - `022_rename_talent_logistics_coordinator_to_coordinator.sql` - **PENDING** - Rename role from talent_logistics_coordinator to coordinator
 - `coordinator-migration-step1-enums.sql` - **PENDING** - Step 1: Add coordinator enum values
 - `coordinator-migration-step2-data.sql` - **PENDING** - Step 2: Migrate data to coordinator role
+- `027_create_daily_assignment_tables.sql` - **NEW** - Create day-specific assignment tables and triggers for multi-day escort assignments
 
 ### Archived Migrations
 Superseded or obsolete migrations have been moved to the `archive/` directory for historical reference.

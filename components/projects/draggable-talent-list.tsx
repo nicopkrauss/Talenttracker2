@@ -239,7 +239,7 @@ function SortableGroupRow({
           talentId={group.id}
           projectId={projectId}
           projectSchedule={projectSchedule}
-          initialScheduledDates={group.scheduledDates || group.scheduled_dates || []}
+          initialScheduledDates={group.scheduledDates || []}
           isGroup={true}
           disabled={isRosterCompleted}
           onPendingChange={onPendingChange}

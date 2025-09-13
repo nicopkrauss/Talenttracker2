@@ -42,7 +42,6 @@ export async function GET(
         project_id,
         group_name,
         members,
-        scheduled_dates,
         assigned_escort_id,
         point_of_contact_name,
         point_of_contact_phone,
@@ -64,13 +63,22 @@ export async function GET(
       )
     }
 
+    // Get scheduled dates from the unified daily assignments table
+    const { data: dailyAssignments } = await supabase
+      .from('group_daily_assignments')
+      .select('assignment_date')
+      .eq('group_id', groupId)
+      .eq('project_id', projectId)
+
+    const scheduledDates = dailyAssignments?.map(da => da.assignment_date).sort() || []
+
     // Transform the response to match the TalentGroup interface (camelCase)
     const transformedGroup = {
       id: group.id,
       projectId: group.project_id,
       groupName: group.group_name,
       members: group.members,
-      scheduledDates: group.scheduled_dates,
+      scheduledDates: scheduledDates,
       assignedEscortId: group.assigned_escort_id,
       pointOfContactName: group.point_of_contact_name,
       pointOfContactPhone: group.point_of_contact_phone,
@@ -142,21 +150,12 @@ export async function PUT(
 
     const { groupName, members, scheduledDates = [], pointOfContactName, pointOfContactPhone } = validationResult.data
 
-    // Update the talent group
+    // Update the talent group (without scheduled_dates column)
     const { data: updatedGroup, error: updateError } = await supabase
       .from('talent_groups')
       .update({
         group_name: groupName,
         members: members,
-        scheduled_dates: scheduledDates.length > 0 ? scheduledDates.map(date => {
-          // Ensure we maintain the date as-is without timezone conversion
-          if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-            return date // Already in YYYY-MM-DD format
-          }
-          // Convert Date object to local date string
-          const dateObj = new Date(date)
-          return dateObj.toISOString().split('T')[0]
-        }) : [],
         point_of_contact_name: pointOfContactName || null,
         point_of_contact_phone: pointOfContactPhone || null,
         updated_at: new Date().toISOString()
@@ -168,7 +167,6 @@ export async function PUT(
         project_id,
         group_name,
         members,
-        scheduled_dates,
         assigned_escort_id,
         point_of_contact_name,
         point_of_contact_phone,
@@ -201,27 +199,65 @@ export async function PUT(
       )
     }
 
-    // Also update the corresponding talent_project_assignments entry
-    const { error: assignmentUpdateError } = await supabase
-      .from('talent_project_assignments')
-      .update({
-        scheduled_dates: scheduledDates.length > 0 ? scheduledDates.map(date => {
-          // Ensure we maintain the date as-is without timezone conversion
-          if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-            return date // Already in YYYY-MM-DD format
-          }
-          // Convert Date object to local date string
-          const dateObj = new Date(date)
-          return dateObj.toISOString().split('T')[0]
-        }) : []
+    // Update scheduled dates in the unified daily assignments system
+    if (scheduledDates && scheduledDates.length > 0) {
+      // First, clear existing assignments for this group
+      const { error: clearError } = await supabase
+        .from('group_daily_assignments')
+        .delete()
+        .eq('group_id', groupId)
+        .eq('project_id', projectId)
+
+      if (clearError) {
+        console.error('Error clearing existing group assignments:', clearError)
+      }
+
+      // Insert new assignments for each scheduled date
+      const normalizedDates = scheduledDates.map(date => {
+        if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          return date // Already in YYYY-MM-DD format
+        }
+        // Convert Date object to local date string
+        const dateObj = new Date(date)
+        return dateObj.toISOString().split('T')[0]
       })
-      .eq('talent_id', groupId)
+
+      const assignmentRecords = normalizedDates.map(date => ({
+        group_id: groupId,
+        project_id: projectId,
+        assignment_date: date,
+        escort_id: null // No escort assigned initially
+      }))
+
+      const { error: insertError } = await supabase
+        .from('group_daily_assignments')
+        .insert(assignmentRecords)
+
+      if (insertError) {
+        console.error('Error inserting group daily assignments:', insertError)
+        // Don't fail the whole operation, but log the error
+      }
+    } else {
+      // Clear all assignments if no scheduled dates
+      const { error: clearError } = await supabase
+        .from('group_daily_assignments')
+        .delete()
+        .eq('group_id', groupId)
+        .eq('project_id', projectId)
+
+      if (clearError) {
+        console.error('Error clearing group assignments:', clearError)
+      }
+    }
+
+    // Get updated scheduled dates from the unified system
+    const { data: dailyAssignments } = await supabase
+      .from('group_daily_assignments')
+      .select('assignment_date')
+      .eq('group_id', groupId)
       .eq('project_id', projectId)
 
-    if (assignmentUpdateError) {
-      console.error('Error updating talent assignment for group:', assignmentUpdateError)
-      // Don't fail the whole operation, but log the error
-    }
+    const updatedScheduledDates = dailyAssignments?.map(da => da.assignment_date).sort() || []
 
     // Transform the response to match the TalentGroup interface (camelCase)
     const transformedGroup = {
@@ -229,7 +265,7 @@ export async function PUT(
       projectId: updatedGroup.project_id,
       groupName: updatedGroup.group_name,
       members: updatedGroup.members,
-      scheduledDates: updatedGroup.scheduled_dates,
+      scheduledDates: updatedScheduledDates,
       assignedEscortId: updatedGroup.assigned_escort_id,
       pointOfContactName: updatedGroup.point_of_contact_name,
       pointOfContactPhone: updatedGroup.point_of_contact_phone,
@@ -244,6 +280,97 @@ export async function PUT(
 
   } catch (error) {
     console.error('Error in PUT /api/projects/[id]/talent-groups/[groupId]:', error)
+    return NextResponse.json(
+      { 
+        error: 'Internal server error', 
+        code: 'INTERNAL_ERROR',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string; groupId: string } }
+) {
+  try {
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+        },
+      }
+    )
+
+    // Get authenticated user
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized', code: 'UNAUTHORIZED' },
+        { status: 401 }
+      )
+    }
+
+    const { id: projectId, groupId } = await params
+    const body = await request.json()
+
+    // Validate that this is just updating dropdown count
+    const allowedFields = ['escort_dropdown_count']
+    const updateData: any = {}
+    
+    for (const [key, value] of Object.entries(body)) {
+      if (allowedFields.includes(key)) {
+        updateData[key] = value
+      }
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: 'No valid fields to update', code: 'VALIDATION_ERROR' },
+        { status: 400 }
+      )
+    }
+
+    // Add updated timestamp
+    updateData.updated_at = new Date().toISOString()
+
+    // Update the talent group
+    const { data: updatedGroup, error: updateError } = await supabase
+      .from('talent_groups')
+      .update(updateData)
+      .eq('id', groupId)
+      .eq('project_id', projectId)
+      .select('id, escort_dropdown_count')
+      .single()
+
+    if (updateError) {
+      console.error('Error updating talent group dropdown count:', updateError)
+      return NextResponse.json(
+        { error: 'Failed to update dropdown count', code: 'UPDATE_ERROR' },
+        { status: 500 }
+      )
+    }
+
+    if (!updatedGroup) {
+      return NextResponse.json(
+        { error: 'Talent group not found or access denied', code: 'GROUP_NOT_FOUND' },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json({
+      data: updatedGroup
+    })
+
+  } catch (error) {
+    console.error('Error in PATCH /api/projects/[id]/talent-groups/[groupId]:', error)
     return NextResponse.json(
       { 
         error: 'Internal server error', 

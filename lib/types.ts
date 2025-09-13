@@ -882,6 +882,11 @@ export interface TalentEscortPair {
   isGroup: boolean
   escortId?: string
   escortName?: string
+  // Multi-dropdown support for groups
+  escortAssignments?: Array<{
+    escortId?: string
+    escortName?: string
+  }>
 }
 
 // Enhanced Team Assignment with availability dates
@@ -998,7 +1003,150 @@ export const assignmentSchema = z.object({
   }))
 })
 
-// Type inference from new Zod schemas
+// Daily Assignment System Types (Multi-Day Escort Assignments)
+
+// Database record interface for individual talent daily assignments
+export interface TalentDailyAssignment {
+  id: string
+  talent_id: string
+  project_id: string
+  assignment_date: string // ISO date string (YYYY-MM-DD)
+  escort_id: string
+  created_at: string
+  updated_at: string
+  // Joined data for API responses
+  talent?: {
+    id: string
+    first_name: string
+    last_name: string
+  }
+  escort?: {
+    id: string
+    full_name: string
+  }
+  project?: {
+    id: string
+    name: string
+  }
+}
+
+// Database record interface for talent group daily assignments
+export interface GroupDailyAssignment {
+  id: string
+  group_id: string
+  project_id: string
+  assignment_date: string // ISO date string (YYYY-MM-DD)
+  escort_id: string
+  created_at: string
+  updated_at: string
+  // Joined data for API responses
+  group?: {
+    id: string
+    group_name: string
+  }
+  escort?: {
+    id: string
+    full_name: string
+  }
+  project?: {
+    id: string
+    name: string
+  }
+}
+
+// API response interface for daily assignment summary
+export interface DailyAssignmentSummary {
+  date: string // ISO date string (YYYY-MM-DD)
+  talents: Array<{
+    talentId: string
+    talentName: string
+    escorts: Array<{
+      escortId: string
+      escortName: string
+    }>
+  }>
+  groups: Array<{
+    groupId: string
+    groupName: string
+    escorts: Array<{
+      escortId: string
+      escortName: string
+    }>
+  }>
+}
+
+// API request interface for creating/updating daily assignments
+export interface DailyAssignmentRequest {
+  date: string // ISO date string (YYYY-MM-DD)
+  talents: Array<{
+    talentId: string
+    escortIds: string[] // Can be empty to clear assignments
+  }>
+  groups: Array<{
+    groupId: string
+    escortIds: string[] // Can be empty to clear, supports multiple escorts
+  }>
+}
+
+// Validation schemas for daily assignment system
+
+export const talentDailyAssignmentSchema = z.object({
+  talent_id: z.string().uuid("Invalid talent ID"),
+  project_id: z.string().uuid("Invalid project ID"),
+  assignment_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
+  escort_id: z.string().uuid("Invalid escort ID")
+})
+
+export const groupDailyAssignmentSchema = z.object({
+  group_id: z.string().uuid("Invalid group ID"),
+  project_id: z.string().uuid("Invalid project ID"),
+  assignment_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
+  escort_id: z.string().uuid("Invalid escort ID")
+})
+
+export const dailyAssignmentRequestSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
+  talents: z.array(z.object({
+    talentId: z.string().uuid("Invalid talent ID"),
+    escortIds: z.array(z.string().uuid("Invalid escort ID"))
+  })).default([]),
+  groups: z.array(z.object({
+    groupId: z.string().uuid("Invalid group ID"),
+    escortIds: z.array(z.string().uuid("Invalid escort ID"))
+  })).default([])
+}).refine((data) => {
+  // Validate that the date is not in the past (optional business rule)
+  const assignmentDate = new Date(data.date + 'T00:00:00')
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return assignmentDate >= today
+}, {
+  message: "Assignment date cannot be in the past",
+  path: ["date"]
+})
+
+// Bulk assignment operations schema
+export const bulkAssignmentSchema = z.object({
+  projectId: z.string().uuid("Invalid project ID"),
+  assignments: z.array(dailyAssignmentRequestSchema)
+    .min(1, "At least one assignment is required")
+    .max(100, "Cannot process more than 100 assignments at once")
+})
+
+// Clear day assignment schema
+export const clearDayAssignmentSchema = z.object({
+  project_id: z.string().uuid("Invalid project ID"),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)")
+})
+
+// Type inference from daily assignment Zod schemas
+export type TalentDailyAssignmentInput = z.infer<typeof talentDailyAssignmentSchema>
+export type GroupDailyAssignmentInput = z.infer<typeof groupDailyAssignmentSchema>
+export type DailyAssignmentRequestInput = z.infer<typeof dailyAssignmentRequestSchema>
+export type BulkAssignmentInput = z.infer<typeof bulkAssignmentSchema>
+export type ClearDayAssignmentInput = z.infer<typeof clearDayAssignmentSchema>
+
+// Type inference from existing Zod schemas
 export type StaffAvailabilityInput = z.infer<typeof staffAvailabilitySchema>
 export type TalentSchedulingInput = z.infer<typeof talentSchedulingSchema>
 export type GroupMemberInput = z.infer<typeof groupMemberSchema>

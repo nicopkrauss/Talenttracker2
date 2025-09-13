@@ -126,24 +126,57 @@ export async function PUT(
       }
     }
 
-    // Update the talent assignment with scheduled dates
-    const { data: updatedAssignment, error: updateError } = await supabase
-      .from('talent_project_assignments')
-      .update({
-        scheduled_dates: scheduledDates,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', talentAssignment.id)
-      .select('id, talent_id, scheduled_dates, updated_at')
-      .single()
+    // Update scheduling using the unified daily assignment system
+    try {
+      // First, remove all existing scheduling entries for this talent
+      const { error: deleteError } = await supabase
+        .from('talent_daily_assignments')
+        .delete()
+        .eq('project_id', projectId)
+        .eq('talent_id', talentId)
 
-    if (updateError) {
-      console.error('Error updating talent schedule:', updateError)
+      if (deleteError) {
+        throw new Error(`Failed to clear existing schedule: ${deleteError.message}`)
+      }
+
+      // Insert new scheduling entries (with escort_id = null for scheduling without assignment)
+      if (scheduledDates.length > 0) {
+        const schedulingRecords = scheduledDates.map(date => ({
+          talent_id: talentId,
+          project_id: projectId,
+          assignment_date: date,
+          escort_id: null // Scheduled but not assigned
+        }))
+
+        const { error: insertError } = await supabase
+          .from('talent_daily_assignments')
+          .insert(schedulingRecords)
+
+        if (insertError) {
+          throw new Error(`Failed to create schedule entries: ${insertError.message}`)
+        }
+      }
+
+      // Update the talent assignment timestamp
+      const { data: updatedAssignment, error: updateError } = await supabase
+        .from('talent_project_assignments')
+        .update({
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', talentAssignment.id)
+        .select('id, talent_id, updated_at')
+        .single()
+
+      if (updateError) {
+        throw new Error(`Failed to update assignment timestamp: ${updateError.message}`)
+      }
+    } catch (error: any) {
+      console.error('Error updating talent schedule:', error)
       return NextResponse.json(
         { 
           error: 'Failed to update talent schedule',
           code: 'UPDATE_ERROR',
-          details: updateError.message
+          details: error.message
         },
         { status: 500 }
       )
@@ -162,8 +195,8 @@ export async function PUT(
       data: {
         talentId: talentId,
         projectId: projectId,
-        scheduledDates: updatedAssignment.scheduled_dates,
-        updatedAt: updatedAssignment.updated_at
+        scheduledDates: scheduledDates,
+        updatedAt: new Date().toISOString()
       },
       message: 'Talent schedule updated successfully'
     })
