@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { X, AlertTriangle, Calendar, RefreshCw } from 'lucide-react'
+import { AlertTriangle, Calendar, RefreshCw } from 'lucide-react'
 import { DaySegmentedControl } from '../day-segmented-control'
 import { AssignmentList } from '../assignment-list'
 import { 
@@ -105,35 +105,59 @@ export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps
     
     try {
       // Optimistic update: Update UI immediately
+      // Convert null to undefined for TalentEscortPair compatibility
+      const normalizedEscortId = escortId || undefined
+      
       setScheduledTalent(prevTalent => 
         prevTalent.map(talent => 
           talent.talentId === talentId 
             ? { 
                 ...talent, 
-                escortId: escortId,
-                escortName: escortId ? availableEscorts.find(e => e.escortId === escortId)?.escortName : undefined
+                escortId: normalizedEscortId,
+                escortName: normalizedEscortId ? availableEscorts.find(e => e.escortId === normalizedEscortId)?.escortName : undefined
               }
             : talent
         )
       )
       
       // Update available escorts status optimistically
-      if (escortId) {
-        setAvailableEscorts(prevEscorts =>
-          prevEscorts.map(escort =>
-            escort.escortId === escortId
-              ? {
+      setAvailableEscorts(prevEscorts => {
+        return prevEscorts.map(escort => {
+          // If we're assigning this escort, mark them as current_day_assigned
+          if (normalizedEscortId && escort.escortId === normalizedEscortId) {
+            return {
+              ...escort,
+              section: 'current_day_assigned' as const,
+              currentAssignment: {
+                talentName: scheduledTalent.find(t => t.talentId === talentId)?.talentName || 'Unknown',
+                date: selectedDate
+              }
+            }
+          }
+          
+          // If we're removing an escort (escortId is null), check if this escort was previously assigned to this talent
+          if (!normalizedEscortId) {
+            const currentTalent = scheduledTalent.find(t => t.talentId === talentId)
+            if (currentTalent?.escortId === escort.escortId && escort.section === 'current_day_assigned') {
+              // Check if this escort has any other assignments on this date
+              const hasOtherAssignments = scheduledTalent.some(t => 
+                t.talentId !== talentId && t.escortId === escort.escortId
+              )
+              
+              if (!hasOtherAssignments) {
+                // Move escort back to available section
+                return {
                   ...escort,
-                  section: 'current_day_assigned' as const,
-                  currentAssignment: {
-                    talentName: scheduledTalent.find(t => t.talentId === talentId)?.talentName || 'Unknown',
-                    date: selectedDate
-                  }
+                  section: 'available' as const,
+                  currentAssignment: undefined
                 }
-              : escort
-          )
-        )
-      }
+              }
+            }
+          }
+          
+          return escort
+        })
+      })
       
       const dateStr = selectedDate.toISOString().split('T')[0]
       
@@ -142,16 +166,19 @@ export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps
       const isGroup = talent?.isGroup || false
       
       // Use the new daily assignment API format
+      // Convert null to empty array for API compatibility
+      const escortIds = normalizedEscortId ? [normalizedEscortId] : []
+      
       const requestBody = isGroup ? {
         groups: [{
           groupId: talentId,
-          escortIds: escortId ? [escortId] : []
+          escortIds
         }],
         talents: []
       } : {
         talents: [{
           talentId,
-          escortIds: escortId ? [escortId] : []
+          escortIds
         }],
         groups: []
       }
@@ -187,6 +214,9 @@ export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps
     const originalTalent = [...scheduledTalent]
     const originalEscorts = [...availableEscorts]
     
+    // Convert null to undefined for TalentEscortPair compatibility
+    const normalizedEscortId = escortId || undefined
+    
     try {
       // Optimistic update: Update UI immediately
       setScheduledTalent(prevTalent => 
@@ -194,8 +224,8 @@ export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps
           if (talent.talentId === talentId && talent.escortAssignments) {
             const newAssignments = [...talent.escortAssignments]
             newAssignments[dropdownIndex] = {
-              escortId: escortId || undefined,
-              escortName: escortId ? availableEscorts.find(e => e.escortId === escortId)?.escortName || undefined : undefined
+              escortId: normalizedEscortId,
+              escortName: normalizedEscortId ? availableEscorts.find(e => e.escortId === normalizedEscortId)?.escortName || undefined : undefined
             }
             return {
               ...talent,
@@ -207,22 +237,52 @@ export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps
       )
       
       // Update available escorts status optimistically
-      if (escortId) {
-        setAvailableEscorts(prevEscorts =>
-          prevEscorts.map(escort =>
-            escort.escortId === escortId
-              ? {
-                  ...escort,
-                  section: 'current_day_assigned' as const,
-                  currentAssignment: {
-                    talentName: scheduledTalent.find(t => t.talentId === talentId)?.talentName || 'Unknown',
-                    date: selectedDate
+      setAvailableEscorts(prevEscorts => {
+        return prevEscorts.map(escort => {
+          // If we're assigning this escort, mark them as current_day_assigned
+          if (normalizedEscortId && escort.escortId === normalizedEscortId) {
+            return {
+              ...escort,
+              section: 'current_day_assigned' as const,
+              currentAssignment: {
+                talentName: scheduledTalent.find(t => t.talentId === talentId)?.talentName || 'Unknown',
+                date: selectedDate
+              }
+            }
+          }
+          
+          // If we're removing an escort (escortId is null), check if this escort was previously assigned to this talent
+          if (!normalizedEscortId) {
+            const currentTalent = scheduledTalent.find(t => t.talentId === talentId)
+            if (currentTalent?.escortAssignments) {
+              const previousAssignment = currentTalent.escortAssignments[dropdownIndex]
+              if (previousAssignment?.escortId === escort.escortId && escort.section === 'current_day_assigned') {
+                // Check if this escort has any other assignments on this date for this talent or others
+                const hasOtherAssignmentsForThisTalent = currentTalent.escortAssignments.some((assignment, index) => 
+                  index !== dropdownIndex && assignment.escortId === escort.escortId
+                )
+                const hasOtherAssignmentsForOtherTalent = scheduledTalent.some(t => 
+                  t.talentId !== talentId && (
+                    t.escortId === escort.escortId || 
+                    (t.escortAssignments && t.escortAssignments.some(assignment => assignment.escortId === escort.escortId))
+                  )
+                )
+                
+                if (!hasOtherAssignmentsForThisTalent && !hasOtherAssignmentsForOtherTalent) {
+                  // Move escort back to available section
+                  return {
+                    ...escort,
+                    section: 'available' as const,
+                    currentAssignment: undefined
                   }
                 }
-              : escort
-          )
-        )
-      }
+              }
+            }
+          }
+          
+          return escort
+        })
+      })
       
       // Get all current escort IDs for this talent
       const currentTalent = scheduledTalent.find(t => t.talentId === talentId)

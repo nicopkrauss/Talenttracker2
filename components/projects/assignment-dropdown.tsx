@@ -37,8 +37,6 @@ interface AssignmentDropdownProps {
 
 export function AssignmentDropdown({
   talentId,
-  talentName,
-  isGroup,
   currentEscortId,
   currentEscortName,
   availableEscorts,
@@ -53,8 +51,6 @@ export function AssignmentDropdown({
   const [isCurrentDayAssignedOpen, setIsCurrentDayAssignedOpen] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   const [isXHovered, setIsXHovered] = useState(false)
-
-
 
   const dayType = getDayType(selectedDate, projectSchedule)
   const isShowDay = dayType === 'show'
@@ -85,38 +81,7 @@ export function AssignmentDropdown({
     setIsOpen(false)
   }
 
-  const handleButtonClick = (e: React.MouseEvent) => {
-    console.log('🔥 BUTTON CLICK:', { isHovered, currentEscortName, target: e.target })
-    // If we're hovering and there's an escort assigned, don't open dropdown
-    if (isHovered && currentEscortName) {
-      console.log('🔥 PREVENTING DROPDOWN OPEN')
-      e.preventDefault()
-      e.stopPropagation()
-      return
-    }
-    console.log('🔥 ALLOWING DROPDOWN OPEN')
-    // Otherwise, let the dropdown open normally
-  }
 
-  const handleXClick = (e: React.MouseEvent) => {
-    console.log('🔥 X CLICK EVENT:', { isHovered, currentEscortName })
-    if (isHovered) {
-      console.log('🔥 X CLICK - PREVENTING AND CLEARING')
-      e.preventDefault()
-      e.stopPropagation()
-      handleClearAssignment()
-    }
-  }
-
-  const handleXMouseDown = (e: React.MouseEvent) => {
-    console.log('🔥 X MOUSEDOWN EVENT:', { isHovered, currentEscortName })
-    if (isHovered) {
-      console.log('🔥 X MOUSEDOWN - PREVENTING AND CLEARING')
-      e.preventDefault()
-      e.stopPropagation()
-      handleClearAssignment()
-    }
-  }
 
   const getButtonText = () => {
     if (currentEscortName) {
