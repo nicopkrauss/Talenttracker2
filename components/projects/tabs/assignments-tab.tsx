@@ -4,9 +4,10 @@ import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { AlertTriangle, Calendar, RefreshCw } from 'lucide-react'
+import { AlertTriangle, Calendar, RefreshCw, WifiOff } from 'lucide-react'
 import { DaySegmentedControl } from '../day-segmented-control'
 import { AssignmentList } from '../assignment-list'
+import { SchedulingErrorBoundary } from '@/components/error-boundaries/scheduling-error-boundary'
 import { 
   EnhancedProject, 
   TalentEscortPair, 
@@ -14,6 +15,11 @@ import {
   ProjectSchedule
 } from '@/lib/types'
 import { createProjectScheduleFromStrings } from '@/lib/schedule-utils'
+import { useSchedulingValidation } from '@/hooks/use-scheduling-validation'
+import { useErrorRecovery } from '@/hooks/use-error-recovery'
+import { useOptimisticUpdates } from '@/hooks/use-optimistic-updates'
+import { schedulingApiClient, withApiErrorHandling } from '@/lib/api/scheduling-api-client'
+import { SchedulingErrorHandler, SchedulingErrorCode } from '@/lib/error-handling/scheduling-errors'
 
 interface AssignmentsTabProps {
   project: EnhancedProject
@@ -22,11 +28,87 @@ interface AssignmentsTabProps {
 
 export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
-  const [scheduledTalent, setScheduledTalent] = useState<TalentEscortPair[]>([])
   const [availableEscorts, setAvailableEscorts] = useState<EscortAvailabilityStatus[]>([])
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [projectSchedule, setProjectSchedule] = useState<ProjectSchedule | null>(null)
+  const [isOnline, setIsOnline] = useState(true)
+
+  // Enhanced error handling and recovery
+  const { 
+    error, 
+    isRetrying, 
+    canRetry, 
+    setError, 
+    clearError, 
+    executeWithRetry,
+    getUserFriendlyMessage 
+  } = useErrorRecovery({
+    maxAttempts: 3,
+    onRetry: (attempt, error) => {
+      console.log(`Retrying assignment operation (attempt ${attempt}):`, error)
+    }
+  })
+
+  // Optimistic updates for assignments
+  const {
+    data: scheduledTalent,
+    isUpdating,
+    hasPendingUpdates,
+    hasFailedUpdates,
+    pendingUpdateCount,
+    executeOptimisticUpdate,
+    rollbackAllUpdates,
+    refreshData: refreshAssignments
+  } = useOptimisticUpdates<TalentEscortPair[]>([], {
+    maxRetries: 3,
+    fallbackToRefresh: true,
+    onError: (error, update) => {
+      console.error('Optimistic update failed:', error, update)
+      setError(error)
+    },
+    onRollback: (update) => {
+      console.log('Rolled back optimistic update:', update)
+    }
+  })
+
+  // Validation for scheduling operations - always call hook to avoid conditional hook usage
+  const validation = useSchedulingValidation({
+    projectSchedule: projectSchedule || {
+      startDate: new Date(),
+      endDate: new Date(),
+      rehearsalDates: [],
+      showDates: [],
+      allDates: [],
+      isSingleDay: true
+    },
+    validateOnChange: true
+  })
+
+  // Network status monitoring
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
+
+  // Debug effect to track pending updates
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Pending updates state:', {
+        hasPendingUpdates,
+        pendingUpdateCount,
+        isUpdating,
+        hasFailedUpdates
+      })
+    }
+  }, [hasPendingUpdates, pendingUpdateCount, isUpdating, hasFailedUpdates])
 
   // Calculate project schedule from start and end dates
   useEffect(() => {
@@ -41,7 +123,11 @@ export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps
         }
       } catch (err) {
         console.error('Error creating project schedule:', err)
-        setError('Invalid project dates')
+        const error = SchedulingErrorHandler.createError(
+          SchedulingErrorCode.INVALID_DATE_FORMAT,
+          'Invalid project dates'
+        )
+        setError(error)
       }
     }
   }, [project.start_date, project.end_date, selectedDate])
@@ -57,287 +143,273 @@ export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps
     if (!projectSchedule) return
     
     setLoading(true)
-    setError(null)
+    clearError()
     
     try {
       const dateStr = date.toISOString().split('T')[0]
       
-      // Fetch assignments for the specific date
-      const assignmentsResponse = await fetch(
-        `/api/projects/${project.id}/assignments/${dateStr}`
-      )
-      
-      if (!assignmentsResponse.ok) {
-        const errorData = await assignmentsResponse.json().catch(() => ({}))
-        throw new Error(errorData.error || `Failed to fetch assignments (${assignmentsResponse.status})`)
+      // Validate date before making API call (only if we have a valid project schedule)
+      if (projectSchedule && validation && !validation.validateDate(dateStr)) {
+        const validationError = SchedulingErrorHandler.createError(
+          SchedulingErrorCode.INVALID_DATE_FORMAT,
+          'Selected date is invalid'
+        )
+        setError(validationError)
+        return
       }
-      
-      const assignmentsResult = await assignmentsResponse.json()
-      setScheduledTalent(assignmentsResult.data?.assignments || [])
-      
-      // Fetch available escorts for the date
-      const escortsResponse = await fetch(
-        `/api/projects/${project.id}/available-escorts/${dateStr}`
-      )
-      
-      if (!escortsResponse.ok) {
-        const errorData = await escortsResponse.json().catch(() => ({}))
-        throw new Error(errorData.error || `Failed to fetch available escorts (${escortsResponse.status})`)
-      }
-      
-      const escortsResult = await escortsResponse.json()
-      setAvailableEscorts(escortsResult.data?.escorts || [])
+
+      await executeWithRetry(async () => {
+        // Fetch assignments and escorts in parallel with error handling
+        const [assignmentsResult, escortsResult] = await Promise.all([
+          withApiErrorHandling(
+            () => schedulingApiClient.getAssignments(project.id, dateStr),
+            'fetchAssignments'
+          ),
+          withApiErrorHandling(
+            () => schedulingApiClient.getAvailableEscorts(project.id, dateStr),
+            'fetchAvailableEscorts'
+          )
+        ])
+
+        // Update state with fetched data
+        refreshAssignments((assignmentsResult as any)?.assignments || [])
+        setAvailableEscorts((escortsResult as any)?.escorts || [])
+      })
       
     } catch (err: any) {
       console.error('Error fetching assignment data:', err)
-      setError(err.message || 'Failed to load assignment data')
+      // Error is already set by executeWithRetry
     } finally {
       setLoading(false)
     }
   }
 
   const handleAssignmentChange = async (talentId: string, escortId: string | null) => {
-    if (!selectedDate) return
+    if (!selectedDate || !projectSchedule) return
     
-    // Store original state for rollback
-    const originalTalent = [...scheduledTalent]
-    const originalEscorts = [...availableEscorts]
+    const dateStr = selectedDate.toISOString().split('T')[0]
+    const normalizedEscortId = escortId || undefined
     
-    try {
-      // Optimistic update: Update UI immediately
-      // Convert null to undefined for TalentEscortPair compatibility
-      const normalizedEscortId = escortId || undefined
-      
-      setScheduledTalent(prevTalent => 
-        prevTalent.map(talent => 
-          talent.talentId === talentId 
-            ? { 
-                ...talent, 
-                escortId: normalizedEscortId,
-                escortName: normalizedEscortId ? availableEscorts.find(e => e.escortId === normalizedEscortId)?.escortName : undefined
-              }
-            : talent
-        )
+    // Validate assignment before proceeding
+    const talent = scheduledTalent.find(t => t.talentId === talentId)
+    if (!talent) {
+      const error = SchedulingErrorHandler.createError(
+        SchedulingErrorCode.VALIDATION_ERROR,
+        'Talent not found for assignment'
       )
-      
-      // Update available escorts status optimistically
-      setAvailableEscorts(prevEscorts => {
-        return prevEscorts.map(escort => {
-          // If we're assigning this escort, mark them as current_day_assigned
-          if (normalizedEscortId && escort.escortId === normalizedEscortId) {
-            return {
-              ...escort,
-              section: 'current_day_assigned' as const,
-              currentAssignment: {
-                talentName: scheduledTalent.find(t => t.talentId === talentId)?.talentName || 'Unknown',
-                date: selectedDate
-              }
-            }
-          }
-          
-          // If we're removing an escort (escortId is null), check if this escort was previously assigned to this talent
-          if (!normalizedEscortId) {
-            const currentTalent = scheduledTalent.find(t => t.talentId === talentId)
-            if (currentTalent?.escortId === escort.escortId && escort.section === 'current_day_assigned') {
-              // Check if this escort has any other assignments on this date
-              const hasOtherAssignments = scheduledTalent.some(t => 
-                t.talentId !== talentId && t.escortId === escort.escortId
-              )
-              
-              if (!hasOtherAssignments) {
-                // Move escort back to available section
-                return {
-                  ...escort,
-                  section: 'available' as const,
-                  currentAssignment: undefined
-                }
-              }
-            }
-          }
-          
-          return escort
-        })
-      })
-      
-      const dateStr = selectedDate.toISOString().split('T')[0]
-      
-      // Check if this is a group to use the correct API format
-      const talent = scheduledTalent.find(t => t.talentId === talentId)
-      const isGroup = talent?.isGroup || false
-      
-      // Use the new daily assignment API format
-      // Convert null to empty array for API compatibility
-      const escortIds = normalizedEscortId ? [normalizedEscortId] : []
-      
-      const requestBody = isGroup ? {
-        groups: [{
-          groupId: talentId,
-          escortIds
-        }],
-        talents: []
-      } : {
-        talents: [{
-          talentId,
-          escortIds
-        }],
-        groups: []
+      setError(error)
+      return
+    }
+
+    // Check if escort is available (if assigning)
+    if (normalizedEscortId) {
+      const escort = availableEscorts.find(e => e.escortId === normalizedEscortId)
+      if (!escort || escort.section === 'current_day_assigned') {
+        const error = SchedulingErrorHandler.createError(
+          SchedulingErrorCode.ESCORT_NOT_AVAILABLE,
+          'Selected escort is not available for assignment'
+        )
+        setError(error)
+        return
       }
-      
-      const response = await fetch(`/api/projects/${project.id}/assignments/${dateStr}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
+    }
+
+    try {
+      // Create optimistic update data
+      const optimisticTalent = scheduledTalent.map(t => 
+        t.talentId === talentId 
+          ? { 
+              ...t, 
+              escortId: normalizedEscortId,
+              escortName: normalizedEscortId ? availableEscorts.find(e => e.escortId === normalizedEscortId)?.escortName : undefined
+            }
+          : t
+      )
+
+      // Execute optimistic update with API call
+      await executeOptimisticUpdate(
+        optimisticTalent,
+        async () => {
+          const escortIds = normalizedEscortId ? [normalizedEscortId] : []
+          const requestBody = talent.isGroup ? {
+            groups: [{ groupId: talentId, escortIds }],
+            talents: []
+          } : {
+            talents: [{ talentId, escortIds }],
+            groups: []
+          }
+
+          return await withApiErrorHandling(
+            () => schedulingApiClient.updateAssignments(project.id, dateStr, requestBody),
+            'updateAssignment'
+          )
         },
-        body: JSON.stringify(requestBody)
-      })
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || 'Failed to update assignment')
-      }
+        `assign_escort_${talentId}`,
+        {
+          onSuccess: () => {
+            // Update available escorts status
+            setAvailableEscorts(prevEscorts => {
+              return prevEscorts.map(escort => {
+                if (normalizedEscortId && escort.escortId === normalizedEscortId) {
+                  return {
+                    ...escort,
+                    section: 'current_day_assigned' as const,
+                    currentAssignment: {
+                      talentName: talent.talentName,
+                      date: selectedDate
+                    }
+                  }
+                }
+                
+                if (!normalizedEscortId && escort.escortId === talent.escortId && escort.section === 'current_day_assigned') {
+                  const hasOtherAssignments = optimisticTalent.some(t => 
+                    t.talentId !== talentId && t.escortId === escort.escortId
+                  )
+                  
+                  if (!hasOtherAssignments) {
+                    return {
+                      ...escort,
+                      section: 'available' as const,
+                      currentAssignment: undefined
+                    }
+                  }
+                }
+                
+                return escort
+              })
+            })
+          }
+        }
+      )
       
     } catch (err: any) {
       console.error('Error updating assignment:', err)
-      
-      // Rollback optimistic updates on error
-      setScheduledTalent(originalTalent)
-      setAvailableEscorts(originalEscorts)
-      
-      setError(err.message || 'Failed to update assignment')
+      // Error handling is managed by optimistic updates hook
     }
   }
 
   const handleMultiDropdownChange = async (talentId: string, dropdownIndex: number, escortId: string | null) => {
     if (!selectedDate) return
     
-    // Store original state for rollback
-    const originalTalent = [...scheduledTalent]
-    const originalEscorts = [...availableEscorts]
-    
     // Convert null to undefined for TalentEscortPair compatibility
     const normalizedEscortId = escortId || undefined
     
     try {
-      // Optimistic update: Update UI immediately
-      setScheduledTalent(prevTalent => 
-        prevTalent.map(talent => {
-          if (talent.talentId === talentId && talent.escortAssignments) {
-            const newAssignments = [...talent.escortAssignments]
-            newAssignments[dropdownIndex] = {
-              escortId: normalizedEscortId,
-              escortName: normalizedEscortId ? availableEscorts.find(e => e.escortId === normalizedEscortId)?.escortName || undefined : undefined
-            }
-            return {
-              ...talent,
-              escortAssignments: newAssignments
-            }
+      // Create optimistic update data
+      const optimisticTalent = scheduledTalent.map(talent => {
+        if (talent.talentId === talentId && talent.escortAssignments) {
+          const newAssignments = [...talent.escortAssignments]
+          newAssignments[dropdownIndex] = {
+            escortId: normalizedEscortId,
+            escortName: normalizedEscortId ? availableEscorts.find(e => e.escortId === normalizedEscortId)?.escortName || undefined : undefined
           }
-          return talent
-        })
-      )
-      
-      // Update available escorts status optimistically
-      setAvailableEscorts(prevEscorts => {
-        return prevEscorts.map(escort => {
-          // If we're assigning this escort, mark them as current_day_assigned
-          if (normalizedEscortId && escort.escortId === normalizedEscortId) {
-            return {
-              ...escort,
-              section: 'current_day_assigned' as const,
-              currentAssignment: {
-                talentName: scheduledTalent.find(t => t.talentId === talentId)?.talentName || 'Unknown',
-                date: selectedDate
-              }
-            }
+          return {
+            ...talent,
+            escortAssignments: newAssignments
           }
-          
-          // If we're removing an escort (escortId is null), check if this escort was previously assigned to this talent
-          if (!normalizedEscortId) {
-            const currentTalent = scheduledTalent.find(t => t.talentId === talentId)
-            if (currentTalent?.escortAssignments) {
-              const previousAssignment = currentTalent.escortAssignments[dropdownIndex]
-              if (previousAssignment?.escortId === escort.escortId && escort.section === 'current_day_assigned') {
-                // Check if this escort has any other assignments on this date for this talent or others
-                const hasOtherAssignmentsForThisTalent = currentTalent.escortAssignments.some((assignment, index) => 
-                  index !== dropdownIndex && assignment.escortId === escort.escortId
-                )
-                const hasOtherAssignmentsForOtherTalent = scheduledTalent.some(t => 
-                  t.talentId !== talentId && (
-                    t.escortId === escort.escortId || 
-                    (t.escortAssignments && t.escortAssignments.some(assignment => assignment.escortId === escort.escortId))
-                  )
-                )
-                
-                if (!hasOtherAssignmentsForThisTalent && !hasOtherAssignmentsForOtherTalent) {
-                  // Move escort back to available section
-                  return {
-                    ...escort,
-                    section: 'available' as const,
-                    currentAssignment: undefined
-                  }
-                }
-              }
-            }
-          }
-          
-          return escort
-        })
+        }
+        return talent
       })
       
-      // Get all current escort IDs for this talent
-      const currentTalent = scheduledTalent.find(t => t.talentId === talentId)
-      if (currentTalent?.escortAssignments) {
-        const updatedAssignments = [...currentTalent.escortAssignments]
-        updatedAssignments[dropdownIndex] = {
-          escortId: escortId || undefined,
-          escortName: escortId ? availableEscorts.find(e => e.escortId === escortId)?.escortName || undefined : undefined
+      // Execute optimistic update with API call
+      await executeOptimisticUpdate(
+        optimisticTalent,
+        async () => {
+          // Get all current escort IDs for this talent
+          const currentTalent = scheduledTalent.find(t => t.talentId === talentId)
+          if (currentTalent?.escortAssignments) {
+            const updatedAssignments = [...currentTalent.escortAssignments]
+            updatedAssignments[dropdownIndex] = {
+              escortId: escortId || undefined,
+              escortName: escortId ? availableEscorts.find(e => e.escortId === escortId)?.escortName || undefined : undefined
+            }
+            
+            const escortIds = updatedAssignments
+              .map(assignment => assignment.escortId)
+              .filter(id => id !== undefined) as string[]
+            
+            const dateStr = selectedDate.toISOString().split('T')[0]
+            
+            // Check if this is a group to use the correct API format
+            const isGroup = currentTalent.isGroup || false
+            
+            const requestBody = isGroup ? {
+              groups: [{
+                groupId: talentId,
+                escortIds
+              }],
+              talents: []
+            } : {
+              talents: [{
+                talentId,
+                escortIds
+              }],
+              groups: []
+            }
+            
+            return await withApiErrorHandling(
+              () => schedulingApiClient.updateAssignments(project.id, dateStr, requestBody),
+              'updateMultiDropdownAssignment'
+            )
+          }
+        },
+        `multi_dropdown_${talentId}_${dropdownIndex}`,
+        {
+          onSuccess: () => {
+            // Update available escorts status
+            setAvailableEscorts(prevEscorts => {
+              return prevEscorts.map(escort => {
+                // If we're assigning this escort, mark them as current_day_assigned
+                if (normalizedEscortId && escort.escortId === normalizedEscortId) {
+                  return {
+                    ...escort,
+                    section: 'current_day_assigned' as const,
+                    currentAssignment: {
+                      talentName: scheduledTalent.find(t => t.talentId === talentId)?.talentName || 'Unknown',
+                      date: selectedDate
+                    }
+                  }
+                }
+                
+                // If we're removing an escort (escortId is null), check if this escort was previously assigned to this talent
+                if (!normalizedEscortId) {
+                  const currentTalent = scheduledTalent.find(t => t.talentId === talentId)
+                  if (currentTalent?.escortAssignments) {
+                    const previousAssignment = currentTalent.escortAssignments[dropdownIndex]
+                    if (previousAssignment?.escortId === escort.escortId && escort.section === 'current_day_assigned') {
+                      // Check if this escort has any other assignments on this date for this talent or others
+                      const hasOtherAssignmentsForThisTalent = currentTalent.escortAssignments.some((assignment, index) => 
+                        index !== dropdownIndex && assignment.escortId === escort.escortId
+                      )
+                      const hasOtherAssignmentsForOtherTalent = optimisticTalent.some(t => 
+                        t.talentId !== talentId && (
+                          t.escortId === escort.escortId || 
+                          (t.escortAssignments && t.escortAssignments.some(assignment => assignment.escortId === escort.escortId))
+                        )
+                      )
+                      
+                      if (!hasOtherAssignmentsForThisTalent && !hasOtherAssignmentsForOtherTalent) {
+                        // Move escort back to available section
+                        return {
+                          ...escort,
+                          section: 'available' as const,
+                          currentAssignment: undefined
+                        }
+                      }
+                    }
+                  }
+                }
+                
+                return escort
+              })
+            })
+          }
         }
-        
-        const escortIds = updatedAssignments
-          .map(assignment => assignment.escortId)
-          .filter(id => id !== undefined) as string[]
-        
-        const dateStr = selectedDate.toISOString().split('T')[0]
-        
-        // Check if this is a group to use the correct API format
-        const isGroup = currentTalent.isGroup || false
-        
-        const requestBody = isGroup ? {
-          groups: [{
-            groupId: talentId,
-            escortIds
-          }],
-          talents: []
-        } : {
-          talents: [{
-            talentId,
-            escortIds
-          }],
-          groups: []
-        }
-        
-        const response = await fetch(`/api/projects/${project.id}/assignments/${dateStr}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(requestBody)
-        })
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || 'Failed to update multi-dropdown assignment')
-        }
-      }
+      )
       
     } catch (err: any) {
       console.error('Error updating multi-dropdown assignment:', err)
-      
-      // Rollback optimistic updates on error
-      setScheduledTalent(originalTalent)
-      setAvailableEscorts(originalEscorts)
-      
-      setError(err.message || 'Failed to update multi-dropdown assignment')
+      // Error handling is managed by optimistic updates hook
     }
   }
 
@@ -345,33 +417,33 @@ export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps
     if (!selectedDate) return
     
     try {
-      // Optimistic update: Add a new empty dropdown
-      setScheduledTalent(prevTalent => 
-        prevTalent.map(talent => {
-          if (talent.talentId === talentId && talent.escortAssignments) {
-            return {
-              ...talent,
-              escortAssignments: [
-                ...talent.escortAssignments,
-                { escortId: undefined, escortName: undefined }
-              ]
-            }
+      // Create optimistic update data: Add a new empty dropdown
+      const optimisticTalent = scheduledTalent.map(talent => {
+        if (talent.talentId === talentId && talent.escortAssignments) {
+          return {
+            ...talent,
+            escortAssignments: [
+              ...talent.escortAssignments,
+              { escortId: undefined, escortName: undefined }
+            ]
           }
-          return talent
-        })
+        }
+        return talent
+      })
+
+      // Execute optimistic update (no API call needed for adding empty dropdown)
+      await executeOptimisticUpdate(
+        optimisticTalent,
+        async () => {
+          // No API call needed - this is just UI state
+          return Promise.resolve()
+        },
+        `add_dropdown_${talentId}`
       )
-      
-      // No need to update database - the new system doesn't track dropdown counts
-      // The dropdown count is now purely a UI state managed by the escort assignments
       
     } catch (err: any) {
       console.error('Error adding dropdown:', err)
-      setError(err.message || 'Failed to add dropdown')
-      
-      // Refresh the data to get the correct state
-      if (selectedDate) {
-        fetchAssignmentsForDate(selectedDate)
-      }
+      // Error handling is managed by optimistic updates hook
     }
   }
 
@@ -384,75 +456,65 @@ export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps
       return // Can't remove when only one dropdown remains
     }
     
-    // Store original state for rollback
-    const originalTalent = [...scheduledTalent]
-    
     try {
-      // Optimistic update: Remove the dropdown
-      setScheduledTalent(prevTalent => 
-        prevTalent.map(talent => {
-          if (talent.talentId === talentId && talent.escortAssignments) {
-            const newAssignments = [...talent.escortAssignments]
-            newAssignments.splice(dropdownIndex, 1)
-            return {
-              ...talent,
-              escortAssignments: newAssignments
-            }
+      // Create optimistic update data: Remove the dropdown
+      const optimisticTalent = scheduledTalent.map(talent => {
+        if (talent.talentId === talentId && talent.escortAssignments) {
+          const newAssignments = [...talent.escortAssignments]
+          newAssignments.splice(dropdownIndex, 1)
+          return {
+            ...talent,
+            escortAssignments: newAssignments
           }
-          return talent
-        })
+        }
+        return talent
+      })
+
+      // Execute optimistic update with API call
+      await executeOptimisticUpdate(
+        optimisticTalent,
+        async () => {
+          // Update escort assignments in the database using the new API
+          const currentTalent = scheduledTalent.find(t => t.talentId === talentId)
+          if (currentTalent?.escortAssignments) {
+            const updatedAssignments = [...currentTalent.escortAssignments]
+            updatedAssignments.splice(dropdownIndex, 1)
+            
+            const escortIds = updatedAssignments
+              .map(assignment => assignment.escortId)
+              .filter(id => id !== undefined) as string[]
+            
+            const dateStr = selectedDate.toISOString().split('T')[0]
+            
+            // Check if this is a group to use the correct API format
+            const isGroup = currentTalent.isGroup || false
+            
+            const requestBody = isGroup ? {
+              groups: [{
+                groupId: talentId,
+                escortIds
+              }],
+              talents: []
+            } : {
+              talents: [{
+                talentId,
+                escortIds
+              }],
+              groups: []
+            }
+            
+            return await withApiErrorHandling(
+              () => schedulingApiClient.updateAssignments(project.id, dateStr, requestBody),
+              'removeDropdownAssignment'
+            )
+          }
+        },
+        `remove_dropdown_${talentId}_${dropdownIndex}`
       )
-      
-      // Update escort assignments in the database using the new API
-      const currentTalent = scheduledTalent.find(t => t.talentId === talentId)
-      if (currentTalent?.escortAssignments) {
-        const updatedAssignments = [...currentTalent.escortAssignments]
-        updatedAssignments.splice(dropdownIndex, 1)
-        
-        const escortIds = updatedAssignments
-          .map(assignment => assignment.escortId)
-          .filter(id => id !== undefined) as string[]
-        
-        const dateStr = selectedDate.toISOString().split('T')[0]
-        
-        // Check if this is a group to use the correct API format
-        const isGroup = currentTalent.isGroup || false
-        
-        const requestBody = isGroup ? {
-          groups: [{
-            groupId: talentId,
-            escortIds
-          }],
-          talents: []
-        } : {
-          talents: [{
-            talentId,
-            escortIds
-          }],
-          groups: []
-        }
-        
-        const response = await fetch(`/api/projects/${project.id}/assignments/${dateStr}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(requestBody)
-        })
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || 'Failed to update escort assignments')
-        }
-      }
       
     } catch (err: any) {
       console.error('Error removing dropdown:', err)
-      
-      // Rollback optimistic updates on error
-      setScheduledTalent(originalTalent)
-      
-      setError(err.message || 'Failed to remove dropdown')
+      // Error handling is managed by optimistic updates hook
     }
   }
 
@@ -461,54 +523,44 @@ export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps
       return
     }
     
-    // Store original state for rollback
-    const originalTalent = [...scheduledTalent]
-    const originalEscorts = [...availableEscorts]
+    const dateStr = date.toISOString().split('T')[0]
     
     try {
-      // Optimistic update: Clear all assignments immediately
-      setScheduledTalent(prevTalent => 
-        prevTalent.map(talent => ({
-          ...talent,
-          escortId: undefined,
-          escortName: undefined,
-          escortAssignments: talent.isGroup ? [{ escortId: undefined, escortName: undefined }] : undefined
-        }))
-      )
-      
-      // Reset all escorts to available status optimistically
-      setAvailableEscorts(prevEscorts =>
-        prevEscorts.map(escort => ({
-          ...escort,
-          section: 'available' as const,
-          currentAssignment: undefined
-        }))
-      )
-      
-      const dateStr = date.toISOString().split('T')[0]
-      
-      const response = await fetch(`/api/projects/${project.id}/assignments/clear-day`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json'
+      // Create optimistic cleared state
+      const clearedTalent = scheduledTalent.map(talent => ({
+        ...talent,
+        escortId: undefined,
+        escortName: undefined,
+        escortAssignments: talent.isGroup ? [{ escortId: undefined, escortName: undefined }] : undefined
+      }))
+
+      // Execute optimistic update with API call
+      await executeOptimisticUpdate(
+        clearedTalent,
+        async () => {
+          return await withApiErrorHandling(
+            () => schedulingApiClient.clearDayAssignments(project.id, dateStr),
+            'clearDayAssignments'
+          )
         },
-        body: JSON.stringify({ date: dateStr })
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to clear day assignments')
-      }
-      
-      // Success: Optimistic update was correct, no additional action needed
+        `clear_day_${dateStr}`,
+        {
+          onSuccess: () => {
+            // Reset all escorts to available status
+            setAvailableEscorts(prevEscorts =>
+              prevEscorts.map(escort => ({
+                ...escort,
+                section: 'available' as const,
+                currentAssignment: undefined
+              }))
+            )
+          }
+        }
+      )
       
     } catch (err: any) {
       console.error('Error clearing day assignments:', err)
-      
-      // Rollback optimistic updates on error
-      setScheduledTalent(originalTalent)
-      setAvailableEscorts(originalEscorts)
-      
-      setError(err.message || 'Failed to clear day assignments')
+      // Error handling is managed by optimistic updates hook
     }
   }
 
@@ -540,18 +592,72 @@ export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps
   }
 
   return (
-    <div className="space-y-6">
-      {/* Error Alert */}
-      {error && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+    <SchedulingErrorBoundary
+      onError={(error, errorInfo) => {
+        console.error('Assignments tab error boundary triggered:', error, errorInfo)
+      }}
+    >
+      <div className="space-y-6">
+        {/* Network Status Alert */}
+        {!isOnline && (
+          <Alert variant="destructive">
+            <WifiOff className="h-4 w-4" />
+            <AlertDescription>
+              You are currently offline. Changes will be saved when your connection is restored.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Error Alert with Enhanced Messaging */}
+        {error && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="space-y-2">
+              <div>{getUserFriendlyMessage()}</div>
+              {canRetry && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => selectedDate && fetchAssignmentsForDate(selectedDate)}
+                  disabled={isRetrying}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isRetrying ? 'animate-spin' : ''}`} />
+                  {isRetrying ? 'Retrying...' : 'Retry'}
+                </Button>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Pending Updates Alert - Only show when actively updating or have failed updates (not during initial loading) */}
+        {!loading && (isUpdating || hasFailedUpdates) && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="flex items-center justify-between">
+              <span>
+                {isUpdating 
+                  ? 'Saving changes...' 
+                  : hasFailedUpdates 
+                    ? 'Some changes failed to save'
+                    : 'Processing changes...'
+                }
+              </span>
+              {hasFailedUpdates && !isUpdating && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={rollbackAllUpdates}
+                >
+                  Cancel Changes
+                </Button>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
 
       {/* Day Selection Header */}
       <Card>
-        <CardHeader>
+        <CardHeader className="gap-4">
           <div className="flex items-center justify-between gap-4">
             <CardTitle className="flex items-center gap-2 flex-shrink-0">
               <Calendar className="h-5 w-5" />
@@ -572,17 +678,17 @@ export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps
                 variant="outline"
                 size="sm"
                 onClick={handleRefresh}
-                disabled={loading}
+                disabled={loading || isUpdating}
               >
-                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
+                <RefreshCw className={`h-4 w-4 mr-2 ${(loading || isUpdating) ? 'animate-spin' : ''}`} />
+                {isUpdating ? 'Updating...' : 'Refresh'}
               </Button>
             </div>
           </div>
 
           {/* Assignment Progress Row */}
           {selectedDate && scheduledTalent.length > 0 && (
-            <div className="flex items-center justify-between pt-4 border-t border-border mt-4">
+            <div className="flex items-center justify-between pt-3 border-t border-border">
               <div className="text-sm text-muted-foreground">
                 <span className="font-medium">
                   {scheduledTalent.length}
@@ -590,7 +696,7 @@ export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps
               </div>
               
               <div className="flex items-center gap-4">
-                <div className="w-64 bg-muted rounded-full h-2">
+                <div className="w-96 bg-muted rounded-full h-2">
                   <div 
                     className="bg-primary h-2 rounded-full transition-all duration-300"
                     style={{
@@ -612,16 +718,16 @@ export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps
           )}
         </CardHeader>
         
-        <CardContent>
-          {projectSchedule.isSingleDay && (
+        {projectSchedule.isSingleDay && (
+          <CardContent>
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
                 This is a single-day project (show day only). All talent scheduled will be treated as show day assignments.
               </AlertDescription>
             </Alert>
-          )}
-        </CardContent>
+          </CardContent>
+        )}
       </Card>
 
       {/* Assignment List */}
@@ -639,6 +745,7 @@ export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps
           loading={loading}
         />
       )}
-    </div>
+      </div>
+    </SchedulingErrorBoundary>
   )
 }

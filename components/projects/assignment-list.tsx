@@ -83,9 +83,6 @@ export function AssignmentList({
             )}
           </CardTitle>
           <div className="flex items-center gap-3">
-            <div className="text-sm text-muted-foreground">
-              {scheduledTalent.length} {scheduledTalent.length === 1 ? 'talent' : 'talent'} scheduled
-            </div>
             {scheduledTalent.length > 0 && scheduledTalent.some(t => t.escortId) && (
               <Button
                 variant="outline"

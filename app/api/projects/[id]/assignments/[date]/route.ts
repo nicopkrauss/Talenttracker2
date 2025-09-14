@@ -2,7 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
-import { TalentEscortPair, dailyAssignmentRequestSchema, DailyAssignmentRequestInput } from '@/lib/types'
+import { TalentEscortPair } from '@/lib/types'
+import { 
+  createAssignmentValidationSchema,
+  validateScheduleConsistency,
+  validateAvailabilityConsistency
+} from '@/lib/validation/scheduling-validation'
+import { 
+  SchedulingErrorHandler, 
+  SchedulingErrorCode 
+} from '@/lib/error-handling/scheduling-errors'
+import { createProjectScheduleFromStrings } from '@/lib/schedule-utils'
 
 export async function GET(
   _request: NextRequest,
@@ -33,16 +43,17 @@ export async function GET(
 
     const { id: projectId, date: dateStr } = await params
 
-    // Validate date format
+    // Enhanced date validation
     const date = new Date(dateStr + 'T00:00:00')
     if (isNaN(date.getTime())) {
-      return NextResponse.json(
-        { error: 'Invalid date format', code: 'INVALID_DATE' },
-        { status: 400 }
+      const error = SchedulingErrorHandler.createError(
+        SchedulingErrorCode.INVALID_DATE_FORMAT,
+        'Invalid date format. Expected YYYY-MM-DD format.'
       )
+      return NextResponse.json(error, { status: 400 })
     }
 
-    // Check project access
+    // Check project access with enhanced error handling
     const { data: project, error: projectError } = await supabase
       .from('projects')
       .select('id, start_date, end_date')
@@ -50,21 +61,32 @@ export async function GET(
       .single()
 
     if (projectError || !project) {
-      return NextResponse.json(
-        { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
-        { status: 404 }
+      const error = SchedulingErrorHandler.createError(
+        SchedulingErrorCode.PROJECT_NOT_FOUND,
+        'Project not found or access denied'
       )
+      return NextResponse.json(error, { status: 404 })
     }
 
-    // Validate date is within project range
-    const projectStart = new Date(project.start_date + 'T00:00:00')
-    const projectEnd = new Date(project.end_date + 'T00:00:00')
-    
-    if (date < projectStart || date > projectEnd) {
-      return NextResponse.json(
-        { error: 'Date is outside project range', code: 'DATE_OUT_OF_RANGE' },
-        { status: 400 }
+    // Create project schedule for validation
+    let projectSchedule
+    try {
+      projectSchedule = createProjectScheduleFromStrings(project.start_date, project.end_date)
+    } catch (err) {
+      const error = SchedulingErrorHandler.createError(
+        SchedulingErrorCode.INVALID_DATE_FORMAT,
+        'Project has invalid date configuration'
       )
+      return NextResponse.json(error, { status: 400 })
+    }
+
+    // Validate date is within project range using schedule
+    if (date < projectSchedule.startDate || date > projectSchedule.endDate) {
+      const error = SchedulingErrorHandler.createError(
+        SchedulingErrorCode.DATE_OUT_OF_RANGE,
+        `Date must be between ${projectSchedule.startDate.toISOString().split('T')[0]} and ${projectSchedule.endDate.toISOString().split('T')[0]}`
+      )
+      return NextResponse.json(error, { status: 400 })
     }
 
     // Get all talent scheduled for this date (from daily assignments table - unified system)
@@ -105,10 +127,12 @@ export async function GET(
 
     if (talentError) {
       console.error('Error fetching talent daily assignments:', talentError)
-      return NextResponse.json(
-        { error: 'Failed to fetch talent assignments', code: 'DATABASE_ERROR' },
-        { status: 500 }
+      const error = SchedulingErrorHandler.createError(
+        SchedulingErrorCode.DATABASE_ERROR,
+        'Failed to fetch talent assignments from database'
       )
+      SchedulingErrorHandler.logError(error, { projectId, date: dateStr, originalError: talentError })
+      return NextResponse.json(error, { status: 500 })
     }
 
     // Get display orders for talent
@@ -168,10 +192,12 @@ export async function GET(
 
     if (groupsError) {
       console.error('Error fetching group daily assignments:', groupsError)
-      return NextResponse.json(
-        { error: 'Failed to fetch group assignments', code: 'DATABASE_ERROR' },
-        { status: 500 }
+      const error = SchedulingErrorHandler.createError(
+        SchedulingErrorCode.DATABASE_ERROR,
+        'Failed to fetch group assignments from database'
       )
+      SchedulingErrorHandler.logError(error, { projectId, date: dateStr, originalError: groupsError })
+      return NextResponse.json(error, { status: 500 })
     }
 
     // Process assignments from unified daily assignment tables
@@ -273,14 +299,15 @@ export async function GET(
 
   } catch (error) {
     console.error('Error in GET /api/projects/[id]/assignments/[date]:', error)
-    return NextResponse.json(
-      { 
-        error: 'Internal server error', 
-        code: 'INTERNAL_ERROR',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
+    const schedulingError = SchedulingErrorHandler.createError(
+      SchedulingErrorCode.INTERNAL_ERROR,
+      'An unexpected error occurred while fetching assignments'
     )
+    SchedulingErrorHandler.logError(schedulingError, { 
+      endpoint: 'GET /assignments/[date]',
+      originalError: error 
+    })
+    return NextResponse.json(schedulingError, { status: 500 })
   }
 }
 
@@ -313,45 +340,17 @@ export async function POST(
 
     const { id: projectId, date: dateStr } = await params
 
-    // Validate date format
+    // Enhanced date validation
     const date = new Date(dateStr + 'T00:00:00')
     if (isNaN(date.getTime())) {
-      return NextResponse.json(
-        { error: 'Invalid date format', code: 'INVALID_DATE' },
-        { status: 400 }
+      const error = SchedulingErrorHandler.createError(
+        SchedulingErrorCode.INVALID_DATE_FORMAT,
+        'Invalid date format. Expected YYYY-MM-DD format.'
       )
+      return NextResponse.json(error, { status: 400 })
     }
 
-    // Parse and validate request body
-    const body = await request.json()
-    
-    // Create a validation schema without the date restriction
-    const requestSchema = z.object({
-      talents: z.array(z.object({
-        talentId: z.string().uuid("Invalid talent ID"),
-        escortIds: z.array(z.string().uuid("Invalid escort ID"))
-      })).default([]),
-      groups: z.array(z.object({
-        groupId: z.string().uuid("Invalid group ID"),
-        escortIds: z.array(z.string().uuid("Invalid escort ID"))
-      })).default([])
-    })
-    
-    const validationResult = requestSchema.safeParse(body)
-    if (!validationResult.success) {
-      return NextResponse.json(
-        { 
-          error: 'Validation failed',
-          code: 'VALIDATION_ERROR',
-          details: validationResult.error.flatten().fieldErrors
-        },
-        { status: 400 }
-      )
-    }
-
-    const { talents, groups } = validationResult.data
-
-    // Check project access and validate date range
+    // Check project access first
     const { data: project, error: projectError } = await supabase
       .from('projects')
       .select('id, start_date, end_date')
@@ -359,22 +358,57 @@ export async function POST(
       .single()
 
     if (projectError || !project) {
-      return NextResponse.json(
-        { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
-        { status: 404 }
+      const error = SchedulingErrorHandler.createError(
+        SchedulingErrorCode.PROJECT_NOT_FOUND,
+        'Project not found or access denied'
       )
+      return NextResponse.json(error, { status: 404 })
     }
 
-    // Validate date is within project range
-    const projectStart = new Date(project.start_date + 'T00:00:00')
-    const projectEnd = new Date(project.end_date + 'T00:00:00')
-    
-    if (date < projectStart || date > projectEnd) {
-      return NextResponse.json(
-        { error: 'Date is outside project range', code: 'DATE_OUT_OF_RANGE' },
-        { status: 400 }
+    // Create project schedule for validation
+    let projectSchedule
+    try {
+      projectSchedule = createProjectScheduleFromStrings(project.start_date, project.end_date)
+    } catch (err) {
+      const error = SchedulingErrorHandler.createError(
+        SchedulingErrorCode.INVALID_DATE_FORMAT,
+        'Project has invalid date configuration'
       )
+      return NextResponse.json(error, { status: 400 })
     }
+
+    // Parse and validate request body with enhanced validation
+    let body
+    try {
+      body = await request.json()
+    } catch (err) {
+      const error = SchedulingErrorHandler.createError(
+        SchedulingErrorCode.VALIDATION_ERROR,
+        'Invalid JSON in request body'
+      )
+      return NextResponse.json(error, { status: 400 })
+    }
+    
+    // Use enhanced assignment validation schema
+    const assignmentSchema = createAssignmentValidationSchema(projectSchedule)
+    const assignmentData = {
+      date: dateStr,
+      talents: body.talents || [],
+      groups: body.groups || []
+    }
+    
+    const validationResult = assignmentSchema.safeParse(assignmentData)
+    if (!validationResult.success) {
+      const error = SchedulingErrorHandler.createError(
+        SchedulingErrorCode.VALIDATION_ERROR,
+        'Assignment validation failed',
+        undefined,
+        { validationErrors: validationResult.error.flatten().fieldErrors }
+      )
+      return NextResponse.json(error, { status: 400 })
+    }
+
+    const { talents, groups } = validationResult.data
 
     // Validate that all talents exist and are assigned to this project
     if (talents.length > 0) {
@@ -396,14 +430,13 @@ export async function POST(
       const invalidTalentIds = talentIds.filter(id => !validTalentIds.has(id))
       
       if (invalidTalentIds.length > 0) {
-        return NextResponse.json(
-          { 
-            error: 'Some talents are not assigned to this project', 
-            code: 'TALENT_NOT_ASSIGNED',
-            details: { invalidTalentIds }
-          },
-          { status: 400 }
+        const error = SchedulingErrorHandler.createError(
+          SchedulingErrorCode.TALENT_NOT_SCHEDULED,
+          'Some talents are not assigned to this project',
+          'talents',
+          { invalidTalentIds }
         )
+        return NextResponse.json(error, { status: 400 })
       }
     }
 
@@ -427,14 +460,13 @@ export async function POST(
       const invalidGroupIds = groupIds.filter(id => !validGroupIds.has(id))
       
       if (invalidGroupIds.length > 0) {
-        return NextResponse.json(
-          { 
-            error: 'Some groups do not belong to this project', 
-            code: 'GROUP_NOT_FOUND',
-            details: { invalidGroupIds }
-          },
-          { status: 400 }
+        const error = SchedulingErrorHandler.createError(
+          SchedulingErrorCode.VALIDATION_ERROR,
+          'Some groups do not belong to this project',
+          'groups',
+          { invalidGroupIds }
         )
+        return NextResponse.json(error, { status: 400 })
       }
     }
 
@@ -463,14 +495,13 @@ export async function POST(
       const invalidEscortIds = escortIdsArray.filter(id => !validEscortIds.has(id))
       
       if (invalidEscortIds.length > 0) {
-        return NextResponse.json(
-          { 
-            error: 'Some escorts are not assigned to this project', 
-            code: 'ESCORT_NOT_ASSIGNED',
-            details: { invalidEscortIds }
-          },
-          { status: 400 }
+        const error = SchedulingErrorHandler.createError(
+          SchedulingErrorCode.ESCORT_NOT_AVAILABLE,
+          'Some escorts are not assigned to this project',
+          'escorts',
+          { invalidEscortIds }
         )
+        return NextResponse.json(error, { status: 400 })
       }
     }
 

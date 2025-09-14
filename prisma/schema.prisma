@@ -409,6 +409,8 @@ model profiles {
   timecards_timecards_approved_byToprofiles                                   timecards[]                  @relation("timecards_approved_byToprofiles")
   timecards_timecards_user_idToprofiles                                       timecards[]                  @relation("timecards_user_idToprofiles")
   user_favorites                                                              user_favorites[]
+  talent_daily_assignments                                                    talent_daily_assignments[]
+  group_daily_assignments                                                     group_daily_assignments[]
 
   @@index([nearest_major_city], map: "idx_profiles_nearest_major_city")
   @@index([willing_to_fly], map: "idx_profiles_willing_to_fly")
@@ -492,6 +494,8 @@ model projects {
   team_assignments           team_assignments[]
   timecards                  timecards[]
   user_favorites             user_favorites[]
+  talent_daily_assignments   talent_daily_assignments[]
+  group_daily_assignments    group_daily_assignments[]
 
   @@schema("public")
 }
@@ -566,6 +570,7 @@ model talent {
   talent_project_assignments talent_project_assignments[]
   talent_status              talent_status[]
   user_favorites             user_favorites[]
+  talent_daily_assignments   talent_daily_assignments[]
 
   @@schema("public")
 }
@@ -640,12 +645,51 @@ model talent_groups {
   escort_dropdown_count  Int?      @default(1)
   assigned_escort        profiles? @relation(fields: [assigned_escort_id], references: [id], onUpdate: NoAction)
   projects               projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  group_daily_assignments group_daily_assignments[]
 
   @@unique([project_id, group_name], map: "unique_group_name_per_project")
   @@index([project_id], map: "idx_talent_groups_project_id")
   @@index([assigned_escort_id], map: "idx_talent_groups_assigned_escort")
   @@index([project_id, display_order], map: "idx_talent_groups_display_order")
   @@index([assigned_escort_ids], map: "idx_talent_groups_assigned_escort_ids", type: Gin)
+  @@schema("public")
+}
+
+model talent_daily_assignments {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  talent_id       String    @db.Uuid
+  project_id      String    @db.Uuid
+  assignment_date DateTime  @db.Date
+  escort_id       String    @db.Uuid
+  created_at      DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime? @default(now()) @db.Timestamptz(6)
+  talent          talent    @relation(fields: [talent_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  projects        projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles        profiles  @relation(fields: [escort_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([talent_id, project_id, assignment_date, escort_id])
+  @@index([project_id, assignment_date], map: "idx_talent_daily_assignments_project_date")
+  @@index([escort_id, assignment_date], map: "idx_talent_daily_assignments_escort_date")
+  @@index([talent_id, project_id], map: "idx_talent_daily_assignments_talent_project")
+  @@schema("public")
+}
+
+model group_daily_assignments {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  group_id        String        @db.Uuid
+  project_id      String        @db.Uuid
+  assignment_date DateTime      @db.Date
+  escort_id       String        @db.Uuid
+  created_at      DateTime?     @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime?     @default(now()) @db.Timestamptz(6)
+  talent_groups   talent_groups @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  projects        projects      @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles        profiles      @relation(fields: [escort_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([group_id, project_id, assignment_date, escort_id])
+  @@index([project_id, assignment_date], map: "idx_group_daily_assignments_project_date")
+  @@index([escort_id, assignment_date], map: "idx_group_daily_assignments_escort_date")
+  @@index([group_id, project_id], map: "idx_group_daily_assignments_group_project")
   @@schema("public")
 }
 
