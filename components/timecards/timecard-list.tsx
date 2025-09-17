@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Clock, Calendar, DollarSign, Edit, AlertTriangle } from "lucide-react"
 import type { Timecard } from "@/lib/types"
+import { TimecardGuard } from "@/components/projects/feature-availability-guard"
 import { format } from "date-fns"
 import Link from "next/link"
 
@@ -14,9 +15,10 @@ interface TimecardListProps {
   timecards: Timecard[]
   onUpdate: () => void
   showUserColumn?: boolean
+  projectId?: string
 }
 
-export function TimecardList({ timecards, onUpdate, showUserColumn = false }: TimecardListProps) {
+export function TimecardList({ timecards, onUpdate, showUserColumn = false, projectId }: TimecardListProps) {
   const [submitting, setSubmitting] = useState<string | null>(null)
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -73,19 +75,16 @@ export function TimecardList({ timecards, onUpdate, showUserColumn = false }: Ti
     }
   }
 
-  if (timecards.length === 0) {
-    return (
-      <Card>
-        <CardContent className="p-8 text-center">
-          <p className="text-muted-foreground">No timecards found.</p>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  return (
+  const content = (
     <div className="space-y-4">
-      {timecards.map((timecard) => (
+      {timecards.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <p className="text-muted-foreground">No timecards found.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        timecards.map((timecard) => (
         <Card key={timecard.id} className="hover:shadow-md transition-shadow">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -188,7 +187,28 @@ export function TimecardList({ timecards, onUpdate, showUserColumn = false }: Ti
             </div>
           </CardContent>
         </Card>
-      ))}
+        ))
+      )}
     </div>
   )
+
+  // If projectId is provided, wrap with feature guard
+  if (projectId) {
+    return (
+      <TimecardGuard 
+        projectId={projectId}
+        fallback={
+          <Card>
+            <CardContent className="p-8 text-center">
+              <p className="text-muted-foreground">Timecard features are not available for this project.</p>
+            </CardContent>
+          </Card>
+        }
+      >
+        {content}
+      </TimecardGuard>
+    )
+  }
+
+  return content
 }

@@ -80,27 +80,7 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
     router.push(`/projects/${projectId}/edit`)
   }
 
-  const handleActivate = async () => {
-    try {
-      setActionLoading('activate')
-
-      const response = await fetch(`/api/projects/${projectId}/activate`, {
-        method: 'POST'
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to activate project')
-      }
-
-      // Refresh project data
-      await fetchProject()
-    } catch (err: any) {
-      console.error('Error activating project:', err)
-      setError(err.message || 'Failed to activate project')
-    } finally {
-      setActionLoading(null)
-    }
-  }
+  // Note: Project activation has been replaced with phase-based lifecycle management
 
   const handleArchive = async () => {
     try {
@@ -243,19 +223,7 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
                   <Edit className="h-4 w-4 mr-2" />
                   Edit
                 </Button>
-                {project.status === 'prep' && (
-                  <Button
-                    onClick={handleActivate}
-                    disabled={actionLoading === 'activate' || !isSetupComplete()}
-                  >
-                    {actionLoading === 'activate' ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Play className="h-4 w-4 mr-2" />
-                    )}
-                    Activate Project
-                  </Button>
-                )}
+                {/* Note: Project activation has been replaced with phase-based lifecycle management */}
                 {project.status === 'active' && (
                   <Button
                     variant="outline"
@@ -454,7 +422,7 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
                   <div>
                     <p className="font-medium">Setup Complete!</p>
                     <p className="text-sm text-green-600 dark:text-green-400">
-                      All checklist items are complete. You can now activate the project.
+                      All checklist items are complete. Project will transition to next phase automatically.
                     </p>
                   </div>
                 </div>
@@ -464,7 +432,7 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
                   <div>
                     <p className="font-medium">Setup In Progress</p>
                     <p className="text-sm text-amber-600 dark:text-amber-400">
-                      Complete all checklist items to activate the project.
+                      Complete all checklist items to advance to the next phase.
                     </p>
                   </div>
                 </div>
@@ -486,7 +454,7 @@ export function ProjectDetailView({ projectId }: ProjectDetailViewProps) {
               <div>
                 <p className="font-medium">Setup Complete</p>
                 <p className="text-sm text-green-600 dark:text-green-400">
-                  Project was activated on {project.project_setup_checklist.completed_at ?
+                  Setup was completed on {project.project_setup_checklist.completed_at ?
                     formatDateStringDefault(project.project_setup_checklist.completed_at) :
                     'Unknown date'
                   }

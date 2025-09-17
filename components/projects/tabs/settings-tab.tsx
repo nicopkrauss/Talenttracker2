@@ -7,9 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Input } from '@/components/ui/input'
-import { Upload, FileText, Download, Trash2, AlertCircle, ExternalLink } from 'lucide-react'
+import { Upload, FileText, Trash2, AlertCircle, ExternalLink, Settings } from 'lucide-react'
 import { FileUpload } from '@/components/projects/file-upload'
+import { PhaseConfigurationPanel } from '@/components/projects/phase-configuration-panel'
+import { PhaseTransitionHistory } from '@/components/projects/phase-transition-history'
 import { EnhancedProject } from '@/lib/types'
 import { useToast } from '@/hooks/use-toast'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -235,7 +236,7 @@ export function SettingsTab({ project, onProjectUpdate }: SettingsTabProps) {
       'note_deleted': 'deleted a note',
       'project_created': 'created the project',
       'project_updated': 'updated project details',
-      'project_activated': 'activated the project',
+      'project_activated': 'completed project setup',
       'checklist_updated': 'updated setup checklist',
     }
     return actionMap[action] || action
@@ -255,6 +256,91 @@ export function SettingsTab({ project, onProjectUpdate }: SettingsTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Settings Guidance */}
+      {(!settings || (auditLog.length === 0 && attachments.length === 0)) && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <div className="space-y-2">
+              <p className="font-medium">Project Settings & Documentation</p>
+              <p className="text-sm">
+                Configure operational settings, upload project documents, and track changes to your project.
+              </p>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const element = document.getElementById('phase-config')
+                    element?.scrollIntoView({ behavior: 'smooth' })
+                  }}
+                  className="gap-2"
+                >
+                  <Settings className="h-3 w-3" />
+                  Phase Configuration
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const element = document.getElementById('notifications')
+                    element?.scrollIntoView({ behavior: 'smooth' })
+                  }}
+                  className="gap-2"
+                >
+                  <Settings className="h-3 w-3" />
+                  Configure Notifications
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const element = document.getElementById('attachments')
+                    element?.scrollIntoView({ behavior: 'smooth' })
+                  }}
+                  className="gap-2"
+                >
+                  <Upload className="h-3 w-3" />
+                  Upload Documents
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const element = document.querySelector('[data-testid="phase-transition-history"]')
+                    element?.scrollIntoView({ behavior: 'smooth' })
+                  }}
+                  className="gap-2"
+                >
+                  <Settings className="h-3 w-3" />
+                  View Phase History
+                </Button>
+              </div>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Phase Configuration */}
+      <div id="phase-config">
+        <PhaseConfigurationPanel 
+          projectId={project.id}
+          onConfigurationChange={() => {
+            // Reload audit log to show configuration changes
+            loadAuditLog()
+          }}
+        />
+      </div>
+
+      {/* Phase Transition History */}
+      <PhaseTransitionHistory 
+        projectId={project.id}
+        onRefresh={() => {
+          // Reload audit log when history is refreshed
+          loadAuditLog()
+        }}
+      />
+
       {/* Project Configuration */}
       <Card>
         <CardHeader>
@@ -311,21 +397,21 @@ export function SettingsTab({ project, onProjectUpdate }: SettingsTabProps) {
               </div>
 
               {/* Notification Rules */}
-              <div className="space-y-4">
+              <div id="notifications" className="space-y-4">
                 <Label>Notification Rules</Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center space-x-2">
                     <Switch
                       id="timecard-reminders"
-                      checked={settings.notificationRules.timecardReminders}
+                      checked={settings?.notificationRules?.timecardReminders || false}
                       onCheckedChange={(checked) =>
-                        setSettings({
+                        setSettings(settings ? {
                           ...settings,
                           notificationRules: {
                             ...settings.notificationRules,
                             timecardReminders: checked
                           }
-                        })
+                        } : null)
                       }
                     />
                     <Label htmlFor="timecard-reminders">Timecard Reminders</Label>
@@ -334,15 +420,15 @@ export function SettingsTab({ project, onProjectUpdate }: SettingsTabProps) {
                   <div className="flex items-center space-x-2">
                     <Switch
                       id="shift-alerts"
-                      checked={settings.notificationRules.shiftAlerts}
+                      checked={settings?.notificationRules?.shiftAlerts || false}
                       onCheckedChange={(checked) =>
-                        setSettings({
+                        setSettings(settings ? {
                           ...settings,
                           notificationRules: {
                             ...settings.notificationRules,
                             shiftAlerts: checked
                           }
-                        })
+                        } : null)
                       }
                     />
                     <Label htmlFor="shift-alerts">Shift Duration Alerts</Label>
@@ -351,15 +437,15 @@ export function SettingsTab({ project, onProjectUpdate }: SettingsTabProps) {
                   <div className="flex items-center space-x-2">
                     <Switch
                       id="talent-notifications"
-                      checked={settings.notificationRules.talentArrivalNotifications}
+                      checked={settings?.notificationRules?.talentArrivalNotifications || false}
                       onCheckedChange={(checked) =>
-                        setSettings({
+                        setSettings(settings ? {
                           ...settings,
                           notificationRules: {
                             ...settings.notificationRules,
                             talentArrivalNotifications: checked
                           }
-                        })
+                        } : null)
                       }
                     />
                     <Label htmlFor="talent-notifications">Talent Arrival Notifications</Label>
@@ -368,15 +454,15 @@ export function SettingsTab({ project, onProjectUpdate }: SettingsTabProps) {
                   <div className="flex items-center space-x-2">
                     <Switch
                       id="overtime-warnings"
-                      checked={settings.notificationRules.overtimeWarnings}
+                      checked={settings?.notificationRules?.overtimeWarnings || false}
                       onCheckedChange={(checked) =>
-                        setSettings({
+                        setSettings(settings ? {
                           ...settings,
                           notificationRules: {
                             ...settings.notificationRules,
                             overtimeWarnings: checked
                           }
-                        })
+                        } : null)
                       }
                     />
                     <Label htmlFor="overtime-warnings">Overtime Warnings</Label>
@@ -395,7 +481,7 @@ export function SettingsTab({ project, onProjectUpdate }: SettingsTabProps) {
       </Card>
 
       {/* Audit Log */}
-      <Card>
+      <Card id="audit">
         <CardHeader>
           <CardTitle>Audit Log</CardTitle>
         </CardHeader>
@@ -432,7 +518,7 @@ export function SettingsTab({ project, onProjectUpdate }: SettingsTabProps) {
       </Card>
 
       {/* Attachments & Notes */}
-      <Card>
+      <Card id="attachments">
         <CardHeader>
           <CardTitle>Attachments & Notes</CardTitle>
         </CardHeader>

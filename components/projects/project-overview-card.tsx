@@ -10,15 +10,13 @@ import {
   MapPin, 
   Building, 
   User, 
-  Play,
-  Archive,
   CheckCircle2,
   Circle,
-  Loader2,
   Edit
 } from 'lucide-react'
 import { ProjectScheduleDisplay } from './project-schedule-display'
 import { EscortAssignmentTracker } from './escort-assignment-tracker'
+
 import { EnhancedProject } from '@/lib/types'
 import { createProjectScheduleFromStrings } from '@/lib/schedule-utils'
 import { formatDateStringShort } from '@/lib/date-utils'
@@ -26,20 +24,15 @@ import { useState, useMemo } from 'react'
 
 interface ProjectOverviewCardProps {
   project: EnhancedProject
-  onActivate: () => Promise<void>
-  onArchive: () => Promise<void>
   onEdit: () => void
   canEdit: boolean
 }
 
 export function ProjectOverviewCard({ 
   project, 
-  onActivate, 
-  onArchive, 
   onEdit,
   canEdit 
 }: ProjectOverviewCardProps) {
-  const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const formatDate = (dateString: string) => {
     return formatDateStringShort(dateString)
@@ -79,23 +72,7 @@ export function ProjectOverviewCard({
            checklist.locations_completed
   }
 
-  const handleActivate = async () => {
-    setActionLoading('activate')
-    try {
-      await onActivate()
-    } finally {
-      setActionLoading(null)
-    }
-  }
 
-  const handleArchive = async () => {
-    setActionLoading('archive')
-    try {
-      await onArchive()
-    } finally {
-      setActionLoading(null)
-    }
-  }
 
   return (
     <Card>
@@ -175,11 +152,11 @@ export function ProjectOverviewCard({
           </div>
         </div>
 
-        {/* Setup Checklist (Prep Only) */}
-        {project.status === 'prep' && project.project_setup_checklist && (
+        {/* Setup Checklist Progress */}
+        {project.project_setup_checklist && (
           <div className="pt-4 border-t space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-medium">Setup Checklist</h3>
+              <h3 className="font-medium">Setup Progress</h3>
               <Badge variant={isSetupComplete() ? "default" : "secondary"}>
                 {Math.round(calculateSetupProgress())}% Complete
               </Badge>
@@ -232,46 +209,10 @@ export function ProjectOverviewCard({
                 </span>
               </div>
             </div>
-
-            {/* Activate Button */}
-            {canEdit && isSetupComplete() && (
-              <div className="flex justify-center pt-4">
-                <Button 
-                  onClick={handleActivate}
-                  disabled={actionLoading === 'activate'}
-                  size="lg"
-                  className="gap-2"
-                >
-                  {actionLoading === 'activate' ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Play className="h-4 w-4" />
-                  )}
-                  Set Project to Active
-                </Button>
-              </div>
-            )}
           </div>
         )}
 
-        {/* Archive Button (Active Projects) */}
-        {project.status === 'active' && canEdit && (
-          <div className="flex justify-end pt-4 border-t">
-            <Button 
-              variant="outline"
-              onClick={handleArchive}
-              disabled={actionLoading === 'archive'}
-              className="gap-2"
-            >
-              {actionLoading === 'archive' ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Archive className="h-4 w-4" />
-              )}
-              Archive Project
-            </Button>
-          </div>
-        )}
+
       </CardContent>
     </Card>
   )

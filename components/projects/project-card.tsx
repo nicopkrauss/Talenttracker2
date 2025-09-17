@@ -47,7 +47,7 @@ export function ProjectCard({
 }: ProjectCardProps) {
   const isAdmin = hasAdminAccess(userRole === 'admin' || userRole === 'in_house' ? userRole : null)
   const canEdit = isAdmin && canAccessDetails
-  const canActivate = isAdmin && project.status === 'prep' && canAccessDetails
+  // Note: Project activation has been replaced with phase-based lifecycle management
   const canArchive = isAdmin && project.status === 'active' && canAccessDetails
   
   // Calculate project status and progress
@@ -100,11 +100,7 @@ export function ProjectCard({
     }
   }
 
-  const handleActivateProject = () => {
-    if (canActivate && onActivateProject) {
-      onActivateProject(project.id)
-    }
-  }
+  // Note: Project activation has been replaced with phase-based lifecycle management
 
   const handleArchiveProject = () => {
     if (canArchive && onArchiveProject) {
@@ -214,17 +210,7 @@ export function ProjectCard({
             </Button>
           )}
 
-          {canActivate && (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleActivateProject}
-              className="bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700"
-            >
-              <Play className="h-4 w-4 mr-1" />
-              Activate
-            </Button>
-          )}
+          {/* Note: Project activation has been replaced with phase-based lifecycle management */}
 
           {canArchive && (
             <Button

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertTriangle, Calendar, RefreshCw, WifiOff } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { DaySegmentedControl } from '../day-segmented-control'
 import { AssignmentList } from '../assignment-list'
 import { SchedulingErrorBoundary } from '@/components/error-boundaries/scheduling-error-boundary'
@@ -20,6 +21,8 @@ import { useErrorRecovery } from '@/hooks/use-error-recovery'
 import { useOptimisticUpdates } from '@/hooks/use-optimistic-updates'
 import { schedulingApiClient, withApiErrorHandling } from '@/lib/api/scheduling-api-client'
 import { SchedulingErrorHandler, SchedulingErrorCode } from '@/lib/error-handling/scheduling-errors'
+import { AssignmentsEmptyState } from '@/components/projects/empty-state-guidance'
+import { AssignmentGuard } from '@/components/projects/feature-availability-guard'
 
 interface AssignmentsTabProps {
   project: EnhancedProject
@@ -27,12 +30,44 @@ interface AssignmentsTabProps {
 }
 
 export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps) {
+  const router = useRouter()
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  
+  // Feature availability is now handled by cached readiness data in EmptyStateGuidance
   const [availableEscorts, setAvailableEscorts] = useState<EscortAvailabilityStatus[]>([])
   const [loading, setLoading] = useState(false)
   const [projectSchedule, setProjectSchedule] = useState<ProjectSchedule | null>(null)
   const [isOnline, setIsOnline] = useState(true)
 
+  // Navigation handler for tab switching
+  const handleNavigateToTab = (route: string) => {
+    // Convert route to tab navigation
+    const currentPath = window.location.pathname
+    const basePath = currentPath.split('?')[0] // Remove query params
+    
+    // Update URL with tab parameter
+    const url = new URL(window.location.href)
+    
+    switch (route) {
+      case '/info':
+        url.searchParams.set('tab', 'info')
+        break
+      case '/roles-team':
+        url.searchParams.set('tab', 'roles-team')
+        break
+      case '/talent-roster':
+        url.searchParams.set('tab', 'talent-roster')
+        break
+      case '/assignments':
+        url.searchParams.set('tab', 'assignments')
+        break
+      default:
+        url.searchParams.set('tab', 'info')
+    }
+    
+    // Use router to navigate with the tab parameter
+    router.push(url.pathname + url.search)
+  }
   // Enhanced error handling and recovery
   const { 
     error, 
@@ -573,13 +608,19 @@ export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps
   // Show error if project dates are invalid
   if (!project.start_date || !project.end_date) {
     return (
-      <Alert>
-        <AlertTriangle className="h-4 w-4" />
-        <AlertDescription>
-          Project start and end dates must be set before managing assignments. 
-          Please update the project information in the Info tab.
-        </AlertDescription>
-      </Alert>
+      <div className="space-y-6">
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Project start and end dates must be set before managing assignments. 
+            Please update the project information in the Info tab.
+          </AlertDescription>
+        </Alert>
+        <AssignmentsEmptyState
+          variant="empty"
+          onNavigate={handleNavigateToTab}
+        />
+      </div>
     )
   }
 
@@ -592,12 +633,21 @@ export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps
   }
 
   return (
-    <SchedulingErrorBoundary
-      onError={(error, errorInfo) => {
-        console.error('Assignments tab error boundary triggered:', error, errorInfo)
-      }}
+    <AssignmentGuard 
+      projectId={project.id}
+      fallback={
+        <AssignmentsEmptyState 
+          variant="empty"
+          onNavigate={handleNavigateToTab}
+        />
+      }
     >
-      <div className="space-y-6">
+      <SchedulingErrorBoundary
+        onError={(error, errorInfo) => {
+          console.error('Assignments tab error boundary triggered:', error, errorInfo)
+        }}
+      >
+        <div className="space-y-6">
         {/* Network Status Alert */}
         {!isOnline && (
           <Alert variant="destructive">
@@ -743,9 +793,11 @@ export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps
           onRemoveDropdown={handleRemoveDropdown}
           onClearDay={handleClearDayAssignments}
           loading={loading}
+
         />
       )}
-      </div>
-    </SchedulingErrorBoundary>
+        </div>
+      </SchedulingErrorBoundary>
+    </AssignmentGuard>
   )
 }

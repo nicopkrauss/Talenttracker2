@@ -4,11 +4,12 @@ import { createShiftTrackingService } from '@/lib/shift-tracking-service'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = createClient()
-    const projectId = params.id
+    const projectId = id
 
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -44,11 +45,12 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = createClient()
-    const projectId = params.id
+    const projectId = id
 
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser()

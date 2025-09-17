@@ -5,21 +5,28 @@ import { usePathname } from 'next/navigation'
 import { NavigationState, NavigationUser, ProjectRole, NavItem, UserRole } from '@/lib/types'
 import { getNavigationItemsForRole } from '@/lib/navigation-config'
 import { getEffectiveUserRole } from '@/lib/role-utils'
+import { useFeatureAvailability } from '@/hooks/use-feature-availability'
 
 interface NavigationContextType extends NavigationState {
   user: NavigationUser | null
   isActiveRoute: (href: string) => boolean
+  currentProjectId?: string
+  featureAvailability?: ReturnType<typeof useFeatureAvailability>['features']
 }
 
 interface NavigationProviderProps {
   children: ReactNode
   user: NavigationUser | null
+  currentProjectId?: string
 }
 
 const NavigationContext = createContext<NavigationContextType | undefined>(undefined)
 
-export function NavigationProvider({ children, user }: NavigationProviderProps) {
+export function NavigationProvider({ children, user, currentProjectId }: NavigationProviderProps) {
   const pathname = usePathname()
+  
+  // Get feature availability for current project if available
+  const { features: featureAvailability } = useFeatureAvailability(currentProjectId || '')
   
   const navigationState = useMemo<NavigationContextType>(() => {
     // Determine effective user role for navigation using role utilities
@@ -30,7 +37,31 @@ export function NavigationProvider({ children, user }: NavigationProviderProps) 
     )
     
     // Get available navigation items based on effective user role
-    const availableItems = getNavigationItemsForRole(userRole)
+    let availableItems = getNavigationItemsForRole(userRole)
+    
+    // Filter navigation items based on feature availability if we have a current project
+    if (currentProjectId && featureAvailability) {
+      availableItems = availableItems.filter(item => {
+        // Check if navigation item requires specific features
+        switch (item.id) {
+          case 'timecards':
+            return featureAvailability.timecards.available
+          case 'talent':
+            // Talent management is always available but may have limited functionality
+            return featureAvailability.talentManagement.available
+          case 'team':
+            return featureAvailability.teamManagement.available
+          case 'projects':
+            // Projects navigation is always available for admin/in_house
+            return true
+          case 'profile':
+            // Profile is always available
+            return true
+          default:
+            return true
+        }
+      })
+    }
     
     // Helper function to check if a route is active
     const isActiveRoute = (href: string): boolean => {
@@ -43,9 +74,11 @@ export function NavigationProvider({ children, user }: NavigationProviderProps) 
       userRole,
       availableItems,
       user,
-      isActiveRoute
+      isActiveRoute,
+      currentProjectId,
+      featureAvailability: currentProjectId ? featureAvailability : undefined
     }
-  }, [pathname, user])
+  }, [pathname, user, currentProjectId, featureAvailability])
   
   return (
     <NavigationContext.Provider value={navigationState}>

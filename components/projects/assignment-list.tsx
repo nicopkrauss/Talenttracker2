@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Users, User } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { AssignmentDropdown } from './assignment-dropdown'
 import { MultiDropdownAssignment } from './multi-dropdown-assignment'
 import { GroupBadge } from './group-badge'
@@ -14,6 +15,7 @@ import {
   ProjectSchedule
 } from '@/lib/types'
 import { getDayType } from '@/lib/schedule-utils'
+import { AssignmentsEmptyState } from '@/components/projects/empty-state-guidance'
 
 interface AssignmentListProps {
   selectedDate: Date
@@ -26,6 +28,13 @@ interface AssignmentListProps {
   onRemoveDropdown?: (talentId: string, dropdownIndex: number) => void
   onClearDay: (date: Date) => void
   loading?: boolean
+  // Legacy prop for backward compatibility - feature availability now handled by cached readiness data
+  featureAvailability?: {
+    available: boolean
+    requirement: string
+    guidance?: string
+    actionRoute?: string
+  }
 }
 
 export function AssignmentList({
@@ -38,10 +47,42 @@ export function AssignmentList({
   onAddDropdown,
   onRemoveDropdown,
   onClearDay,
-  loading = false
+  loading = false,
+  featureAvailability
 }: AssignmentListProps) {
+  const router = useRouter()
   const dayType = getDayType(selectedDate, projectSchedule)
   const isShowDay = dayType === 'show'
+
+  // Navigation handler for tab switching
+  const handleNavigateToTab = (route: string) => {
+    // Convert route to tab navigation
+    const currentPath = window.location.pathname
+    const basePath = currentPath.split('?')[0] // Remove query params
+    
+    // Update URL with tab parameter
+    const url = new URL(window.location.href)
+    
+    switch (route) {
+      case '/info':
+        url.searchParams.set('tab', 'info')
+        break
+      case '/roles-team':
+        url.searchParams.set('tab', 'roles-team')
+        break
+      case '/talent-roster':
+        url.searchParams.set('tab', 'talent-roster')
+        break
+      case '/assignments':
+        url.searchParams.set('tab', 'assignments')
+        break
+      default:
+        url.searchParams.set('tab', 'info')
+    }
+    
+    // Use router to navigate with the tab parameter
+    router.push(url.pathname + url.search)
+  }
 
   const formatDateDisplay = (date: Date): string => {
     return date.toLocaleDateString('en-US', { 
@@ -99,13 +140,11 @@ export function AssignmentList({
       
       <CardContent>
         {scheduledTalent.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-lg font-medium mb-2">No talent scheduled for this day</p>
-            <p className="text-sm">
-              Use the Talent Roster tab to schedule talent for specific days.
-            </p>
-          </div>
+          <AssignmentsEmptyState
+            variant="empty"
+            onNavigate={handleNavigateToTab}
+
+          />
         ) : (
           <div className="space-y-3">
             {scheduledTalent.map((talent) => (
@@ -168,6 +207,7 @@ export function AssignmentList({
             ))}
           </div>
         )}
+
 
 
       </CardContent>

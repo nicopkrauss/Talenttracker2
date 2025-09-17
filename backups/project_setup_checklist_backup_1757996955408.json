@@ -1,0 +1,22 @@
+[
+  {
+    "project_id": "9e093154-1952-499d-a033-19e3718b1b63",
+    "roles_and_pay_completed": false,
+    "talent_roster_completed": false,
+    "team_assignments_completed": false,
+    "locations_completed": false,
+    "completed_at": null,
+    "created_at": "2025-08-30T21:55:16.117549+00:00",
+    "updated_at": "2025-08-30T21:55:16.117549+00:00"
+  },
+  {
+    "project_id": "7ba0d5ca-3bd0-4aa0-8c6d-5d226ce76b22",
+    "roles_and_pay_completed": false,
+    "talent_roster_completed": false,
+    "team_assignments_completed": false,
+    "locations_completed": false,
+    "completed_at": null,
+    "created_at": "2025-09-10T02:19:21.076155+00:00",
+    "updated_at": "2025-09-10T02:19:21.076155+00:00"
+  }
+]

@@ -48,7 +48,17 @@ export async function GET(
     }
 
     // Validate project ID format
-    const { id: projectId } = await params
+    let projectId: string
+    try {
+      const resolvedParams = await params
+      projectId = resolvedParams?.id || ''
+    } catch (error) {
+      return NextResponse.json(
+        { error: 'Invalid project ID', code: 'INVALID_PROJECT_ID' },
+        { status: 400 }
+      )
+    }
+    
     if (!projectId || typeof projectId !== 'string') {
       return NextResponse.json(
         { error: 'Invalid project ID', code: 'INVALID_PROJECT_ID' },
@@ -56,7 +66,7 @@ export async function GET(
       )
     }
 
-    // Get project details with related data
+    // Get project details with embedded readiness data from materialized view
     const { data: project, error: projectError } = await supabase
       .from('projects')
       .select(`
@@ -74,16 +84,6 @@ export async function GET(
         updated_at,
         created_by,
         created_by_profile:profiles!projects_created_by_fkey(full_name),
-        project_setup_checklist (
-          project_id,
-          roles_and_pay_completed,
-          talent_roster_completed,
-          team_assignments_completed,
-          locations_completed,
-          completed_at,
-          created_at,
-          updated_at
-        ),
         project_role_templates (
           id,
           role,
@@ -114,6 +114,35 @@ export async function GET(
       )
     }
 
+    // Get readiness data from materialized view
+    let readinessData = null
+    let readinessError = null
+
+    try {
+      const { data: readiness, error: readinessErr } = await supabase
+        .from('project_readiness_summary')
+        .select('*')
+        .eq('project_id', projectId)
+        .single()
+
+      if (readinessErr) {
+        if (readinessErr.code === 'PGRST116') {
+          // Materialized view doesn't have data for this project yet
+          // This can happen for new projects before the first refresh
+          console.warn(`No readiness data found in materialized view for project ${projectId}`)
+          readinessError = 'READINESS_NOT_CALCULATED'
+        } else {
+          console.error('Error fetching readiness from materialized view:', readinessErr)
+          readinessError = 'READINESS_FETCH_ERROR'
+        }
+      } else {
+        readinessData = readiness
+      }
+    } catch (error) {
+      console.error('Error accessing materialized view:', error)
+      readinessError = 'MATERIALIZED_VIEW_ERROR'
+    }
+
     // Check access permissions
     const isAdmin = hasAdminAccess(userProfile.role)
     
@@ -129,8 +158,32 @@ export async function GET(
       }
     }
 
+    // Prepare the response with embedded readiness data
+    const responseData = {
+      ...project,
+      readiness: readinessData ? {
+        status: readinessData.readiness_status,
+        features: {
+          team_management: readinessData.team_management_available,
+          talent_tracking: readinessData.talent_tracking_available,
+          scheduling: readinessData.scheduling_available,
+          time_tracking: readinessData.time_tracking_available,
+        },
+        blocking_issues: readinessData.blocking_issues || [],
+        available_features: readinessData.available_features || [],
+        counts: {
+          role_templates: readinessData.role_template_count,
+          team_assignments: readinessData.team_assignment_count,
+          locations: readinessData.location_count,
+          talent: readinessData.talent_count,
+        },
+        calculated_at: readinessData.calculated_at,
+      } : null,
+      readiness_error: readinessError,
+    }
+
     return NextResponse.json({
-      data: project
+      data: responseData
     })
 
   } catch (error) {

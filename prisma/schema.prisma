@@ -411,6 +411,12 @@ model profiles {
   user_favorites                                                              user_favorites[]
   talent_daily_assignments                                                    talent_daily_assignments[]
   group_daily_assignments                                                     group_daily_assignments[]
+  project_readiness_locations_finalized_by                                   project_readiness[]          @relation("project_readiness_locations_finalized_by")
+  project_readiness_roles_finalized_by                                       project_readiness[]          @relation("project_readiness_roles_finalized_by")
+  project_readiness_team_finalized_by                                        project_readiness[]          @relation("project_readiness_team_finalized_by")
+  project_readiness_talent_finalized_by                                      project_readiness[]          @relation("project_readiness_talent_finalized_by")
+  project_settings_updated_by                                                project_settings[]
+  project_audit_log                                                          project_audit_log[]
 
   @@index([nearest_major_city], map: "idx_profiles_nearest_major_city")
   @@index([willing_to_fly], map: "idx_profiles_willing_to_fly")
@@ -452,19 +458,67 @@ model project_role_templates {
   @@schema("public")
 }
 
-model project_setup_checklist {
-  project_id                 String    @id @db.Uuid
-  roles_and_pay_completed    Boolean?  @default(false)
-  talent_roster_completed    Boolean?  @default(false)
-  team_assignments_completed Boolean?  @default(false)
-  locations_completed        Boolean?  @default(false)
-  completed_at               DateTime? @db.Timestamptz(6)
-  created_at                 DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at                 DateTime? @default(now()) @db.Timestamptz(6)
-  projects                   projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+model project_readiness {
+  project_id                String    @id @db.Uuid
+  
+  // Locations
+  has_default_locations     Boolean   @default(true)
+  custom_location_count     Int       @default(0)
+  locations_finalized       Boolean   @default(false)
+  locations_finalized_at    DateTime? @db.Timestamptz(6)
+  locations_finalized_by    String?   @db.Uuid
+  locations_status          String    @default("default-only") @db.VarChar(20)
+  
+  // Roles
+  has_default_roles         Boolean   @default(true)
+  custom_role_count         Int       @default(0)
+  roles_finalized           Boolean   @default(false)
+  roles_finalized_at        DateTime? @db.Timestamptz(6)
+  roles_finalized_by        String?   @db.Uuid
+  roles_status              String    @default("default-only") @db.VarChar(20)
+  
+  // Team
+  total_staff_assigned      Int       @default(0)
+  supervisor_count          Int       @default(0)
+  escort_count              Int       @default(0)
+  coordinator_count         Int       @default(0)
+  team_finalized            Boolean   @default(false)
+  team_finalized_at         DateTime? @db.Timestamptz(6)
+  team_finalized_by         String?   @db.Uuid
+  team_status               String    @default("none") @db.VarChar(20)
+  
+  // Talent
+  total_talent              Int       @default(0)
+  talent_finalized          Boolean   @default(false)
+  talent_finalized_at       DateTime? @db.Timestamptz(6)
+  talent_finalized_by       String?   @db.Uuid
+  talent_status             String    @default("none") @db.VarChar(20)
+  
+  // Assignment Progress
+  assignments_status        String    @default("none") @db.VarChar(20)
+  urgent_assignment_issues  Int       @default(0)
+  
+  // Overall
+  overall_status            String    @default("getting-started") @db.VarChar(20)
+  last_updated              DateTime  @default(now()) @db.Timestamptz(6)
+  
+  created_at                DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at                DateTime  @default(now()) @db.Timestamptz(6)
+  
+  projects                  projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  locations_finalized_by_profile profiles? @relation("project_readiness_locations_finalized_by", fields: [locations_finalized_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  roles_finalized_by_profile     profiles? @relation("project_readiness_roles_finalized_by", fields: [roles_finalized_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  team_finalized_by_profile      profiles? @relation("project_readiness_team_finalized_by", fields: [team_finalized_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  talent_finalized_by_profile    profiles? @relation("project_readiness_talent_finalized_by", fields: [talent_finalized_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@index([project_id], map: "idx_project_setup_checklist_project_id")
-  @@index([roles_and_pay_completed, talent_roster_completed, team_assignments_completed, locations_completed], map: "idx_project_setup_checklist_completed")
+  @@index([project_id], map: "idx_project_readiness_project_id")
+  @@index([overall_status], map: "idx_project_readiness_overall_status")
+  @@index([last_updated], map: "idx_project_readiness_last_updated")
+  @@index([urgent_assignment_issues], map: "idx_project_readiness_urgent_issues")
+  @@index([locations_status], map: "idx_project_readiness_locations_status")
+  @@index([roles_status], map: "idx_project_readiness_roles_status")
+  @@index([team_status], map: "idx_project_readiness_team_status")
+  @@index([talent_status], map: "idx_project_readiness_talent_status")
   @@schema("public")
 }
 
@@ -482,11 +536,16 @@ model projects {
   created_at                 DateTime?                    @default(now()) @db.Timestamptz(6)
   updated_at                 DateTime?                    @default(now()) @db.Timestamptz(6)
   talent_expected            Int?
+  phase_updated_at           DateTime?                    @default(now()) @db.Timestamptz(6)
+  auto_transitions_enabled   Boolean?                     @default(true)
+  timezone                   String?                      @db.VarChar(50)
+  rehearsal_start_date       DateTime?                    @db.Date
+  show_end_date              DateTime?                    @db.Date
   notifications              notifications[]
   project_locations          project_locations[]
   project_role_templates     project_role_templates[]
   project_roles              project_roles[]
-  project_setup_checklist    project_setup_checklist?
+  project_readiness          project_readiness?
   profiles                   profiles?                    @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   shifts                     shifts[]
   talent_groups              talent_groups[]
@@ -496,7 +555,51 @@ model projects {
   user_favorites             user_favorites[]
   talent_daily_assignments   talent_daily_assignments[]
   group_daily_assignments    group_daily_assignments[]
+  project_settings           project_settings?
+  project_audit_log          project_audit_log[]
 
+  @@index([phase_updated_at], map: "idx_projects_phase_updated_at")
+  @@index([auto_transitions_enabled], map: "idx_projects_auto_transitions")
+  @@index([timezone], map: "idx_projects_timezone")
+  @@index([rehearsal_start_date], map: "idx_projects_rehearsal_start_date")
+  @@index([show_end_date], map: "idx_projects_show_end_date")
+  @@index([status, rehearsal_start_date, show_end_date], map: "idx_projects_status_dates")
+  @@index([status, auto_transitions_enabled, rehearsal_start_date, show_end_date], map: "idx_projects_lifecycle_tracking")
+  @@schema("public")
+}
+
+model project_settings {
+  project_id                 String    @id @db.Uuid
+  default_break_duration     Int?      @default(30)
+  payroll_export_format      String?   @default("csv") @db.VarChar(10)
+  notification_rules         Json?     @default("{\"timecardReminders\": true, \"shiftAlerts\": true, \"talentArrivalNotifications\": false, \"overtimeWarnings\": true}")
+  auto_transitions_enabled   Boolean?  @default(true)
+  archive_month              Int?      @default(4)
+  archive_day                Int?      @default(1)
+  post_show_transition_hour  Int?      @default(6)
+  created_at                 DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at                 DateTime? @default(now()) @db.Timestamptz(6)
+  updated_by                 String?   @db.Uuid
+  projects                   projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  updated_by_profile         profiles? @relation(fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+model project_audit_log {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  project_id String    @db.Uuid
+  user_id    String    @db.Uuid
+  action     String    @db.VarChar(100)
+  details    Json?
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  projects   projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles   profiles  @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id], map: "idx_project_audit_log_project_id")
+  @@index([created_at(sort: Desc)], map: "idx_project_audit_log_created_at")
+  @@index([action, created_at(sort: Desc)], map: "idx_project_audit_log_phase_transitions")
+  @@index([project_id, action], map: "idx_project_audit_log_project_phase")
   @@schema("public")
 }
 
@@ -660,12 +763,12 @@ model talent_daily_assignments {
   talent_id       String    @db.Uuid
   project_id      String    @db.Uuid
   assignment_date DateTime  @db.Date
-  escort_id       String    @db.Uuid
+  escort_id       String?   @db.Uuid
   created_at      DateTime? @default(now()) @db.Timestamptz(6)
   updated_at      DateTime? @default(now()) @db.Timestamptz(6)
   talent          talent    @relation(fields: [talent_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   projects        projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  profiles        profiles  @relation(fields: [escort_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles        profiles? @relation(fields: [escort_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([talent_id, project_id, assignment_date, escort_id])
   @@index([project_id, assignment_date], map: "idx_talent_daily_assignments_project_date")
@@ -679,12 +782,12 @@ model group_daily_assignments {
   group_id        String        @db.Uuid
   project_id      String        @db.Uuid
   assignment_date DateTime      @db.Date
-  escort_id       String        @db.Uuid
+  escort_id       String?       @db.Uuid
   created_at      DateTime?     @default(now()) @db.Timestamptz(6)
   updated_at      DateTime?     @default(now()) @db.Timestamptz(6)
   talent_groups   talent_groups @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   projects        projects      @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  profiles        profiles      @relation(fields: [escort_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles        profiles?     @relation(fields: [escort_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([group_id, project_id, assignment_date, escort_id])
   @@index([project_id, assignment_date], map: "idx_group_daily_assignments_project_date")
@@ -847,7 +950,11 @@ enum project_role {
 
 enum project_status {
   prep
+  staffing
+  pre_show
   active
+  post_show
+  complete
   completed
   archived
 

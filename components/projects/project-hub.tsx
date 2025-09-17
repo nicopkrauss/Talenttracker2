@@ -25,7 +25,7 @@ interface ProjectHubProps {
   onCreateProject?: () => void
   onViewProject?: (projectId: string) => void
   onEditProject?: (projectId: string) => void
-  onActivateProject?: (projectId: string) => void
+  // Note: onActivateProject removed - activation replaced with phase-based lifecycle
   onArchiveProject?: (projectId: string) => void
   onViewTimecard?: (projectId: string) => void
 }
@@ -41,7 +41,7 @@ export function ProjectHub({
   onCreateProject,
   onViewProject,
   onEditProject,
-  onActivateProject,
+  // onActivateProject removed
   onArchiveProject,
   onViewTimecard
 }: ProjectHubProps) {
@@ -365,7 +365,7 @@ export function ProjectHub({
                 hasTimecards={hasTimecardsForProject(project.id)}
                 onViewProject={onViewProject}
                 onEditProject={onEditProject}
-                onActivateProject={onActivateProject}
+                // onActivateProject removed
                 onArchiveProject={onArchiveProject}
                 onViewTimecard={onViewTimecard}
               />

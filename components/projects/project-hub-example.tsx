@@ -24,21 +24,7 @@ export function ProjectHubExample({ userRole = 'admin' }: ProjectHubExampleProps
     // In real implementation: router.push(`/projects/${projectId}/edit`)
   }
 
-  const handleActivateProject = async (projectId: string) => {
-    console.log('Activate project:', projectId)
-    // In real implementation: call API to activate project
-    try {
-      const response = await fetch(`/api/projects/${projectId}/activate`, {
-        method: 'POST'
-      })
-      if (response.ok) {
-        // Refresh project list or update state
-        console.log('Project activated successfully')
-      }
-    } catch (error) {
-      console.error('Failed to activate project:', error)
-    }
-  }
+  // Note: Project activation has been replaced with phase-based lifecycle management
 
   const handleArchiveProject = async (projectId: string) => {
     console.log('Archive project:', projectId)
@@ -59,7 +45,7 @@ export function ProjectHubExample({ userRole = 'admin' }: ProjectHubExampleProps
           onCreateProject={handleCreateProject}
           onViewProject={handleViewProject}
           onEditProject={handleEditProject}
-          onActivateProject={handleActivateProject}
+          // onActivateProject removed
           onArchiveProject={handleArchiveProject}
           onViewTimecard={handleViewTimecard}
         />

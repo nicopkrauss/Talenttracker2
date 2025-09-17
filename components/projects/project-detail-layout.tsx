@@ -6,12 +6,16 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertTriangle } from 'lucide-react'
 import { ProjectHeader } from './project-header'
 import { ProjectOverviewCard } from './project-overview-card'
-import { ProjectTabs } from './project-tabs'
-import { OperationsDashboard } from './operations-dashboard'
+import { ConfigurationModeComponents, OperationsModeComponents, preloadModeComponents } from './mode-specific-components'
 import { EnhancedProject, ProjectStatistics } from '@/lib/types'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { useAuth } from '@/lib/auth-context'
 import { hasAdminAccess } from '@/lib/role-utils'
+import { useProjectPhaseMode } from '@/hooks/use-project-phase-mode'
+import { ReadinessProvider, ProjectReadiness } from '@/lib/contexts/readiness-context'
+import { ProjectPhase } from '@/lib/types/project-phase'
+import { PhaseFeatureAvailabilityGuard } from './phase-feature-availability-guard'
+import { ProjectPhaseProvider } from '@/lib/contexts/project-phase-context'
 
 interface ProjectDetailLayoutProps {
   projectId: string
@@ -23,6 +27,14 @@ export function ProjectDetailLayout({ projectId }: ProjectDetailLayoutProps) {
   const [project, setProject] = useState<EnhancedProject | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Phase-aware mode management with persistence
+  const { currentMode, setMode, isConfiguration, isOperations, currentPhase, phaseLoading } = useProjectPhaseMode({
+    projectId,
+    defaultMode: 'configuration'
+  })
+
+  // Components are now directly imported, no preloading needed
 
   // Check if user can edit project settings
   const canEditProject = userProfile?.role ? hasAdminAccess(userProfile.role) : false
@@ -76,6 +88,13 @@ export function ProjectDetailLayout({ projectId }: ProjectDetailLayoutProps) {
     }
   }
 
+  // Extract readiness data from project for ReadinessProvider (backward compatibility)
+  const getInitialReadiness = (project: EnhancedProject): ProjectReadiness | undefined => {
+    // For backward compatibility, we'll still provide readiness context
+    // but it will be gradually replaced by phase-aware components
+    return undefined // Phase system handles feature availability now
+  }
+
   const handleEdit = () => {
     router.push(`/projects/${projectId}/edit`)
   }
@@ -84,41 +103,7 @@ export function ProjectDetailLayout({ projectId }: ProjectDetailLayoutProps) {
     router.push('/projects')
   }
 
-  const handleActivate = async () => {
-    try {
-      const response = await fetch(`/api/projects/${projectId}/activate`, {
-        method: 'POST'
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to activate project')
-      }
-      
-      // Refresh project data
-      await fetchProject()
-    } catch (err: any) {
-      console.error('Error activating project:', err)
-      setError(err.message || 'Failed to activate project')
-    }
-  }
 
-  const handleArchive = async () => {
-    try {
-      const response = await fetch(`/api/projects/${projectId}/archive`, {
-        method: 'POST'
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to archive project')
-      }
-      
-      // Redirect to projects list after archiving
-      router.push('/projects')
-    } catch (err: any) {
-      console.error('Error archiving project:', err)
-      setError(err.message || 'Failed to archive project')
-    }
-  }
 
   if (loading) {
     return <LoadingSpinner />
@@ -143,37 +128,56 @@ export function ProjectDetailLayout({ projectId }: ProjectDetailLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Sticky Header - positioned at top of content area */}
-      <ProjectHeader 
-        project={project}
-        onBack={handleBack}
-      />
-      
-      {/* Main Content - with top padding to account for sticky header */}
-      <div className="container mx-auto px-4 pt-[100px] pb-6 space-y-6">
-        {/* Project Overview Card - Always Visible */}
-        <ProjectOverviewCard 
+    <ProjectPhaseProvider projectId={projectId}>
+      <ReadinessProvider 
+        projectId={projectId}
+        initialReadiness={getInitialReadiness(project)}
+      >
+        <div className="min-h-screen bg-background">
+        {/* Sticky Header - positioned at top of content area */}
+        <ProjectHeader 
           project={project}
-          onActivate={handleActivate}
-          onArchive={handleArchive}
-          onEdit={handleEdit}
-          canEdit={canEditProject}
+          onBack={handleBack}
+          currentMode={currentMode}
+          onModeChange={setMode}
         />
         
-        {/* Mode-Based Content */}
-        {project.status === 'prep' ? (
-          <ProjectTabs 
+        {/* Main Content - with top padding to account for sticky header */}
+        <div className="container mx-auto px-4 pt-[100px] pb-6 space-y-6">
+          {/* Project Overview Card - Always Visible */}
+          <ProjectOverviewCard 
             project={project}
-            onProjectUpdate={fetchProject}
+            onEdit={handleEdit}
+            canEdit={canEditProject}
           />
-        ) : project.status === 'active' ? (
-          <OperationsDashboard 
-            project={project}
-            onProjectUpdate={fetchProject}
-          />
-        ) : null}
+          
+          {/* Mode-Based Content - Tab Headers Always Visible */}
+          {isConfiguration ? (
+            <div 
+              id="configuration-panel"
+              role="tabpanel"
+              aria-labelledby="configuration-tab"
+            >
+              <ConfigurationModeComponents.Tabs 
+                project={project}
+                onProjectUpdate={fetchProject}
+              />
+            </div>
+          ) : isOperations ? (
+            <div 
+              id="operations-panel"
+              role="tabpanel"
+              aria-labelledby="operations-tab"
+            >
+              <OperationsModeComponents.Dashboard 
+                project={project}
+                onProjectUpdate={fetchProject}
+              />
+            </div>
+          ) : null}
+        </div>
       </div>
-    </div>
+    </ReadinessProvider>
+    </ProjectPhaseProvider>
   )
 }

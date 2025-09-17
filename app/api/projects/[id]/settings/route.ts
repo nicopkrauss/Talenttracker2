@@ -12,6 +12,11 @@ const projectSettingsSchema = z.object({
     talentArrivalNotifications: z.boolean(),
     overtimeWarnings: z.boolean(),
   }),
+  // Phase configuration
+  autoTransitionsEnabled: z.boolean().optional(),
+  archiveMonth: z.number().min(1).max(12).optional(),
+  archiveDay: z.number().min(1).max(31).optional(),
+  postShowTransitionHour: z.number().min(0).max(23).optional(),
 })
 
 export async function GET(
@@ -81,6 +86,11 @@ export async function GET(
         talentArrivalNotifications: false,
         overtimeWarnings: true,
       },
+      // Phase configuration defaults
+      autoTransitionsEnabled: true,
+      archiveMonth: 4,
+      archiveDay: 1,
+      postShowTransitionHour: 6,
     }
 
     return NextResponse.json({
@@ -140,7 +150,15 @@ export async function PUT(
       )
     }
 
-    const { defaultBreakDuration, payrollExportFormat, notificationRules } = validationResult.data
+    const { 
+      defaultBreakDuration, 
+      payrollExportFormat, 
+      notificationRules,
+      autoTransitionsEnabled,
+      archiveMonth,
+      archiveDay,
+      postShowTransitionHour
+    } = validationResult.data
 
     // Check if user has access to this project
     const { data: project, error: projectError } = await supabase
@@ -157,16 +175,32 @@ export async function PUT(
     }
 
     // Upsert project settings
+    const settingsData: any = {
+      project_id: id,
+      default_break_duration: defaultBreakDuration,
+      payroll_export_format: payrollExportFormat,
+      notification_rules: notificationRules,
+      updated_at: new Date().toISOString(),
+      updated_by: user.id,
+    }
+
+    // Add phase configuration if provided
+    if (autoTransitionsEnabled !== undefined) {
+      settingsData.auto_transitions_enabled = autoTransitionsEnabled
+    }
+    if (archiveMonth !== undefined) {
+      settingsData.archive_month = archiveMonth
+    }
+    if (archiveDay !== undefined) {
+      settingsData.archive_day = archiveDay
+    }
+    if (postShowTransitionHour !== undefined) {
+      settingsData.post_show_transition_hour = postShowTransitionHour
+    }
+
     const { data: settings, error: settingsError } = await supabase
       .from('project_settings')
-      .upsert({
-        project_id: id,
-        default_break_duration: defaultBreakDuration,
-        payroll_export_format: payrollExportFormat,
-        notification_rules: notificationRules,
-        updated_at: new Date().toISOString(),
-        updated_by: user.id,
-      })
+      .upsert(settingsData)
       .select()
       .single()
 
@@ -179,17 +213,33 @@ export async function PUT(
     }
 
     // Log the settings change
+    const auditDetails: any = {
+      defaultBreakDuration,
+      payrollExportFormat,
+      notificationRules,
+    }
+
+    // Add phase configuration to audit log if changed
+    if (autoTransitionsEnabled !== undefined) {
+      auditDetails.autoTransitionsEnabled = autoTransitionsEnabled
+    }
+    if (archiveMonth !== undefined) {
+      auditDetails.archiveMonth = archiveMonth
+    }
+    if (archiveDay !== undefined) {
+      auditDetails.archiveDay = archiveDay
+    }
+    if (postShowTransitionHour !== undefined) {
+      auditDetails.postShowTransitionHour = postShowTransitionHour
+    }
+
     await supabase
       .from('project_audit_log')
       .insert({
         project_id: id,
         user_id: user.id,
-        action: 'settings_updated',
-        details: {
-          defaultBreakDuration,
-          payrollExportFormat,
-          notificationRules,
-        },
+        action: 'phase_configuration_updated',
+        details: auditDetails,
         created_at: new Date().toISOString(),
       })
 

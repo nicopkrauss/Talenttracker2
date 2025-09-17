@@ -415,6 +415,7 @@ export interface NavItem {
   href: string
   icon: LucideIcon
   roles: UserRole[]
+  requiresFeature?: 'timeTracking' | 'assignments' | 'locationTracking' | 'supervisorCheckout' | 'talentManagement' | 'projectOperations' | 'notifications' | 'timecards' | 'teamManagement'
 }
 
 // User interface for navigation context
@@ -553,8 +554,8 @@ export interface EmailNotification {
 
 // Project Management System Types
 
-// Project status type
-export type ProjectStatus = 'prep' | 'active' | 'archived'
+// Project status type - extended to support full phase lifecycle
+export type ProjectStatus = 'prep' | 'staffing' | 'pre_show' | 'active' | 'post_show' | 'complete' | 'archived'
 
 // Core Project interface
 export interface Project {
@@ -1152,3 +1153,97 @@ export type TalentSchedulingInput = z.infer<typeof talentSchedulingSchema>
 export type GroupMemberInput = z.infer<typeof groupMemberSchema>
 export type TalentGroupInput = z.infer<typeof talentGroupSchema>
 export type AssignmentInput = z.infer<typeof assignmentSchema>
+
+// Project Readiness Performance Optimization Types
+export interface ProjectReadiness {
+  status: 'setup_required' | 'ready_for_activation' | 'active'
+  features: {
+    team_management: boolean
+    talent_tracking: boolean
+    scheduling: boolean
+    time_tracking: boolean
+  }
+  blocking_issues: string[]
+  available_features: string[]
+  counts: {
+    role_templates: number
+    team_assignments: number
+    locations: number
+    talent: number
+  }
+  calculated_at: string
+}
+
+export interface ProjectWithReadiness {
+  // Standard project fields
+  id: string
+  name: string
+  description?: string
+  production_company?: string
+  hiring_contact?: string
+  location?: string
+  talent_expected?: number
+  start_date: string
+  end_date: string
+  status: 'prep' | 'active' | 'archived'
+  created_at: string
+  updated_at: string
+  created_by: string
+  
+  // Joined data
+  created_by_profile?: {
+    full_name: string
+  }
+  project_role_templates?: Array<{
+    id: string
+    role: string
+    display_name: string
+    base_pay_rate: number
+    time_type: 'hourly' | 'daily'
+    description?: string
+    is_active: boolean
+    sort_order: number
+    created_at: string
+    updated_at: string
+  }>
+  
+  // Embedded readiness data
+  readiness: ProjectReadiness | null
+  readiness_error?: string
+}
+
+// Readiness invalidation API types
+export interface ReadinessInvalidationRequest {
+  reason: 'role_template_change' | 'team_assignment_change' | 'location_change' | 'status_change'
+  optimistic_state?: Partial<ProjectReadiness>
+}
+
+export interface ReadinessInvalidationResponse {
+  readiness: ProjectReadiness
+  timestamp: string
+}
+
+// Feature availability types
+export type FeatureName = 'team_management' | 'talent_tracking' | 'scheduling' | 'time_tracking'
+
+export interface FeatureAvailability {
+  [key: string]: boolean
+}
+
+// Readiness validation schema
+export const readinessInvalidationSchema = z.object({
+  reason: z.enum(['role_template_change', 'team_assignment_change', 'location_change', 'status_change']),
+  optimistic_state: z.object({
+    status: z.enum(['setup_required', 'ready_for_activation', 'active']).optional(),
+    features: z.object({
+      team_management: z.boolean().optional(),
+      talent_tracking: z.boolean().optional(),
+      scheduling: z.boolean().optional(),
+      time_tracking: z.boolean().optional(),
+    }).optional(),
+    blocking_issues: z.array(z.string()).optional(),
+    available_features: z.array(z.string()).optional(),
+  }).optional()
+})
+
+export type ReadinessInvalidationInput = z.infer<typeof readinessInvalidationSchema>

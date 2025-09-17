@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { EnhancedProject, TalentProfile, TalentGroup, ProjectSchedule } from '@/lib/types'
 import { Plus, Search, Users, Check, UserPlus, ChevronDown, ChevronRight, Loader2, UserCheck } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { useReadiness } from '@/lib/contexts/readiness-context'
 import { useRequestQueue } from '@/hooks/use-request-queue'
 import { useOptimisticState } from '@/hooks/use-optimistic-state'
 import { CSVImportDialog } from '@/components/talent/csv-import-dialog'
@@ -23,6 +24,7 @@ import { GroupBadge } from '@/components/projects/group-badge'
 import { TalentScheduleColumn } from '@/components/projects/talent-schedule-column'
 import { DraggableTalentList } from '@/components/projects/draggable-talent-list'
 import { createProjectScheduleFromStrings } from '@/lib/schedule-utils'
+import { TalentEmptyState } from '@/components/projects/empty-state-guidance'
 
 interface TalentRosterTabProps {
   project: EnhancedProject
@@ -42,8 +44,16 @@ interface AvailableTalent extends TalentProfile {
   // Available talent from the general talent database
 }
 
+interface ProjectReadiness {
+  talent_finalized: boolean
+  talent_status: 'none' | 'partial' | 'finalized'
+}
+
 export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabProps) {
   const { toast } = useToast()
+  const { readiness: cachedReadiness, canAccessFeature, invalidateReadiness } = useReadiness()
+  
+  // Feature availability is now handled by cached readiness data in EmptyStateGuidance
   
   // Enhanced state management with optimistic updates and request queuing
   const [serverAssignedTalent, setServerAssignedTalent] = useState<ProjectTalent[]>([])
@@ -149,6 +159,8 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
         const unassignedTalent = (availableData.data || []).filter((t: AvailableTalent) => !assignedIds.has(t.id))
         setServerAvailableTalent(unassignedTalent)
       }
+
+      // Readiness data is now provided by ReadinessProvider context
     } catch (error) {
       console.error('Error loading talent data:', error)
       toast({
@@ -159,7 +171,7 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
     } finally {
       setLoading(false)
     }
-  }, [project.id])
+  }, [project.id, toast])
 
   // Load talent roster and available talent
   useEffect(() => {
@@ -589,8 +601,10 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
 
   const handleFinalizeTalentRoster = async () => {
     try {
-      const response = await fetch(`/api/projects/${project.id}/talent-roster/complete`, {
-        method: 'POST'
+      const response = await fetch(`/api/projects/${project.id}/readiness/finalize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ area: 'talent' })
       })
 
       if (response.ok) {
@@ -598,6 +612,8 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
           title: "Success",
           description: "Talent roster finalized"
         })
+        // Invalidate readiness cache to trigger refresh
+        await invalidateReadiness('role_template_change')
         await onProjectUpdate()
       } else {
         const errorData = await response.json()
@@ -737,12 +753,14 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
           {/* Available Talent Grid */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 max-h-[440px] overflow-y-auto">
             {filteredAvailableTalent.length === 0 ? (
-              <div className="col-span-full text-center py-8 text-muted-foreground">
-                {availableTalent.length === 0 ? (
-                  <p>No available talent found. Add new talent to get started.</p>
-                ) : (
-                  <p>No available talent match your search.</p>
-                )}
+              <div className="col-span-full">
+                <TalentEmptyState
+                  variant={availableTalent.length === 0 ? 'empty' : 'filtered'}
+                  onNavigate={(route) => {
+                    // Handle navigation - could integrate with router
+                    console.log('Navigate to:', route)
+                  }}
+                />
               </div>
             ) : (
               filteredAvailableTalent.map((person) => {
@@ -867,7 +885,7 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
             talent={filteredAssignedTalent}
             projectId={project.id}
             projectSchedule={projectSchedule}
-            isRosterCompleted={project.project_setup_checklist?.talent_roster_completed}
+            isRosterCompleted={canAccessFeature('scheduling')}
             onRemoveTalent={handleRemoveTalent}
             onPendingChange={handlePendingChange}
             onRegisterConfirm={registerConfirmFunction}
@@ -881,12 +899,20 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
             showEmptyState={filteredAssignedTalent.length === 0 && filteredTalentGroups.length === 0}
             emptyStateMessage={
               assignedTalent.length === 0 && talentGroups.length === 0 ? (
-                <div>
-                  <p>No talent or groups assigned to this project yet.</p>
-                  <p className="text-sm mt-1">Assign talent from the available talent above or add new talent/groups.</p>
-                </div>
+                <TalentEmptyState
+                  variant="empty"
+                  onNavigate={(route) => {
+                    console.log('Navigate to:', route)
+                  }}
+                  featureAvailability={talentFeatureAvailability}
+                />
               ) : (
-                <p>No assigned talent or groups match your search.</p>
+                <TalentEmptyState
+                  variant="filtered"
+                  onNavigate={(route) => {
+                    console.log('Navigate to:', route)
+                  }}
+                />
               )
             }
             // Pass request state for better UX
@@ -905,10 +931,10 @@ export function TalentRosterTab({ project, onProjectUpdate }: TalentRosterTabPro
       <div className="flex justify-center">
         <Button 
           onClick={handleFinalizeTalentRoster}
-          disabled={(assignedTalent.length === 0 && talentGroups.length === 0) || project.project_setup_checklist?.talent_roster_completed}
+          disabled={(assignedTalent.length === 0 && talentGroups.length === 0) || canAccessFeature('scheduling')}
           className="gap-2"
         >
-          {project.project_setup_checklist?.talent_roster_completed ? (
+          {canAccessFeature('scheduling') ? (
             <>
               <Check className="h-4 w-4" />
               Talent Roster Finalized

@@ -24,12 +24,14 @@ import { getRoleDisplayName } from '@/lib/role-utils'
 import { Search, Users, DollarSign, Plus, X, Check, ArrowUp, ArrowDown, MapPin, Plane, ChevronDown, ChevronRight, Edit, FileText, UserPlus, Calendar, CalendarDays } from 'lucide-react'
 import { TrashButton } from '@/components/ui/trash-button'
 import { useToast } from '@/hooks/use-toast'
+import { useReadiness } from '@/lib/contexts/readiness-context'
 import { ProjectRoleTemplateManager, ProjectRoleTemplateManagerRef } from '@/components/projects/project-role-template-manager'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { AvailabilityPopup } from '@/components/projects/availability-popup'
 import { MassAvailabilityPopup } from '@/components/projects/mass-availability-popup'
 import { ProjectSchedule } from '@/lib/types'
 import { createProjectScheduleFromStrings } from '@/lib/schedule-utils'
+import { TeamEmptyState } from '@/components/projects/empty-state-guidance'
 
 interface RolesTeamTabProps {
   project: EnhancedProject
@@ -56,8 +58,16 @@ const getRoleColor = (role: string | null): string => {
 
 
 
+interface ProjectReadiness {
+  team_finalized: boolean
+  team_status: 'none' | 'partial' | 'finalized'
+}
+
 export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
   const { toast } = useToast()
+  const { readiness: cachedReadiness, canAccessFeature, invalidateReadiness } = useReadiness()
+  
+  // Feature availability is now handled by cached readiness data in EmptyStateGuidance
   const roleTemplateManagerRef = React.useRef<ProjectRoleTemplateManagerRef>(null)
   const [assignments, setAssignments] = useState<TeamAssignment[]>([])
   const [availableStaff, setAvailableStaff] = useState<AvailableStaff[]>([])
@@ -388,12 +398,25 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
         setRoleTemplates(templatesData.roleTemplates || [])
       }
 
-      // Load all user assignments (for project badge functionality)
-      const allAssignmentsResponse = await fetch(`/api/team-assignments`)
-      if (allAssignmentsResponse.ok) {
-        const allAssignmentsData = await allAssignmentsResponse.json()
-        setAllUserAssignments(allAssignmentsData.assignments || [])
+      // Load all user assignments (for project badge functionality) - with better error handling
+      try {
+        const allAssignmentsResponse = await fetch(`/api/team-assignments`)
+        if (allAssignmentsResponse.ok) {
+          const allAssignmentsData = await allAssignmentsResponse.json()
+          setAllUserAssignments(allAssignmentsData.assignments || [])
+        } else {
+          // Don't log warnings for expected permission errors
+          if (allAssignmentsResponse.status !== 403) {
+            console.warn('Failed to load all user assignments:', allAssignmentsResponse.status)
+          }
+          setAllUserAssignments([]) // Fallback to empty array
+        }
+      } catch (assignmentError) {
+        // Silently handle network errors to prevent console spam
+        setAllUserAssignments([]) // Fallback to empty array
       }
+
+      // Readiness data is now provided by ReadinessProvider context
     } catch (error) {
       console.error('Error loading data:', error)
       toast({
@@ -825,8 +848,10 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
 
   const handleFinalizeAssignments = async () => {
     try {
-      const response = await fetch(`/api/projects/${project.id}/team-assignments/complete`, {
-        method: 'POST'
+      const response = await fetch(`/api/projects/${project.id}/readiness/finalize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ area: 'team' })
       })
 
       if (response.ok) {
@@ -834,7 +859,12 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
           title: "Success",
           description: "Team assignments finalized",
         })
+        // Invalidate readiness cache to trigger refresh
+        await invalidateReadiness('team_assignment_change')
         await onProjectUpdate()
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to finalize team assignments')
       }
     } catch (error) {
       console.error('Error finalizing assignments:', error)
@@ -1700,10 +1730,12 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
               </div>
 
               {filteredStaff.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No staff members match your current filters</p>
-                </div>
+                <TeamEmptyState
+                  variant="filtered"
+                  onNavigate={(route) => {
+                    console.log('Navigate to:', route)
+                  }}
+                />
               )}
             </div>
           </CardContent>
@@ -1991,17 +2023,22 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
               </div>
 
               {filteredPendingAssignments.length === 0 && assignments.filter(a => !a.confirmed_at).length > 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No pending assignments match your current filters</p>
-                </div>
+                <TeamEmptyState
+                  variant="filtered"
+                  onNavigate={(route) => {
+                    console.log('Navigate to:', route)
+                  }}
+                />
               )}
 
               {assignments.filter(a => !a.confirmed_at).length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No pending team assignments</p>
-                </div>
+                <TeamEmptyState
+                  variant="empty"
+                  onNavigate={(route) => {
+                    console.log('Navigate to:', route)
+                  }}
+                  featureAvailability={timeTrackingAvailability}
+                />
               )}
             </CardContent>
           )}
@@ -2245,10 +2282,12 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
               </div>
 
               {filteredConfirmedAssignments.length === 0 && assignments.filter(a => a.confirmed_at).length > 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No confirmed assignments match your current filters</p>
-                </div>
+                <TeamEmptyState
+                  variant="filtered"
+                  onNavigate={(route) => {
+                    console.log('Navigate to:', route)
+                  }}
+                />
               )}
             </CardContent>
           )}
@@ -2295,11 +2334,11 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
       <div className="flex justify-center">
         <Button
           onClick={handleFinalizeAssignments}
-          disabled={assignments.length === 0}
+          disabled={assignments.length === 0 || canAccessFeature('team_management')}
           className="px-8"
         >
           <Check className="h-4 w-4 mr-2" />
-          Finalize Team Assignments
+          {canAccessFeature('team_management') ? 'Team Assignments Finalized' : 'Finalize Team Assignments'}
         </Button>
       </div>
 

@@ -12,7 +12,7 @@
  */
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { createClient } from '@/lib/supabase/client'
 import type { User, Session } from '@supabase/supabase-js'
 import { 
   UserProfile, 
@@ -34,7 +34,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables. Please check your .env.local file.')
 }
 
-const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey)
+const supabase = createClient()
 
 // Authentication context interface
 export interface AuthContextType {

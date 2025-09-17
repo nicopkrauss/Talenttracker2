@@ -19,6 +19,10 @@ import {
 } from 'lucide-react'
 import { EnhancedProject } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
+import { TimeTrackingActionBar } from './time-tracking-action-bar'
+import { LocationTrackingWidget, LocationTrackingPanel } from './location-tracking-panel'
+import { useAuth } from '@/lib/auth-context'
+import { PhaseTimeTrackingGuard, PhaseLocationTrackingGuard, PhaseOperationsGuard } from './phase-feature-availability-guard'
 
 interface TalentLocationStatus {
   id: string
@@ -61,6 +65,8 @@ interface OperationsDashboardProps {
 }
 
 export function OperationsDashboard({ project }: OperationsDashboardProps) {
+  // Always call hooks at the top level in the same order
+  const { userProfile } = useAuth()
   const [liveData, setLiveData] = useState<LiveProjectData | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedStaff, setSelectedStaff] = useState<string[]>([])
@@ -87,8 +93,15 @@ export function OperationsDashboard({ project }: OperationsDashboardProps) {
     fetchLiveData()
   }, [project.id])
 
-  // Set up real-time subscriptions
+  // Set up real-time subscriptions with debouncing
   useEffect(() => {
+    let debounceTimeout: NodeJS.Timeout
+
+    const debouncedFetchLiveData = () => {
+      clearTimeout(debounceTimeout)
+      debounceTimeout = setTimeout(fetchLiveData, 1000) // 1 second debounce
+    }
+
     const talentChannel = supabase
       .channel('talent-status-updates')
       .on('postgres_changes', {
@@ -96,9 +109,7 @@ export function OperationsDashboard({ project }: OperationsDashboardProps) {
         schema: 'public',
         table: 'talent_status',
         filter: `project_id=eq.${project.id}`
-      }, () => {
-        fetchLiveData()
-      })
+      }, debouncedFetchLiveData)
       .subscribe()
 
     const shiftsChannel = supabase
@@ -108,12 +119,11 @@ export function OperationsDashboard({ project }: OperationsDashboardProps) {
         schema: 'public',
         table: 'shifts',
         filter: `project_id=eq.${project.id}`
-      }, () => {
-        fetchLiveData()
-      })
+      }, debouncedFetchLiveData)
       .subscribe()
 
     return () => {
+      clearTimeout(debounceTimeout)
       supabase.removeChannel(talentChannel)
       supabase.removeChannel(shiftsChannel)
     }
@@ -255,14 +265,31 @@ export function OperationsDashboard({ project }: OperationsDashboardProps) {
 
   return (
     <div className="space-y-6">
-      {/* Live KPIs Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Live Project Status
-          </CardTitle>
-        </CardHeader>
+      {/* Time Tracking Action Bar - Phase-aware availability */}
+      {userProfile && (
+        <PhaseTimeTrackingGuard projectId={project.id}>
+          <TimeTrackingActionBar
+            projectId={project.id}
+            projectName={project.name}
+            userId={userProfile.id}
+          />
+        </PhaseTimeTrackingGuard>
+      )}
+
+      {/* Location Tracking Widget - Phase-aware availability */}
+      <PhaseLocationTrackingGuard projectId={project.id}>
+        <LocationTrackingWidget projectId={project.id} />
+      </PhaseLocationTrackingGuard>
+
+      {/* Live KPIs Section - Phase-aware availability */}
+      <PhaseOperationsGuard projectId={project.id}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Live Project Status
+            </CardTitle>
+          </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center">
@@ -315,9 +342,11 @@ export function OperationsDashboard({ project }: OperationsDashboardProps) {
           </div>
         </CardContent>
       </Card>
+      </PhaseOperationsGuard>
 
-      {/* Talent Locations Board */}
-      <Card>
+      {/* Talent Locations Board - Phase-aware availability */}
+      <PhaseLocationTrackingGuard projectId={project.id}>
+        <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
@@ -408,9 +437,11 @@ export function OperationsDashboard({ project }: OperationsDashboardProps) {
           </div>
         </CardContent>
       </Card>
+      </PhaseLocationTrackingGuard>
 
-      {/* Team Status Board */}
-      <Card>
+      {/* Team Status Board - Phase-aware availability */}
+      <PhaseTimeTrackingGuard projectId={project.id}>
+        <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
@@ -519,6 +550,7 @@ export function OperationsDashboard({ project }: OperationsDashboardProps) {
           </div>
         </CardContent>
       </Card>
+      </PhaseTimeTrackingGuard>
     </div>
   )
 }

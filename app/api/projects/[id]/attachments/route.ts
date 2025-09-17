@@ -63,37 +63,47 @@ export async function GET(
       )
     }
 
-    // Fetch project attachments
-    const { data: attachments, error: attachmentsError } = await supabase
-      .from('project_attachments')
-      .select(`
-        id,
-        name,
-        type,
-        content,
-        file_url,
-        file_size,
-        mime_type,
-        created_at,
-        created_by_user:profiles!project_attachments_created_by_fkey(
+    // Fetch project attachments - return empty array if table doesn't exist
+    try {
+      const { data: attachments, error: attachmentsError } = await supabase
+        .from('project_attachments')
+        .select(`
           id,
-          full_name
+          name,
+          type,
+          content,
+          file_url,
+          file_size,
+          mime_type,
+          created_at,
+          created_by_user:profiles!project_attachments_created_by_fkey(
+            id,
+            full_name
+          )
+        `)
+        .eq('project_id', id)
+        .order('created_at', { ascending: false })
+
+      if (attachmentsError) {
+        console.error('Error fetching attachments:', attachmentsError)
+        // If table doesn't exist, return empty array instead of error
+        if (attachmentsError.code === 'PGRST205') {
+          console.log('project_attachments table not found, returning empty array')
+          return NextResponse.json({ data: [] })
+        }
+        return NextResponse.json(
+          { error: 'Failed to fetch attachments', code: 'FETCH_ERROR' },
+          { status: 500 }
         )
-      `)
-      .eq('project_id', id)
-      .order('created_at', { ascending: false })
+      }
 
-    if (attachmentsError) {
-      console.error('Error fetching attachments:', attachmentsError)
-      return NextResponse.json(
-        { error: 'Failed to fetch attachments', code: 'FETCH_ERROR' },
-        { status: 500 }
-      )
+      return NextResponse.json({
+        data: attachments || []
+      })
+    } catch (error) {
+      console.error('Attachments fetch error:', error)
+      return NextResponse.json({ data: [] })
     }
-
-    return NextResponse.json({
-      data: attachments || []
-    })
   } catch (error) {
     console.error('Attachments API Error:', error)
     return NextResponse.json(
