@@ -116,6 +116,14 @@ function hasAdminAccess(systemRole: SystemRole | null): boolean {
  */
 async function getUserProfile(supabase: any, userId: string): Promise<UserProfile | null> {
   try {
+    // First check if we have a valid session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
+    if (sessionError || !session) {
+      // No valid session, don't try to fetch profile
+      return null
+    }
+
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -123,13 +131,19 @@ async function getUserProfile(supabase: any, userId: string): Promise<UserProfil
       .single()
 
     if (error) {
-      console.error('Error fetching user profile:', error)
+      // Don't log errors for expected cases (no profile, auth issues)
+      if (error.code !== 'PGRST116' && !error.message.includes('JWT') && !error.message.includes('session missing')) {
+        console.error('Error fetching user profile:', error)
+      }
       return null
     }
 
     return data
   } catch (error) {
-    console.error('Error in getUserProfile:', error)
+    // Don't log auth-related errors that are expected
+    if (error instanceof Error && !error.message.includes('JWT') && !error.message.includes('session')) {
+      console.error('Error in getUserProfile:', error)
+    }
     return null
   }
 }
@@ -234,8 +248,13 @@ export async function middleware(request: NextRequest) {
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     
     if (userError) {
-      // Only log actual errors, not expected "no session" states
-      if (!userError.message?.includes('session missing') && userError.message !== 'Auth session missing!') {
+      // Handle specific case where JWT exists but user doesn't exist in auth
+      if (userError.message?.includes('User from sub claim in JWT does not exist') || 
+          userError.code === 'user_not_found') {
+        // Clear the invalid session - this will be handled by the client
+        console.warn('Invalid JWT token detected, user needs to re-authenticate')
+      } else if (!userError.message?.includes('session missing') && userError.message !== 'Auth session missing!') {
+        // Only log actual errors, not expected "no session" states
         console.error('User authentication error:', userError)
       }
       
@@ -258,9 +277,14 @@ export async function middleware(request: NextRequest) {
       if (user && (pathname === '/login' || pathname === '/register')) {
         const userProfile = await getUserProfile(supabase, user.id)
         
-        if (userProfile?.status === 'pending') {
+        // If no profile exists (database cleared), allow access to login/register
+        if (!userProfile) {
+          return response
+        }
+        
+        if (userProfile.status === 'pending') {
           return NextResponse.redirect(new URL('/pending', request.url))
-        } else if (userProfile?.status === 'active') {
+        } else if (userProfile.status === 'active') {
           // Redirect to return URL or default route based on role
           const returnUrl = request.nextUrl.searchParams.get('returnUrl')
           if (returnUrl && !isPublicRoute(returnUrl)) {
@@ -294,7 +318,8 @@ export async function middleware(request: NextRequest) {
     const userProfile = await getUserProfile(supabase, user.id)
     
     if (!userProfile) {
-      console.error('User profile not found for authenticated user:', user.id)
+      // If no profile exists (database cleared), redirect to login to allow re-registration
+      console.warn('User profile not found for authenticated user:', user.id, '- redirecting to login')
       
       // For API routes, return JSON error
       if (pathname.startsWith('/api/')) {

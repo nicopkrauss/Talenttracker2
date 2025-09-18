@@ -60,9 +60,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Update the auto-created user profile with registration data
+    // Try to update the auto-created user profile with registration data
+    // If the trigger doesn't exist, we'll create the profile manually
     
-    const { error: profileError } = await supabaseAdmin
+    let { error: profileError } = await supabaseAdmin
       .from('profiles')
       .update({
         full_name: `${validatedData.firstName} ${validatedData.lastName}`,
@@ -76,8 +77,35 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', authData.user.id)
 
+    // If update failed because profile doesn't exist, create it manually
+    if (profileError && profileError.code === 'PGRST116') {
+      console.log('Profile not found, creating manually (trigger may be missing)')
+      
+      const { error: createError } = await supabaseAdmin
+        .from('profiles')
+        .insert({
+          id: authData.user.id,
+          full_name: `${validatedData.firstName} ${validatedData.lastName}`,
+          email: validatedData.email,
+          phone: validatedData.phone,
+          role: validatedData.role,
+          nearest_major_city: validatedData.nearestMajorCity,
+          willing_to_fly: validatedData.willingToFly || false,
+          status: 'pending',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+      
+      if (createError) {
+        console.error('Profile creation error:', createError)
+        profileError = createError
+      } else {
+        profileError = null // Success
+      }
+    }
+
     if (profileError) {
-      console.error('Profile update error:', profileError)
+      console.error('Profile operation error:', profileError)
       
       // Clean up the auth user if profile creation fails
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
@@ -90,7 +118,8 @@ export async function POST(request: NextRequest) {
 
     // Send notification email to admins about new registration
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/notifications/send-email`, {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+      await fetch(`${siteUrl}/api/notifications/send-email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

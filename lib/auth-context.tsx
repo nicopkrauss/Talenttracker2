@@ -94,6 +94,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
    */
   const fetchUserProfile = useCallback(async (userId: string): Promise<UserProfile | null> => {
     try {
+      // First check if we have a valid session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      
+      if (sessionError || !session) {
+        // No valid session, don't try to fetch profile
+        return null
+      }
+
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
@@ -101,13 +109,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
         .single()
 
       if (error) {
-        console.error('Failed to fetch user profile:', error)
+        // Don't log errors for expected cases (no profile, auth issues)
+        if (error.code !== 'PGRST116' && !error.message.includes('JWT')) {
+          console.error('Failed to fetch user profile:', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            userId: userId
+          })
+        }
         return null
       }
 
       return profile
     } catch (error) {
-      console.error('Error fetching user profile:', error)
+      // Don't log auth-related errors that are expected on login page
+      if (error instanceof Error && !error.message.includes('JWT') && !error.message.includes('session')) {
+        console.error('Error fetching user profile:', error)
+      }
       return null
     }
   }, [])
@@ -129,10 +149,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setSession(session)
     setUser(session?.user ?? null)
     
-    if (session?.user) {
-      // Fetch user profile when user is authenticated
-      const profile = await fetchUserProfile(session.user.id)
-      setUserProfile(profile)
+    if (session?.user && event !== 'SIGNED_OUT') {
+      // Only fetch profile for valid sessions and not during sign out
+      try {
+        const profile = await fetchUserProfile(session.user.id)
+        setUserProfile(profile)
+      } catch (error) {
+        // Handle profile fetch errors gracefully
+        console.warn('Could not fetch user profile:', error)
+        setUserProfile(null)
+      }
     } else {
       // Clear profile when user is not authenticated
       setUserProfile(null)
@@ -169,23 +195,54 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Get initial session
     const initializeAuth = async () => {
       try {
-        const { data: { user }, error } = await supabase.auth.getUser()
+        // First check if we have a valid session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
         
-        if (error) {
-          // Only log actual errors, not expected "no session" states
-          if (error.message !== 'Auth session missing!' && !error.message.includes('session missing')) {
-            console.error('Error getting user:', error)
-          }
+        if (sessionError || !session) {
+          // No session or session error - this is normal for login page
+          setUser(null)
+          setUserProfile(null)
+          setSession(null)
           setLoading(false)
           return
         }
 
+        // We have a session, now get the user
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
+        
+        if (userError) {
+          // Handle specific case where JWT exists but user doesn't exist in auth
+          if (userError.message.includes('User from sub claim in JWT does not exist') || 
+              userError.code === 'user_not_found') {
+            // Clear the invalid session
+            await supabase.auth.signOut()
+          }
+          
+          // Clear everything
+          setUser(null)
+          setUserProfile(null)
+          setSession(null)
+          setLoading(false)
+          return
+        }
+
+        if (!user) {
+          // No user but we have a session - clear everything
+          setUser(null)
+          setUserProfile(null)
+          setSession(null)
+          setLoading(false)
+          return
+        }
+
+        // Valid user and session
         await handleInitialUser(user)
       } catch (error) {
-        // Only log unexpected errors, not expected "no session" states
-        if (error instanceof Error && !error.message.includes('session missing')) {
-          console.error('Error initializing auth:', error)
-        }
+        // Handle any unexpected errors gracefully
+        console.warn('Auth initialization error:', error)
+        setUser(null)
+        setUserProfile(null)
+        setSession(null)
         setLoading(false)
       }
     }
@@ -198,7 +255,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => {
       subscription.unsubscribe()
     }
-  }, [handleAuthStateChange])
+  }, [handleAuthStateChange, handleInitialUser])
 
   /**
    * Sign in with email and password
@@ -267,7 +324,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
             throw new Error(result.details)
           }
         }
-        throw new Error(result.error || 'Registration failed. Please try again.')
+        
+        // Provide more specific error messages
+        let errorMessage = result.error || 'Registration failed. Please try again.'
+        
+        // Handle common error cases
+        if (errorMessage.includes('already exists') || errorMessage.includes('already registered')) {
+          errorMessage = 'An account with this email address already exists. Please use a different email or try logging in.'
+        } else if (errorMessage.includes('profile')) {
+          errorMessage = 'Failed to create user profile. This may be a temporary issue - please try again.'
+        } else if (errorMessage.includes('validation')) {
+          errorMessage = 'Please check your information and try again.'
+        }
+        
+        throw new Error(errorMessage)
       }
 
       // Registration successful - user is now pending approval
@@ -323,7 +393,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [user?.id])
 
   // Computed values
-  const isAuthenticated = !!user && !!session
+  const isAuthenticated = !!user && !!userProfile
   const isApproved = userProfile?.status === 'active'
   const isPending = userProfile?.status === 'pending'
   
