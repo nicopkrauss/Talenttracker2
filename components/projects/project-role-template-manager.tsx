@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ProjectRoleTemplate, ProjectRoleTemplateFormData, ProjectRole } from '@/lib/types'
 import { Plus, Edit, Trash2, FileText, Clock, Save, X, DollarSign, AlertTriangle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { getRoleColor } from '@/lib/role-utils'
 
 interface ProjectRoleTemplateManagerProps {
   projectId: string
@@ -404,7 +405,7 @@ export const ProjectRoleTemplateManager = React.forwardRef<ProjectRoleTemplateMa
               <div className="flex-1">
                 <div className="flex items-center gap-3">
                   <h3 className="font-medium">{template.display_name}</h3>
-                  <Badge variant="secondary">
+                  <Badge variant="outline" className={getRoleColor(template.role)}>
                     {roleOptions.find(r => r.value === template.role)?.label}
                   </Badge>
                   {template.is_default && (

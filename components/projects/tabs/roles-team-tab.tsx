@@ -20,7 +20,7 @@ import {
   ProjectRole,
   ProjectRoleTemplate
 } from '@/lib/types'
-import { getRoleDisplayName } from '@/lib/role-utils'
+import { getRoleDisplayName, getRoleColor } from '@/lib/role-utils'
 import { Search, Users, DollarSign, Plus, X, Check, ArrowUp, ArrowDown, MapPin, Plane, ChevronDown, ChevronRight, Edit, FileText, UserPlus, Calendar, CalendarDays } from 'lucide-react'
 import { TrashButton } from '@/components/ui/trash-button'
 import { useToast } from '@/hooks/use-toast'
@@ -36,23 +36,7 @@ interface RolesTeamTabProps {
   onProjectUpdate: () => Promise<void>
 }
 
-// Role color mapping function
-const getRoleColor = (role: string | null): string => {
-  switch (role) {
-    case 'admin':
-      return 'bg-slate-900 text-slate-50 border-slate-900 dark:bg-slate-100 dark:text-slate-900 dark:border-slate-100'
-    case 'in_house':
-      return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-800'
-    case 'supervisor':
-      return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-200 dark:border-green-800'
-    case 'coordinator':
-      return 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900 dark:text-purple-200 dark:border-purple-800'
-    case 'talent_escort':
-      return 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900 dark:text-orange-200 dark:border-orange-800'
-    default:
-      return 'bg-muted text-muted-foreground border-border'
-  }
-}
+
 
 
 
@@ -78,6 +62,7 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
   const [editValues, setEditValues] = useState<{ pay_rate?: number; schedule_notes?: string }>({})
   const [isRoleTemplatesExpanded, setIsRoleTemplatesExpanded] = useState(false)
   const [isAssigning, setIsAssigning] = useState(false)
+  const [assigningStaff, setAssigningStaff] = useState<Set<string>>(new Set())
   const [individualAssignOpen, setIndividualAssignOpen] = useState<string | null>(null)
   const [individualTemplateId, setIndividualTemplateId] = useState<string>('')
   const [individualPayRate, setIndividualPayRate] = useState<number | ''>('')
@@ -448,11 +433,26 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
     // Find the template for the selected role to get the base pay rate
     const selectedTemplate = roleTemplates.find(t => t.role === bulkRole)
 
-    // Optimistic update - create temporary assignments
-    const optimisticAssignments = selectedStaffArray.map(userId => {
+    // Filter out already assigned users to prevent duplicates
+    const unassignedStaff = selectedStaffArray.filter(userId => 
+      !assignments.find(a => a.user_id === userId)
+    )
+
+    if (unassignedStaff.length === 0) {
+      toast({
+        title: "No New Assignments",
+        description: "All selected staff members are already assigned to this project",
+        variant: "destructive"
+      })
+      return
+    }
+
+    // Optimistic update - create temporary assignments with unique IDs
+    const timestamp = Date.now()
+    const optimisticAssignments = unassignedStaff.map((userId, index) => {
       const staff = availableStaff.find(s => s.id === userId)
       return {
-        id: `temp-${userId}`, // Temporary ID
+        id: `temp-${userId}-${timestamp}-${index}`, // Unique temporary ID
         user_id: userId,
         role: bulkRole,
         project_id: project.id,
@@ -472,8 +472,8 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
     // Add optimistic assignments to current assignments
     setAssignments(prev => [...prev, ...optimisticAssignments])
 
-    // Remove assigned staff from available staff list immediately
-    setAvailableStaff(prev => prev.filter(staff => !selectedStaff.has(staff.id)))
+    // Remove assigned staff from available staff list immediately (only unassigned ones)
+    setAvailableStaff(prev => prev.filter(staff => !unassignedStaff.includes(staff.id)))
 
     // Clear selection immediately for better UX
     setSelectedStaff(new Set())
@@ -483,7 +483,7 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
       // Find the template for the selected role to get the base pay rate
       const selectedTemplate = roleTemplates.find(t => t.role === bulkRole)
 
-      const promises = selectedStaffArray.map(userId =>
+      const promises = unassignedStaff.map(userId =>
         fetch(`/api/projects/${project.id}/team-assignments`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -499,7 +499,7 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
 
       toast({
         title: "Success",
-        description: `Assigned ${selectedStaffArray.length} staff members to ${getRoleDisplayName(bulkRole)}`,
+        description: `Assigned ${unassignedStaff.length} staff members to ${getRoleDisplayName(bulkRole)}`,
       })
 
       // Reload data silently to get real IDs and any server-side updates
@@ -507,11 +507,15 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
     } catch (error) {
       console.error('Error bulk assigning:', error)
 
-      // Revert optimistic updates on error
-      setAssignments(prev => prev.filter(a => !a.id.startsWith('temp-')))
+      // Revert optimistic updates on error - only remove the specific temp assignments we just created
+      const tempIds = optimisticAssignments.map(a => a.id)
+      setAssignments(prev => prev.filter(a => !tempIds.includes(a.id)))
 
-      // Restore staff to available list
-      setAvailableStaff(prev => [...prev, ...selectedStaffData])
+      // Restore only the unassigned staff to available list
+      const staffToRestore = unassignedStaff.map(userId => 
+        availableStaff.find(s => s.id === userId)
+      ).filter(Boolean)
+      setAvailableStaff(prev => [...prev, ...staffToRestore])
 
       toast({
         title: "Error",
@@ -526,6 +530,25 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
   const handleQuickAssign = async (userId: string) => {
     const staff = availableStaff.find(s => s.id === userId)
     if (!staff) return
+
+    // Check if already assigning this staff member
+    if (assigningStaff.has(userId)) {
+      return
+    }
+
+    // Check if user is already assigned (prevent double-assignment)
+    const existingAssignment = assignments.find(a => a.user_id === userId)
+    if (existingAssignment) {
+      toast({
+        title: "Already Assigned",
+        description: `${staff.full_name} is already assigned to this project`,
+        variant: "destructive"
+      })
+      return
+    }
+
+    // Set loading state
+    setAssigningStaff(prev => new Set([...prev, userId]))
 
     // Find default template for user's system role
     let defaultTemplate = roleTemplates.find(t => t.role === staff.role && t.is_default)
@@ -549,9 +572,12 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
       return
     }
 
+    // Create unique temporary ID with timestamp and random component to prevent duplicates
+    const tempId = `temp-${userId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    
     // Optimistic update - create temporary assignment
     const optimisticAssignment = {
-      id: `temp-${userId}`,
+      id: tempId,
       user_id: userId,
       role: defaultTemplate.role,
       project_id: project.id,
@@ -598,7 +624,7 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
       console.error('Error assigning staff:', error)
 
       // Revert optimistic updates on error
-      setAssignments(prev => prev.filter(a => a.id !== `temp-${userId}`))
+      setAssignments(prev => prev.filter(a => a.id !== tempId))
       setAvailableStaff(prev => [...prev, staff])
 
       const errorMessage = error instanceof Error ? error.message : 'Failed to assign staff member'
@@ -606,6 +632,13 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
         title: "Error",
         description: errorMessage,
         variant: "destructive"
+      })
+    } finally {
+      // Clear loading state
+      setAssigningStaff(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(userId)
+        return newSet
       })
     }
   }
@@ -617,9 +650,31 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
     const template = roleTemplates.find(t => t.id === individualTemplateId)
     if (!staff || !template) return
 
+    // Check if already assigning this staff member
+    if (assigningStaff.has(userId)) {
+      return
+    }
+
+    // Check if user is already assigned (prevent double-assignment)
+    const existingAssignment = assignments.find(a => a.user_id === userId)
+    if (existingAssignment) {
+      toast({
+        title: "Already Assigned",
+        description: `${staff.full_name} is already assigned to this project`,
+        variant: "destructive"
+      })
+      return
+    }
+
+    // Set loading state
+    setAssigningStaff(prev => new Set([...prev, userId]))
+
+    // Create unique temporary ID with timestamp and random component to prevent duplicates
+    const tempId = `temp-${userId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
     // Optimistic update - create temporary assignment
     const optimisticAssignment = {
-      id: `temp-${userId}`,
+      id: tempId,
       user_id: userId,
       role: template.role,
       project_id: project.id,
@@ -669,13 +724,20 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
       console.error('Error assigning staff:', error)
 
       // Revert optimistic updates on error
-      setAssignments(prev => prev.filter(a => a.id !== `temp-${userId}`))
+      setAssignments(prev => prev.filter(a => a.id !== tempId))
       setAvailableStaff(prev => [...prev, staff])
 
       toast({
         title: "Error",
         description: "Failed to assign staff member",
         variant: "destructive"
+      })
+    } finally {
+      // Clear loading state
+      setAssigningStaff(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(userId)
+        return newSet
       })
     }
   }
@@ -1596,12 +1658,13 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
                                 <Button
                                   size="sm"
                                   className="h-7 text-xs px-3 rounded-r-none border-r-0"
+                                  disabled={assigningStaff.has(staff.id)}
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     handleQuickAssign(staff.id)
                                   }}
                                 >
-                                  Assign
+                                  {assigningStaff.has(staff.id) ? "Assigning..." : "Assign"}
                                 </Button>
 
                                 {/* Dropdown Button */}

@@ -231,6 +231,54 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    console.log('Project created successfully, creating default role templates...')
+
+    // Create default role templates for the new project
+    const defaultRoleTemplates = [
+      {
+        project_id: newProject.id,
+        role: 'supervisor',
+        display_name: 'Supervisor',
+        base_pay_rate: 300.00,
+        time_type: 'daily',
+        sort_order: 1,
+        is_default: true,
+        description: 'On-site management with day rate tracking'
+      },
+      {
+        project_id: newProject.id,
+        role: 'coordinator',
+        display_name: 'Coordinator',
+        base_pay_rate: 350.00,
+        time_type: 'daily',
+        sort_order: 2,
+        is_default: true,
+        description: 'Informational oversight role with day rate tracking'
+      },
+      {
+        project_id: newProject.id,
+        role: 'talent_escort',
+        display_name: 'Talent Escort',
+        base_pay_rate: 25.00,
+        time_type: 'hourly',
+        sort_order: 3,
+        is_default: true,
+        description: 'On-the-ground operations with hourly tracking'
+      }
+    ]
+
+    const { error: templatesError } = await supabase
+      .from('project_role_templates')
+      .insert(defaultRoleTemplates)
+
+    if (templatesError) {
+      console.error('Error creating default role templates:', templatesError)
+      // Don't fail the project creation, just log the error
+      console.log('Project created but default role templates failed to create')
+    } else {
+      console.log('Default role templates created successfully')
+    }
+
     return NextResponse.json({
       data: newProject,
       message: 'Project created successfully'
