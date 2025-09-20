@@ -396,11 +396,14 @@ model profiles {
   nearest_major_city                                                          String?
   willing_to_fly                                                              Boolean                      @default(false)
   email_notifications                                                         email_notifications[]
+  global_settings_updated_by                                                  global_settings[]            @relation("global_settings_updated_by")
+  group_daily_assignments                                                     group_daily_assignments[]
   notifications                                                               notifications[]
   users                                                                       users                        @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   projects                                                                    projects[]
   shifts                                                                      shifts[]
   system_settings                                                             system_settings[]
+  talent_daily_assignments                                                    talent_daily_assignments[]
   talent_groups                                                               talent_groups[]
   talent_project_assignments_talent_project_assignments_assigned_byToprofiles talent_project_assignments[] @relation("talent_project_assignments_assigned_byToprofiles")
   talent_project_assignments_talent_project_assignments_escort_idToprofiles   talent_project_assignments[] @relation("talent_project_assignments_escort_idToprofiles")
@@ -409,8 +412,6 @@ model profiles {
   timecards_timecards_approved_byToprofiles                                   timecards[]                  @relation("timecards_approved_byToprofiles")
   timecards_timecards_user_idToprofiles                                       timecards[]                  @relation("timecards_user_idToprofiles")
   user_favorites                                                              user_favorites[]
-  talent_daily_assignments                                                    talent_daily_assignments[]
-  group_daily_assignments                                                     group_daily_assignments[]
 
   @@index([nearest_major_city], map: "idx_profiles_nearest_major_city")
   @@index([willing_to_fly], map: "idx_profiles_willing_to_fly")
@@ -482,6 +483,7 @@ model projects {
   created_at                 DateTime?                    @default(now()) @db.Timestamptz(6)
   updated_at                 DateTime?                    @default(now()) @db.Timestamptz(6)
   talent_expected            Int?
+  group_daily_assignments    group_daily_assignments[]
   notifications              notifications[]
   project_locations          project_locations[]
   project_role_templates     project_role_templates[]
@@ -489,13 +491,12 @@ model projects {
   project_setup_checklist    project_setup_checklist?
   profiles                   profiles?                    @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   shifts                     shifts[]
+  talent_daily_assignments   talent_daily_assignments[]
   talent_groups              talent_groups[]
   talent_project_assignments talent_project_assignments[]
   team_assignments           team_assignments[]
   timecards                  timecards[]
   user_favorites             user_favorites[]
-  talent_daily_assignments   talent_daily_assignments[]
-  group_daily_assignments    group_daily_assignments[]
 
   @@schema("public")
 }
@@ -555,6 +556,32 @@ model system_settings {
   @@schema("public")
 }
 
+model global_settings {
+  id                                String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  default_escort_break_minutes      Int       @default(30)
+  default_staff_break_minutes       Int       @default(60)
+  timecard_reminder_frequency_days  Int       @default(1)
+  submission_opens_on_show_day      Boolean   @default(true)
+  max_hours_before_stop             Int       @default(20)
+  overtime_warning_hours            Int       @default(12)
+  archive_date_month                Int       @default(12)
+  archive_date_day                  Int       @default(31)
+  post_show_transition_time         DateTime  @default(dbgenerated("'06:00:00'::time without time zone")) @db.Time(6)
+  in_house_can_approve_timecards    Boolean   @default(true)
+  in_house_can_initiate_checkout    Boolean   @default(true)
+  in_house_can_manage_projects      Boolean   @default(true)
+  supervisor_can_approve_timecards  Boolean   @default(false)
+  supervisor_can_initiate_checkout  Boolean   @default(true)
+  coordinator_can_approve_timecards Boolean   @default(false)
+  coordinator_can_initiate_checkout Boolean   @default(false)
+  created_at                        DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at                        DateTime  @default(now()) @db.Timestamptz(6)
+  updated_by                        String?   @db.Uuid
+  profiles                          profiles? @relation("global_settings_updated_by", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model talent {
   id                         String                       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
@@ -567,10 +594,10 @@ model talent {
   first_name                 String                       @db.VarChar(50)
   last_name                  String                       @db.VarChar(50)
   contact_info               Json?
+  talent_daily_assignments   talent_daily_assignments[]
   talent_project_assignments talent_project_assignments[]
   talent_status              talent_status[]
   user_favorites             user_favorites[]
-  talent_daily_assignments   talent_daily_assignments[]
 
   @@schema("public")
 }
@@ -630,22 +657,22 @@ model talent_status {
 }
 
 model talent_groups {
-  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  project_id             String    @db.Uuid
-  group_name             String    @db.VarChar(255)
-  members                Json      @default("[]")
-  scheduled_dates        String[]  @default([])
-  assigned_escort_id     String?   @db.Uuid
-  created_at             DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at             DateTime? @default(now()) @db.Timestamptz(6)
-  display_order          Int?      @default(0)
-  point_of_contact_name  String?   @db.VarChar(255)
-  point_of_contact_phone String?   @db.VarChar(20)
-  assigned_escort_ids    String[]  @default([]) @db.Uuid
-  escort_dropdown_count  Int?      @default(1)
-  assigned_escort        profiles? @relation(fields: [assigned_escort_id], references: [id], onUpdate: NoAction)
-  projects               projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                      String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  project_id              String                    @db.Uuid
+  group_name              String                    @db.VarChar(255)
+  members                 Json                      @default("[]")
+  scheduled_dates         String[]                  @default([])
+  assigned_escort_id      String?                   @db.Uuid
+  created_at              DateTime?                 @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime?                 @default(now()) @db.Timestamptz(6)
+  display_order           Int?                      @default(0)
+  point_of_contact_name   String?                   @db.VarChar(255)
+  point_of_contact_phone  String?                   @db.VarChar(20)
+  assigned_escort_ids     String[]                  @default([]) @db.Uuid
+  escort_dropdown_count   Int?                      @default(1)
   group_daily_assignments group_daily_assignments[]
+  assigned_escort         profiles?                 @relation(fields: [assigned_escort_id], references: [id], onUpdate: NoAction)
+  projects                projects                  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([project_id, group_name], map: "unique_group_name_per_project")
   @@index([project_id], map: "idx_talent_groups_project_id")
@@ -663,9 +690,9 @@ model talent_daily_assignments {
   escort_id       String    @db.Uuid
   created_at      DateTime? @default(now()) @db.Timestamptz(6)
   updated_at      DateTime? @default(now()) @db.Timestamptz(6)
-  talent          talent    @relation(fields: [talent_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  projects        projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   profiles        profiles  @relation(fields: [escort_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  projects        projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  talent          talent    @relation(fields: [talent_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([talent_id, project_id, assignment_date, escort_id])
   @@index([project_id, assignment_date], map: "idx_talent_daily_assignments_project_date")
@@ -682,9 +709,9 @@ model group_daily_assignments {
   escort_id       String        @db.Uuid
   created_at      DateTime?     @default(now()) @db.Timestamptz(6)
   updated_at      DateTime?     @default(now()) @db.Timestamptz(6)
+  profiles        profiles      @relation(fields: [escort_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   talent_groups   talent_groups @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   projects        projects      @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  profiles        profiles      @relation(fields: [escort_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([group_id, project_id, assignment_date, escort_id])
   @@index([project_id, assignment_date], map: "idx_group_daily_assignments_project_date")

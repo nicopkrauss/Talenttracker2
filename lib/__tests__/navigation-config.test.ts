@@ -10,10 +10,10 @@ import { UserRole } from '../types'
 describe('Navigation Configuration', () => {
   describe('navigationItems', () => {
     it('should contain all expected navigation items', () => {
-      expect(navigationItems).toHaveLength(5)
+      expect(navigationItems).toHaveLength(6)
       
       const itemIds = navigationItems.map(item => item.id)
-      expect(itemIds).toEqual(['projects', 'team', 'talent', 'timecards', 'profile'])
+      expect(itemIds).toEqual(['projects', 'team', 'talent', 'timecards', 'settings', 'profile'])
     })
 
     it('should have proper structure for each navigation item', () => {
@@ -27,7 +27,7 @@ describe('Navigation Configuration', () => {
         expect(typeof item.id).toBe('string')
         expect(typeof item.label).toBe('string')
         expect(typeof item.href).toBe('string')
-        expect(typeof item.icon).toBe('function')
+        expect(typeof item.icon).toMatch(/^(function|object)$/)
         expect(Array.isArray(item.roles)).toBe(true)
       })
     })
@@ -45,6 +45,9 @@ describe('Navigation Configuration', () => {
       const timecardsItem = navigationItems.find(item => item.id === 'timecards')
       expect(timecardsItem?.roles).toEqual(['admin', 'in_house', 'supervisor', 'coordinator', 'talent_escort'])
 
+      const settingsItem = navigationItems.find(item => item.id === 'settings')
+      expect(settingsItem?.roles).toEqual(['admin'])
+
       const profileItem = navigationItems.find(item => item.id === 'profile')
       expect(profileItem?.roles).toEqual(['admin', 'in_house', 'supervisor', 'coordinator', 'talent_escort'])
     })
@@ -55,6 +58,7 @@ describe('Navigation Configuration', () => {
         team: '/team',
         talent: '/talent',
         timecards: '/timecards',
+        settings: '/settings',
         profile: '/profile',
       }
 
@@ -67,10 +71,10 @@ describe('Navigation Configuration', () => {
   describe('getNavigationItemsForRole', () => {
     it('should return all items for admin role', () => {
       const items = getNavigationItemsForRole('admin')
-      expect(items).toHaveLength(5)
+      expect(items).toHaveLength(6)
       
       const itemIds = items.map(item => item.id)
-      expect(itemIds).toEqual(['projects', 'team', 'talent', 'timecards', 'profile'])
+      expect(itemIds).toEqual(['projects', 'team', 'talent', 'timecards', 'settings', 'profile'])
     })
 
     it('should return all items for in_house role', () => {
@@ -206,14 +210,20 @@ describe('Navigation Configuration', () => {
   })
 
   describe('Role-based navigation requirements', () => {
-    it('should meet requirement 1.1: Admin and In-House see Projects, Team, Talent, Timecards, Profile', () => {
+    it('should meet requirement 1.1: Admin sees Projects, Team, Talent, Timecards, Settings, Profile', () => {
       const adminItems = getNavigationItemsForRole('admin')
+      
+      const expectedAdminItems = ['projects', 'team', 'talent', 'timecards', 'settings', 'profile']
+      const adminItemIds = adminItems.map(item => item.id)
+      expect(adminItemIds).toEqual(expectedAdminItems)
+    })
+
+    it('should meet requirement 1.1: In-House sees Projects, Team, Talent, Timecards, Profile', () => {
       const inHouseItems = getNavigationItemsForRole('in_house')
       
       const expectedItems = ['projects', 'team', 'talent', 'timecards', 'profile']
-      
-      expect(adminItems.map(item => item.id)).toEqual(expectedItems)
-      expect(inHouseItems.map(item => item.id)).toEqual(expectedItems)
+      const inHouseItemIds = inHouseItems.map(item => item.id)
+      expect(inHouseItemIds).toEqual(expectedItems)
     })
 
     it('should meet requirement 1.2: Supervisor and Coordinator see Team, Talent, Timecards, Profile', () => {

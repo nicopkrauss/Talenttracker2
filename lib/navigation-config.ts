@@ -3,7 +3,8 @@ import {
   UsersIcon, 
   StarIcon, 
   ClipboardListIcon,
-  UserIcon
+  UserIcon,
+  Settings
 } from 'lucide-react'
 import { NavItem, UserRole } from './types'
 
@@ -36,6 +37,13 @@ export const navigationItems: NavItem[] = [
     href: '/timecards',
     icon: ClipboardListIcon,
     roles: ['admin', 'in_house', 'supervisor', 'coordinator', 'talent_escort']
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    href: '/settings',
+    icon: Settings,
+    roles: ['admin']
   },
   {
     id: 'profile',
