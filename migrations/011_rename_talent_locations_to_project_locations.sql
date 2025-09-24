@@ -1,1 +1,0 @@
-ALTER TABLE talent_locations RENAME TO project_locations;
