@@ -110,12 +110,35 @@ export interface Timecard {
   total_pay: number
   status: "draft" | "submitted" | "approved" | "rejected"
   manually_edited: boolean
-  supervisor_comments?: string
+  edit_comments?: string
+  admin_notes?: string
+  admin_edited?: boolean
+  last_edited_by?: string
+  edit_type?: "user_correction" | "admin_adjustment" | "system_correction"
   submitted_at?: string
   approved_at?: string
   approved_by?: string
   created_at: string
   updated_at: string
+  
+  // Multi-day timecard fields
+  is_multi_day?: boolean
+  working_days?: number
+  period_start_date?: string
+  period_end_date?: string
+  total_break_duration?: number
+  daily_entries?: Array<{
+    id: string
+    work_date: string
+    check_in_time?: string
+    check_out_time?: string
+    break_start_time?: string
+    break_end_time?: string
+    hours_worked: number
+    break_duration: number
+    daily_pay: number
+  }>
+  
   // Joined data from foreign keys
   profiles?: {
     full_name: string
@@ -692,6 +715,7 @@ export interface TeamAssignment {
   user_id: string
   role: ProjectRole
   pay_rate?: number
+  time_type: 'hourly' | 'daily'
   schedule_notes?: string
   available_dates?: string[] // ISO date strings for availability
   confirmed_at?: string // When availability was confirmed

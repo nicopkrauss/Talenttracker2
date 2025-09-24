@@ -409,8 +409,9 @@ model profiles {
   talent_project_assignments_talent_project_assignments_escort_idToprofiles   talent_project_assignments[] @relation("talent_project_assignments_escort_idToprofiles")
   talent_status                                                               talent_status[]
   team_assignments                                                            team_assignments[]
-  timecards_timecards_approved_byToprofiles                                   timecards[]                  @relation("timecards_approved_byToprofiles")
-  timecards_timecards_user_idToprofiles                                       timecards[]                  @relation("timecards_user_idToprofiles")
+  // Old timecard relations removed - using normalized structure instead
+  timecard_headers_user                                                       timecard_headers[]           @relation("timecard_headers_user")
+  timecard_headers_approved_by                                                timecard_headers[]           @relation("timecard_headers_approved_by")
   user_favorites                                                              user_favorites[]
 
   @@index([nearest_major_city], map: "idx_profiles_nearest_major_city")
@@ -495,7 +496,7 @@ model projects {
   talent_groups              talent_groups[]
   talent_project_assignments talent_project_assignments[]
   team_assignments           team_assignments[]
-  timecards                  timecards[]
+  timecard_headers           timecard_headers[]           @relation("timecard_headers_project")
   user_favorites             user_favorites[]
 
   @@schema("public")
@@ -737,45 +738,90 @@ model team_assignments {
   @@schema("public")
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model timecards {
-  id                                       String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  user_id                                  String?          @db.Uuid
-  project_id                               String?          @db.Uuid
-  status                                   timecard_status? @default(draft)
-  submitted_at                             DateTime?        @db.Timestamptz(6)
-  approved_at                              DateTime?        @db.Timestamptz(6)
-  approved_by                              String?          @db.Uuid
-  rejection_reason                         String?
-  admin_notes                              String?
-  created_at                               DateTime?        @default(now()) @db.Timestamptz(6)
-  updated_at                               DateTime?        @default(now()) @db.Timestamptz(6)
-  date                                     DateTime?        @db.Date
-  check_in_time                            DateTime?        @db.Time(6)
-  check_out_time                           DateTime?        @db.Time(6)
-  break_start_time                         DateTime?        @db.Time(6)
-  break_end_time                           DateTime?        @db.Time(6)
-  total_hours                              Decimal?         @default(0) @db.Decimal(5, 2)
-  break_duration                           Decimal?         @default(0) @db.Decimal(4, 2)
-  pay_rate                                 Decimal?         @default(0) @db.Decimal(8, 2)
-  total_pay                                Decimal?         @default(0) @db.Decimal(10, 2)
-  manually_edited                          Boolean?         @default(false)
-  supervisor_comments                      String?
-  profiles_timecards_approved_byToprofiles profiles?        @relation("timecards_approved_byToprofiles", fields: [approved_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  projects                                 projects?        @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  profiles_timecards_user_idToprofiles     profiles?        @relation("timecards_user_idToprofiles", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+// Old timecards model removed - using normalized structure instead
 
-  @@unique([user_id, project_id])
-  @@unique([user_id, project_id, date], map: "timecards_user_project_date_unique")
-  @@index([approved_by], map: "idx_timecards_approved_by")
-  @@index([date], map: "idx_timecards_date")
-  @@index([project_id], map: "idx_timecards_project_id")
-  @@index([project_id, status], map: "idx_timecards_project_status")
-  @@index([status], map: "idx_timecards_status")
-  @@index([submitted_at], map: "idx_timecards_submitted_at")
-  @@index([user_id, date], map: "idx_timecards_user_date")
-  @@index([user_id], map: "idx_timecards_user_id")
-  @@index([user_id, status], map: "idx_timecards_user_status")
+/// Normalized timecard structure - Header table for overall timecard information
+model timecard_headers {
+  id                   String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id              String?   @db.Uuid
+  project_id           String?   @db.Uuid
+  
+  // Timecard metadata
+  status               timecard_status? @default(draft)
+  submitted_at         DateTime? @db.Timestamptz(6)
+  approved_at          DateTime? @db.Timestamptz(6)
+  approved_by          String?   @db.Uuid
+  rejection_reason     String?
+  admin_notes          String?
+  
+  // Period information
+  period_start_date    DateTime  @db.Date
+  period_end_date      DateTime  @db.Date
+  
+  // Calculated totals (computed from daily entries)
+  total_hours          Decimal?  @default(0) @db.Decimal(5, 2)
+  total_break_duration Decimal?  @default(0) @db.Decimal(4, 2)
+  total_pay            Decimal?  @default(0) @db.Decimal(10, 2)
+  
+  // Metadata
+  pay_rate             Decimal?  @default(0) @db.Decimal(8, 2)
+  manually_edited      Boolean?  @default(false)
+  edit_comments        String?
+  admin_edited         Boolean?  @default(false)
+  last_edited_by       String?
+  edit_type            String?
+  
+  created_at           DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime? @default(now()) @db.Timestamptz(6)
+  
+  // Relations
+  daily_entries                                    timecard_daily_entries[]
+  user                                             profiles? @relation("timecard_headers_user", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  project                                          projects? @relation("timecard_headers_project", fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  approved_by_profile                              profiles? @relation("timecard_headers_approved_by", fields: [approved_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  // Constraints
+  @@unique([user_id, project_id, period_start_date], map: "timecard_headers_user_project_date_unique")
+  @@index([user_id, project_id], map: "idx_timecard_headers_user_project")
+  @@index([status], map: "idx_timecard_headers_status")
+  @@index([period_start_date, period_end_date], map: "idx_timecard_headers_period")
+  @@index([submitted_at], map: "idx_timecard_headers_submitted")
+  @@schema("public")
+}
+
+/// Normalized timecard structure - Daily entries for individual day details
+model timecard_daily_entries {
+  id                   String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  timecard_header_id   String    @db.Uuid
+  
+  // Day information
+  work_date            DateTime  @db.Date
+  
+  // Time tracking
+  check_in_time        DateTime? @db.Time(6)
+  check_out_time       DateTime? @db.Time(6)
+  break_start_time     DateTime? @db.Time(6)
+  break_end_time       DateTime? @db.Time(6)
+  
+  // Calculated values
+  hours_worked         Decimal?  @default(0) @db.Decimal(4, 2)
+  break_duration       Decimal?  @default(0) @db.Decimal(3, 2)
+  daily_pay            Decimal?  @default(0) @db.Decimal(8, 2)
+  
+  // Simplified - no individual daily notes or locations
+  
+  // Metadata
+  created_at           DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime? @default(now()) @db.Timestamptz(6)
+  
+  // Relations
+  timecard_header      timecard_headers @relation(fields: [timecard_header_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  
+  // Constraints
+  @@unique([timecard_header_id, work_date], map: "timecard_daily_entries_header_date_unique")
+  @@index([timecard_header_id], map: "idx_timecard_daily_entries_header")
+  @@index([work_date], map: "idx_timecard_daily_entries_date")
+  @@index([timecard_header_id, work_date], map: "idx_timecard_daily_entries_header_date")
   @@schema("public")
 }
 

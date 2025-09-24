@@ -92,6 +92,7 @@ export async function PUT(
         user_id,
         role,
         pay_rate,
+        time_type,
         schedule_notes,
         available_dates,
         confirmed_at,

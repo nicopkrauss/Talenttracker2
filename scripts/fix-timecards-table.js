@@ -75,7 +75,7 @@ async function fixTimecardsTable() {
       'ALTER TABLE timecards ADD COLUMN IF NOT EXISTS pay_rate DECIMAL(8,2) DEFAULT 0',
       'ALTER TABLE timecards ADD COLUMN IF NOT EXISTS total_pay DECIMAL(10,2) DEFAULT 0',
       'ALTER TABLE timecards ADD COLUMN IF NOT EXISTS manually_edited BOOLEAN DEFAULT FALSE',
-      'ALTER TABLE timecards ADD COLUMN IF NOT EXISTS supervisor_comments TEXT',
+      'ALTER TABLE timecards ADD COLUMN IF NOT EXISTS edit_comments TEXT',
       'ALTER TABLE timecards ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMP WITH TIME ZONE',
       'ALTER TABLE timecards ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP WITH TIME ZONE',
       'ALTER TABLE timecards ADD COLUMN IF NOT EXISTS approved_by UUID'

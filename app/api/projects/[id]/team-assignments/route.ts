@@ -34,6 +34,7 @@ export async function GET(
         user_id,
         role,
         pay_rate,
+        time_type,
         schedule_notes,
         available_dates,
         confirmed_at,
@@ -106,6 +107,28 @@ export async function POST(
       return NextResponse.json({ error: 'Pay rate must be between 0 and 10000' }, { status: 400 })
     }
 
+    // Get the time_type from the project's role template
+    const { data: roleTemplate } = await supabase
+      .from('project_role_templates')
+      .select('time_type')
+      .eq('project_id', projectId)
+      .eq('role', role)
+      .eq('is_default', true)
+      .single()
+
+    // Fallback to default time_type based on role if no template found
+    let time_type = 'hourly' // default
+    if (roleTemplate?.time_type) {
+      time_type = roleTemplate.time_type
+    } else {
+      // Default time types by role
+      if (role === 'talent_escort') {
+        time_type = 'hourly'
+      } else if (role === 'supervisor' || role === 'coordinator') {
+        time_type = 'daily'
+      }
+    }
+
     // Create team assignment
     const { data: assignment, error } = await supabase
       .from('team_assignments')
@@ -114,6 +137,7 @@ export async function POST(
         user_id,
         role,
         pay_rate: pay_rate || null,
+        time_type,
         schedule_notes: schedule_notes || null
       })
       .select(`
@@ -121,6 +145,7 @@ export async function POST(
         user_id,
         role,
         pay_rate,
+        time_type,
         schedule_notes,
         available_dates,
         confirmed_at,

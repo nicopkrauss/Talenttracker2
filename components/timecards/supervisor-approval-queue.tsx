@@ -7,22 +7,50 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Clock, Calendar, DollarSign, AlertTriangle, Check, X } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Clock, Calendar, DollarSign, AlertTriangle, Check, X, Edit, Shield } from "lucide-react"
 import type { Timecard } from "@/lib/types"
 import { format } from "date-fns"
+import { canApproveTimecardsWithSettings } from "@/lib/role-utils"
 
 interface SupervisorApprovalQueueProps {
   timecards: Timecard[]
   onUpdate: () => void
+  userRole?: string | null
+  globalSettings?: {
+    in_house_can_approve_timecards?: boolean
+    supervisor_can_approve_timecards?: boolean
+    coordinator_can_approve_timecards?: boolean
+  }
 }
 
-export function SupervisorApprovalQueue({ timecards, onUpdate }: SupervisorApprovalQueueProps) {
+export function SupervisorApprovalQueue({ 
+  timecards, 
+  onUpdate, 
+  userRole, 
+  globalSettings 
+}: SupervisorApprovalQueueProps) {
   const [selectedTimecards, setSelectedTimecards] = useState<string[]>([])
   const [comments, setComments] = useState<Record<string, string>>({})
   const [processing, setProcessing] = useState<string | null>(null)
+  const [rejectingTimecard, setRejectingTimecard] = useState<string | null>(null)
+  const [editingTimecard, setEditingTimecard] = useState<Timecard | null>(null)
+  const [confirmationDialog, setConfirmationDialog] = useState<{
+    type: 'bulk_approve' | 'edit_confirm'
+    data?: any
+  } | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  )
+
+  // Check if user has approval permissions (requirement 6.1-6.6)
+  const hasApprovalPermission = canApproveTimecardsWithSettings(
+    userRole as any, 
+    globalSettings
   )
 
   const handleTimecardSelection = (timecardId: string, checked: boolean) => {
@@ -42,82 +70,201 @@ export function SupervisorApprovalQueue({ timecards, onUpdate }: SupervisorAppro
   }
 
   const approveTimecard = async (timecardId: string) => {
+    if (!hasApprovalPermission) {
+      setError("You don't have permission to approve timecards")
+      return
+    }
+
     setProcessing(timecardId)
+    setError(null)
+    
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) throw new Error("Not authenticated")
+      const response = await fetch('/api/timecards/approve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          timecardId,
+          comments: comments[timecardId] || undefined,
+        }),
+      })
 
-      const { error } = await supabase
-        .from("timecards")
-        .update({
-          status: "approved",
-          approved_at: new Date().toISOString(),
-          approved_by: user.id,
-          supervisor_comments: comments[timecardId] || null,
-        })
-        .eq("id", timecardId)
+      const result = await response.json()
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to approve timecard')
+      }
+
       onUpdate()
     } catch (error) {
       console.error("Error approving timecard:", error)
+      setError(error instanceof Error ? error.message : 'Failed to approve timecard')
     } finally {
       setProcessing(null)
     }
   }
 
   const rejectTimecard = async (timecardId: string) => {
+    if (!hasApprovalPermission) {
+      setError("You don't have permission to reject timecards")
+      return
+    }
+
+    // Required comments validation for rejection workflow (requirement 5.4)
+    const rejectionComments = comments[timecardId]?.trim()
+    if (!rejectionComments) {
+      setError("Comments are required when rejecting a timecard")
+      return
+    }
+
     setProcessing(timecardId)
+    setError(null)
+    
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) throw new Error("Not authenticated")
+      const response = await fetch('/api/timecards/reject', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          timecardId,
+          comments: rejectionComments,
+        }),
+      })
 
-      const { error } = await supabase
-        .from("timecards")
-        .update({
-          status: "rejected",
-          supervisor_comments: comments[timecardId] || "Rejected by supervisor",
-        })
-        .eq("id", timecardId)
+      const result = await response.json()
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to reject timecard')
+      }
+
       onUpdate()
     } catch (error) {
       console.error("Error rejecting timecard:", error)
+      setError(error instanceof Error ? error.message : 'Failed to reject timecard')
     } finally {
       setProcessing(null)
     }
   }
 
-  const bulkApprove = async () => {
+  const handleBulkApprove = () => {
+    if (!hasApprovalPermission) {
+      setError("You don't have permission to approve timecards")
+      return
+    }
+
+    if (selectedTimecards.length === 0) {
+      setError("No timecards selected for bulk approval")
+      return
+    }
+
+    // Proper validation checks before bulk approval (requirement 5.9)
+    const selectedTimecardData = timecards.filter(tc => selectedTimecards.includes(tc.id))
+    const invalidTimecards = selectedTimecardData.filter(tc => tc.status !== 'submitted')
+    const manuallyEditedCount = selectedTimecardData.filter(tc => tc.manually_edited).length
+
+    setConfirmationDialog({
+      type: 'bulk_approve',
+      data: {
+        count: selectedTimecards.length,
+        invalidCount: invalidTimecards.length,
+        manuallyEditedCount,
+        invalidTimecards
+      }
+    })
+  }
+
+  const confirmBulkApprove = async () => {
     setProcessing("bulk")
+    setError(null)
+    
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) throw new Error("Not authenticated")
+      const response = await fetch('/api/timecards/approve?bulk=true', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          timecardIds: selectedTimecards,
+          comments: undefined, // Bulk approval doesn't require comments
+        }),
+      })
 
-      const { error } = await supabase
-        .from("timecards")
-        .update({
-          status: "approved",
-          approved_at: new Date().toISOString(),
-          approved_by: user.id,
-        })
-        .in("id", selectedTimecards)
+      const result = await response.json()
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to bulk approve timecards')
+      }
+
       setSelectedTimecards([])
+      setConfirmationDialog(null)
       onUpdate()
     } catch (error) {
       console.error("Error bulk approving timecards:", error)
+      setError(error instanceof Error ? error.message : 'Failed to bulk approve timecards')
     } finally {
       setProcessing(null)
     }
+  }
+
+  // Two-way confirmation for administrator edits (requirement 5.3)
+  const handleEditTimecard = (timecard: Timecard) => {
+    if (userRole !== 'admin') {
+      setError("Only administrators can edit timecards")
+      return
+    }
+    setEditingTimecard(timecard)
+  }
+
+  const submitTimecardEdit = async (edits: any, adminNote: string) => {
+    if (!editingTimecard) return
+
+    setProcessing(editingTimecard.id)
+    setError(null)
+    
+    try {
+      const response = await fetch('/api/timecards/edit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          timecardId: editingTimecard.id,
+          edits,
+          adminNote,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to edit timecard')
+      }
+
+      setEditingTimecard(null)
+      onUpdate()
+    } catch (error) {
+      console.error("Error editing timecard:", error)
+      setError(error instanceof Error ? error.message : 'Failed to edit timecard')
+    } finally {
+      setProcessing(null)
+    }
+  }
+
+  // Show permission error if user doesn't have approval rights
+  if (!hasApprovalPermission) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center">
+          <Shield className="w-12 h-12 text-amber-500 dark:text-amber-400 mx-auto mb-4" />
+          <p className="text-muted-foreground">You don't have permission to approve timecards.</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Contact an administrator to configure approval permissions for your role.
+          </p>
+        </CardContent>
+      </Card>
+    )
   }
 
   if (timecards.length === 0) {
@@ -125,7 +272,7 @@ export function SupervisorApprovalQueue({ timecards, onUpdate }: SupervisorAppro
       <Card>
         <CardContent className="p-8 text-center">
           <Check className="w-12 h-12 text-green-500 dark:text-green-400 mx-auto mb-4" />
-          <p className="text-muted-foreground">No timecards pending approval.</p>
+          <p className="text-muted-foreground">No timecards awaiting approval.</p>
         </CardContent>
       </Card>
     )
@@ -133,19 +280,30 @@ export function SupervisorApprovalQueue({ timecards, onUpdate }: SupervisorAppro
 
   return (
     <div className="space-y-4">
+      {/* Error Display */}
+      {error && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       {/* Bulk Actions */}
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <Checkbox checked={selectedTimecards.length === timecards.length} onCheckedChange={handleSelectAll} />
+              <Checkbox 
+                checked={selectedTimecards.length === timecards.length && timecards.length > 0} 
+                onCheckedChange={handleSelectAll} 
+              />
               <span className="text-sm font-medium">
                 {selectedTimecards.length} of {timecards.length} selected
               </span>
             </div>
             {selectedTimecards.length > 0 && (
               <Button
-                onClick={bulkApprove}
+                onClick={handleBulkApprove}
                 disabled={processing === "bulk"}
                 className="bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700"
               >
@@ -184,7 +342,7 @@ export function SupervisorApprovalQueue({ timecards, onUpdate }: SupervisorAppro
                     Manually Edited
                   </Badge>
                 )}
-                <Badge className="bg-blue-500 text-white dark:bg-blue-600 dark:text-blue-50">Pending Review</Badge>
+                <Badge className="bg-blue-500 text-white dark:bg-blue-600 dark:text-blue-50">Submitted</Badge>
               </div>
             </div>
           </CardHeader>
@@ -241,7 +399,7 @@ export function SupervisorApprovalQueue({ timecards, onUpdate }: SupervisorAppro
             )}
 
             <div>
-              <label className="text-sm font-medium text-foreground">Supervisor Comments (Optional)</label>
+              <label className="text-sm font-medium text-foreground">Edit Comments (Optional)</label>
               <Textarea
                 placeholder="Add comments for this timecard..."
                 value={comments[timecard.id] || ""}
@@ -255,13 +413,25 @@ export function SupervisorApprovalQueue({ timecards, onUpdate }: SupervisorAppro
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => rejectTimecard(timecard.id)}
+                  onClick={() => setRejectingTimecard(timecard.id)}
                   disabled={processing === timecard.id}
                   className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950/20"
                 >
                   <X className="w-4 h-4 mr-1" />
                   {processing === timecard.id ? "Processing..." : "Reject"}
                 </Button>
+                {userRole === 'admin' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEditTimecard(timecard)}
+                    disabled={processing === timecard.id}
+                    className="text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-950/20"
+                  >
+                    <Edit className="w-4 h-4 mr-1" />
+                    Edit
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   onClick={() => approveTimecard(timecard.id)}
@@ -281,6 +451,258 @@ export function SupervisorApprovalQueue({ timecards, onUpdate }: SupervisorAppro
           </CardContent>
         </Card>
       ))}
+
+      {/* Rejection Confirmation Dialog */}
+      <Dialog open={rejectingTimecard !== null} onOpenChange={() => setRejectingTimecard(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Timecard</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for rejecting this timecard. The user will receive your comments and be able to make corrections.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Textarea
+              placeholder="Explain why this timecard is being rejected..."
+              value={rejectingTimecard ? (comments[rejectingTimecard] || '') : ''}
+              onChange={(e) => {
+                if (rejectingTimecard) {
+                  setComments({ ...comments, [rejectingTimecard]: e.target.value })
+                }
+              }}
+              className="min-h-[100px]"
+            />
+            {rejectingTimecard && !comments[rejectingTimecard]?.trim() && (
+              <p className="text-sm text-red-600 dark:text-red-400">
+                Comments are required when rejecting a timecard.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectingTimecard(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (rejectingTimecard) {
+                  rejectTimecard(rejectingTimecard)
+                  setRejectingTimecard(null)
+                }
+              }}
+              disabled={!rejectingTimecard || !comments[rejectingTimecard]?.trim()}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Reject Timecard
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Approval Confirmation Dialog */}
+      <Dialog 
+        open={confirmationDialog?.type === 'bulk_approve'} 
+        onOpenChange={() => setConfirmationDialog(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Bulk Approval</DialogTitle>
+            <DialogDescription>
+              You are about to approve {confirmationDialog?.data?.count} timecard(s).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {confirmationDialog?.data?.invalidCount > 0 && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  {confirmationDialog.data.invalidCount} timecard(s) are not in submitted status and will be skipped.
+                </AlertDescription>
+              </Alert>
+            )}
+            {confirmationDialog?.data?.manuallyEditedCount > 0 && (
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  {confirmationDialog.data.manuallyEditedCount} timecard(s) have been manually edited and require special attention.
+                </AlertDescription>
+              </Alert>
+            )}
+            <p className="text-sm text-muted-foreground">
+              This action cannot be undone. Are you sure you want to proceed?
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmationDialog(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmBulkApprove}
+              disabled={processing === "bulk"}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              {processing === "bulk" ? "Approving..." : "Confirm Approval"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Timecard Edit Dialog (Two-way confirmation for administrator edits) */}
+      <Dialog open={editingTimecard !== null} onOpenChange={() => setEditingTimecard(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Timecard</DialogTitle>
+            <DialogDescription>
+              Make changes to this timecard. The timecard will be returned to the user for re-approval after editing.
+            </DialogDescription>
+          </DialogHeader>
+          {editingTimecard && (
+            <TimecardEditForm
+              timecard={editingTimecard}
+              onSubmit={submitTimecardEdit}
+              onCancel={() => setEditingTimecard(null)}
+              processing={processing === editingTimecard.id}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
+// Timecard Edit Form Component (requirement 5.3 - Two-way confirmation)
+interface TimecardEditFormProps {
+  timecard: Timecard
+  onSubmit: (edits: any, adminNote: string) => void
+  onCancel: () => void
+  processing: boolean
+}
+
+function TimecardEditForm({ timecard, onSubmit, onCancel, processing }: TimecardEditFormProps) {
+  const [edits, setEdits] = useState({
+    check_in_time: timecard.check_in_time || '',
+    check_out_time: timecard.check_out_time || '',
+    break_start_time: timecard.break_start_time || '',
+    break_end_time: timecard.break_end_time || '',
+    total_hours: timecard.total_hours,
+    break_duration: timecard.break_duration,
+    pay_rate: timecard.pay_rate,
+  })
+  const [adminNote, setAdminNote] = useState('')
+
+  const handleSubmit = () => {
+    if (!adminNote.trim()) {
+      return // Admin note is required
+    }
+
+    // Only include changed fields
+    const changes: any = {}
+    Object.entries(edits).forEach(([key, value]) => {
+      if (value !== timecard[key as keyof Timecard]) {
+        changes[key] = value
+      }
+    })
+
+    onSubmit(changes, adminNote)
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm font-medium">Check In Time</label>
+          <input
+            type="datetime-local"
+            value={edits.check_in_time ? new Date(edits.check_in_time).toISOString().slice(0, 16) : ''}
+            onChange={(e) => setEdits({ ...edits, check_in_time: e.target.value })}
+            className="w-full p-2 border rounded"
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Check Out Time</label>
+          <input
+            type="datetime-local"
+            value={edits.check_out_time ? new Date(edits.check_out_time).toISOString().slice(0, 16) : ''}
+            onChange={(e) => setEdits({ ...edits, check_out_time: e.target.value })}
+            className="w-full p-2 border rounded"
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Break Start Time</label>
+          <input
+            type="datetime-local"
+            value={edits.break_start_time ? new Date(edits.break_start_time).toISOString().slice(0, 16) : ''}
+            onChange={(e) => setEdits({ ...edits, break_start_time: e.target.value })}
+            className="w-full p-2 border rounded"
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Break End Time</label>
+          <input
+            type="datetime-local"
+            value={edits.break_end_time ? new Date(edits.break_end_time).toISOString().slice(0, 16) : ''}
+            onChange={(e) => setEdits({ ...edits, break_end_time: e.target.value })}
+            className="w-full p-2 border rounded"
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Total Hours</label>
+          <input
+            type="number"
+            step="0.1"
+            value={edits.total_hours}
+            onChange={(e) => setEdits({ ...edits, total_hours: parseFloat(e.target.value) || 0 })}
+            className="w-full p-2 border rounded"
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Break Duration (minutes)</label>
+          <input
+            type="number"
+            value={edits.break_duration}
+            onChange={(e) => setEdits({ ...edits, break_duration: parseFloat(e.target.value) || 0 })}
+            className="w-full p-2 border rounded"
+          />
+        </div>
+      </div>
+      
+      <div>
+        <label className="text-sm font-medium">Pay Rate</label>
+        <input
+          type="number"
+          step="0.01"
+          value={edits.pay_rate}
+          onChange={(e) => setEdits({ ...edits, pay_rate: parseFloat(e.target.value) || 0 })}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+
+      <div>
+        <label className="text-sm font-medium">Admin Note (Required)</label>
+        <Textarea
+          placeholder="Explain why this timecard is being edited..."
+          value={adminNote}
+          onChange={(e) => setAdminNote(e.target.value)}
+          className="min-h-[100px]"
+        />
+        {!adminNote.trim() && (
+          <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+            Admin note is required when editing a timecard.
+          </p>
+        )}
+      </div>
+
+      <DialogFooter>
+        <Button variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          disabled={processing || !adminNote.trim()}
+          className="bg-blue-600 hover:bg-blue-700 text-white"
+        >
+          {processing ? "Saving..." : "Save Changes"}
+        </Button>
+      </DialogFooter>
     </div>
   )
 }

@@ -1999,7 +1999,7 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
                                 </Badge>
                                 {assignment.pay_rate && (
                                   <Badge variant="outline" className="text-sm">
-                                    ${assignment.pay_rate}
+                                    ${assignment.pay_rate}{assignment.time_type === 'hourly' ? '/h' : ''}
                                   </Badge>
                                 )}
                               </div>
@@ -2188,7 +2188,7 @@ export function RolesTeamTab({ project, onProjectUpdate }: RolesTeamTabProps) {
                             </Badge>
                             {assignment.pay_rate && (
                               <Badge variant="outline" className="text-sm">
-                                ${assignment.pay_rate}
+                                ${assignment.pay_rate}{assignment.time_type === 'hourly' ? '/h' : ''}
                               </Badge>
                             )}
                           </div>

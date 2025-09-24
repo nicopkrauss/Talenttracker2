@@ -156,10 +156,43 @@ export function canManageTalent(
 
 /**
  * Checks if a user can approve timecards
- * Only admin and in_house system roles can approve timecards
+ * Admin always can approve, other roles depend on global settings
  */
 export function canApproveTimecards(systemRole: SystemRole | null): boolean {
-  return hasAdminAccess(systemRole)
+  return systemRole === 'admin'
+}
+
+/**
+ * Checks if a user can approve timecards based on role and global settings
+ * This function should be used with global settings data
+ */
+export function canApproveTimecardsWithSettings(
+  systemRole: SystemRole | null,
+  globalSettings?: {
+    in_house_can_approve_timecards?: boolean
+    supervisor_can_approve_timecards?: boolean
+    coordinator_can_approve_timecards?: boolean
+  }
+): boolean {
+  // Admin always has approval rights
+  if (systemRole === 'admin') {
+    return true
+  }
+  
+  // Check role-specific permissions from global settings
+  if (systemRole === 'in_house' && globalSettings?.in_house_can_approve_timecards) {
+    return true
+  }
+  
+  if (systemRole === 'supervisor' && globalSettings?.supervisor_can_approve_timecards) {
+    return true
+  }
+  
+  if (systemRole === 'coordinator' && globalSettings?.coordinator_can_approve_timecards) {
+    return true
+  }
+  
+  return false
 }
 
 /**
