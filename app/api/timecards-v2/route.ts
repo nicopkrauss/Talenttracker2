@@ -11,27 +11,75 @@ import { cookies } from 'next/headers'
 
 export async function GET(request: NextRequest) {
   try {
-    // Use service role for testing to bypass authentication
+    const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          get(name: string) {
-            return ''
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
           },
         },
       }
     )
 
-    // Temporarily disable authentication for testing
-    console.log('Using service role for timecard access (testing mode)')
+    // Get authenticated user
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: 'Authentication required', code: 'UNAUTHORIZED' },
+        { status: 401 }
+      )
+    }
+
+    // Get user profile for role-based access
+    const { data: userProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError || !userProfile) {
+      return NextResponse.json(
+        { error: 'User profile not found', code: 'PROFILE_NOT_FOUND' },
+        { status: 403 }
+      )
+    }
 
     // Get query parameters
     const { searchParams } = new URL(request.url)
     const projectId = searchParams.get('project_id')
     const status = searchParams.get('status')
     const userId = searchParams.get('user_id')
+
+    // Validate project access if project_id is provided
+    if (projectId) {
+      const isAdmin = userProfile.role === 'admin' || userProfile.role === 'in_house'
+      
+      if (!isAdmin) {
+        // Regular users can only access projects where they have timecards
+        const { data: accessCheck, error: accessError } = await supabase
+          .from('timecard_headers')
+          .select('id')
+          .eq('project_id', projectId)
+          .eq('user_id', user.id)
+          .limit(1)
+
+        if (accessError || !accessCheck || accessCheck.length === 0) {
+          return NextResponse.json(
+            { error: 'Access denied to this project', code: 'PROJECT_ACCESS_DENIED' },
+            { status: 403 }
+          )
+        }
+      }
+    }
 
     // Build query
     let query = supabase
@@ -70,7 +118,15 @@ export async function GET(request: NextRequest) {
       `)
       .order('created_at', { ascending: false })
 
-    // Apply filters
+    // Apply role-based filtering
+    const isAdmin = userProfile.role === 'admin' || userProfile.role === 'in_house'
+    
+    if (!isAdmin) {
+      // Regular users can only see their own timecards
+      query = query.eq('user_id', user.id)
+    }
+
+    // Apply additional filters
     if (projectId) {
       query = query.eq('project_id', projectId)
     }
@@ -79,7 +135,8 @@ export async function GET(request: NextRequest) {
       query = query.eq('status', status)
     }
     
-    if (userId) {
+    if (userId && isAdmin) {
+      // Only admins can filter by other users
       query = query.eq('user_id', userId)
     }
 
@@ -214,25 +271,33 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Use service role for testing to bypass authentication
+    const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          get(name: string) {
-            return ''
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
           },
         },
       }
     )
 
-    // Temporarily disable authentication for testing
-    console.log('Using service role for timecard creation (testing mode)')
+    // Get authenticated user
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
     
-    // Use first available user for testing
-    const { data: users } = await supabase.from('profiles').select('id').limit(1)
-    const user = users?.[0] || { id: 'test-user' }
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: 'Authentication required', code: 'UNAUTHORIZED' },
+        { status: 401 }
+      )
+    }
 
     const body = await request.json()
     

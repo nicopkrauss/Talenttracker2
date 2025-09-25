@@ -19,9 +19,11 @@ interface TimecardListProps {
   showUserColumn?: boolean
   enableBulkSubmit?: boolean
   projectStartDate?: string // For show day validation
+  projectId?: string // For project-specific navigation context
+  teamAssignments?: any[] // For role badge display
 }
 
-export function TimecardList({ timecards, onUpdate, showUserColumn = false, enableBulkSubmit = false, projectStartDate }: TimecardListProps) {
+export function TimecardList({ timecards, onUpdate, showUserColumn = false, enableBulkSubmit = false, projectStartDate, projectId, teamAssignments = [] }: TimecardListProps) {
   const [submitting, setSubmitting] = useState<string | null>(null)
   const [showMissingBreakModal, setShowMissingBreakModal] = useState(false)
   const [pendingSubmissionId, setPendingSubmissionId] = useState<string | null>(null)
@@ -313,13 +315,26 @@ export function TimecardList({ timecards, onUpdate, showUserColumn = false, enab
             const statusOrder = { approved: 0, submitted: 1, draft: 2, rejected: 3 }
             return (statusOrder[a.status as keyof typeof statusOrder] || 4) - (statusOrder[b.status as keyof typeof statusOrder] || 4)
           })
-          .map((timecard) => (
+          .map((timecard) => {
+            // Create timecard link with project context if available
+            const timecardUrl = projectId 
+              ? `/timecards/${timecard.id}?projectId=${projectId}`
+              : `/timecards/${timecard.id}`
+            
+            // Get the user's project role
+            const userAssignment = teamAssignments.find(assignment => assignment.user_id === timecard.user_id)
+            const userProjectRole = userAssignment?.role || null
+            
+            return (
           <div key={timecard.id} className="relative">
-            <Link href={`/timecards/${timecard.id}`} className="block">
-              <MultiDayTimecardDisplay 
-                timecard={timecard} 
-                showUserName={showUserColumn}
-              />
+            <Link href={timecardUrl} className="block">
+              <div className="[&_.gap-6]:gap-0">
+                <MultiDayTimecardDisplay 
+                  timecard={timecard} 
+                  showUserName={showUserColumn}
+                  userProjectRole={userProjectRole}
+                />
+              </div>
             </Link>
             
             {/* Action Buttons Overlay - only for staff view and draft timecards */}
@@ -331,7 +346,7 @@ export function TimecardList({ timecards, onUpdate, showUserColumn = false, enab
                   asChild
                   className="bg-background/95 backdrop-blur"
                 >
-                  <Link href={`/timecards/${timecard.id}/edit`}>
+                  <Link href={projectId ? `/timecards/${timecard.id}/edit?projectId=${projectId}` : `/timecards/${timecard.id}/edit`}>
                     <Edit className="w-4 h-4 mr-1" />
                     Edit
                   </Link>
@@ -351,7 +366,8 @@ export function TimecardList({ timecards, onUpdate, showUserColumn = false, enab
               </div>
             )}
           </div>
-        ))}
+            )
+          })}
       </div>
 
       <MissingBreakResolutionModal

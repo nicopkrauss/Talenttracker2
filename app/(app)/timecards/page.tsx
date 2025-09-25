@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DollarSign, FileText, AlertCircle, FileEdit, ChevronLeft, ChevronRight, Check } from "lucide-react"
 import type { Timecard } from "@/lib/types"
+import { useRouter } from "next/navigation"
 
 // New payroll summary interface
 interface PayrollSummaryItem {
@@ -28,15 +29,13 @@ interface PayrollSummaryItem {
 import { NormalizedTimecardDisplay } from "@/components/timecards/normalized-timecard-display"
 import { TimecardList } from "@/components/timecards/timecard-list"
 import { MultiDayTimecardDisplay } from "@/components/timecards/multi-day-timecard-display"
-
-// Temporarily disabled during auth system overhaul
-// import { useAuth } from "@/lib/auth"
+import { TimecardProjectHub } from "@/components/timecards/timecard-project-hub"
+import { useAuth } from "@/lib/auth-context"
+import { hasAdminAccess } from "@/lib/role-utils"
 
 export default function TimecardsPage() {
-  // Temporarily disabled during auth system overhaul
-  // const { user, userProfile } = useAuth()
-  const user = { id: 'temp-user' } // Temporary mock
-  const userProfile = { role: 'admin' } // Temporary mock
+  const { user, userProfile, loading: authLoading, isAuthenticated } = useAuth()
+  const router = useRouter()
   const [timecards, setTimecards] = useState<Timecard[]>([])
   const [pendingTimecards, setPendingTimecards] = useState<Timecard[]>([])
   const [statusFilter, setStatusFilter] = useState<string>("all")
@@ -59,13 +58,24 @@ export default function TimecardsPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   )
 
+  // Handle project selection from TimecardProjectHub
+  const handleSelectProject = useCallback((projectId: string) => {
+    router.push(`/timecards/project/${projectId}`)
+  }, [router])
+
   const isAdmin = useMemo(() => 
-    userProfile?.role === "admin" || userProfile?.role === "in_house", 
+    hasAdminAccess(userProfile?.role || null), 
     [userProfile?.role]
   )
   const isSupervisor = useMemo(() => 
     userProfile?.role === "supervisor" || userProfile?.role === "coordinator", 
     [userProfile?.role]
+  )
+  
+  // Determine if user should see project selection interface
+  const shouldShowProjectHub = useMemo(() => 
+    isAdmin, 
+    [isAdmin]
   )
 
   const fetchSubmittedTimecards = async () => {
@@ -384,10 +394,11 @@ export default function TimecardsPage() {
     }
   }, [statusFilter, initialLoadComplete, user?.id])
 
-  if (loading) {
+  // Show loading state while auth is loading or data is loading
+  if (authLoading || loading) {
     return (
       <div className="p-6">
-        <div className="animate-pulse space-y-4">
+        <div className="animate-pulse space-y-4" data-testid="loading-skeleton">
           <div className="h-8 bg-muted rounded w-1/4"></div>
           <div className="h-10 bg-muted rounded"></div>
           <div className="space-y-3">
@@ -398,6 +409,12 @@ export default function TimecardsPage() {
         </div>
       </div>
     )
+  }
+
+  // Redirect to login if not authenticated
+  if (!isAuthenticated || !user || !userProfile) {
+    router.push('/login')
+    return null
   }
 
   // Show error state
@@ -459,6 +476,21 @@ export default function TimecardsPage() {
     )
   }
 
+  // Render project selection hub for admin users
+  if (shouldShowProjectHub) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <div className="p-6 flex-1">
+          <TimecardProjectHub
+            userRole={userProfile.role || 'admin'}
+            onSelectProject={handleSelectProject}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  // Render regular timecard interface for non-admin users
   return (
     <div className="min-h-screen flex flex-col">
       <div className="p-6 flex-1">
@@ -645,6 +677,8 @@ export default function TimecardsPage() {
                           showUserName={false}
                           showHeaderStats={false}
                           showTimecardHeader={true}
+                          defaultExpanded={true}
+                          hideExpandToggle={true}
                         />
 
                       </div>

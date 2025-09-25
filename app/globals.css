@@ -234,3 +234,23 @@
     scrollbar-width: none;
   }
 }
+
+/* Fix for mobile viewport header issues */
+@media (max-width: 767px) {
+  .fixed {
+    position: fixed !important;
+    transform: translateZ(0) !important;
+  }
+  
+  /* Prevent mobile browser viewport changes from affecting fixed elements */
+  html {
+    height: 100%;
+    overflow-x: hidden;
+  }
+  
+  body {
+    height: 100%;
+    overflow-x: hidden;
+    position: relative;
+  }
+}

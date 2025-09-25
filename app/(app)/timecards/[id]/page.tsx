@@ -54,6 +54,30 @@ export default function TimecardDetailPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   )
 
+  // Determine the correct back navigation based on URL params or referrer
+  const getBackUrl = () => {
+    if (typeof window !== 'undefined') {
+      // First check if projectId is in URL params
+      const urlParams = new URLSearchParams(window.location.search)
+      const projectId = urlParams.get('projectId')
+      if (projectId) {
+        return `/timecards/project/${projectId}`
+      }
+      
+      // Fallback to referrer-based detection
+      const referrer = document.referrer
+      if (referrer && referrer.includes('/timecards/project/')) {
+        // Extract project ID from referrer URL
+        const match = referrer.match(/\/timecards\/project\/([^\/]+)/)
+        if (match && match[1]) {
+          return `/timecards/project/${match[1]}`
+        }
+      }
+    }
+    // Default back to general timecards page
+    return '/timecards'
+  }
+
   useEffect(() => {
     if (params.id) {
       fetchTimecard()
@@ -444,7 +468,7 @@ export default function TimecardDetailPage() {
               <p className="text-muted-foreground mt-2">{error}</p>
             </div>
             <Button variant="outline" asChild>
-              <Link href="/timecards">Back to Timecards</Link>
+              <Link href={getBackUrl()}>Back to Timecards</Link>
             </Button>
           </CardContent>
         </Card>
@@ -462,7 +486,7 @@ export default function TimecardDetailPage() {
               <p className="text-muted-foreground mt-2">The requested timecard could not be found.</p>
             </div>
             <Button variant="outline" asChild>
-              <Link href="/timecards">Back to Timecards</Link>
+              <Link href={getBackUrl()}>Back to Timecards</Link>
             </Button>
           </CardContent>
         </Card>
@@ -483,7 +507,7 @@ export default function TimecardDetailPage() {
                 asChild
                 className="gap-2 hover:bg-muted transition-colors"
               >
-                <Link href="/timecards">
+                <Link href={getBackUrl()}>
                   <ArrowLeft className="h-4 w-4" />
                   Back
                 </Link>

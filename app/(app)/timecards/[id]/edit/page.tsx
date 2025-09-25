@@ -11,6 +11,18 @@ export default function TimecardEditPage() {
   const params = useParams()
   const router = useRouter()
 
+  // Determine the correct back navigation based on URL params
+  const getBackUrl = () => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const projectId = urlParams.get('projectId')
+      if (projectId) {
+        return `/timecards/${params.id}?projectId=${projectId}`
+      }
+    }
+    return `/timecards/${params.id}`
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-6">
@@ -23,7 +35,7 @@ export default function TimecardEditPage() {
                 asChild
                 className="gap-2"
               >
-                <Link href={`/timecards/${params.id}`}>
+                <Link href={getBackUrl()}>
                   <ArrowLeft className="h-4 w-4" />
                   Back
                 </Link>
@@ -36,7 +48,7 @@ export default function TimecardEditPage() {
               <p>Timecard ID: {params.id}</p>
               <p>This is a simplified edit page. The full functionality will be implemented once the basic routing works.</p>
               <Button asChild>
-                <Link href={`/timecards/${params.id}`}>Return to Timecard</Link>
+                <Link href={getBackUrl()}>Return to Timecard</Link>
               </Button>
             </div>
           </CardContent>

@@ -132,7 +132,7 @@ export function MultiDayTimecardDetail({
   const avgBreakPerDay = isMultiDay ? (timecard.break_duration || 0) / workingDays : (timecard.break_duration || 0)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-4 sm:pt-0">
       {/* Multi-Day Overview */}
       {isMultiDay && (
         <Card>
@@ -143,63 +143,41 @@ export function MultiDayTimecardDetail({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {/* Pattern Description */}
-              <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                <div className="flex items-start gap-3">
-                  <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-                  <div>
-                    <h3 className="font-semibold text-blue-700 dark:text-blue-300">
-                      {pattern || 'Multi-Day Schedule'}
-                    </h3>
-                    <p className="text-blue-600 dark:text-blue-400 mt-1">
-                      {description}
-                    </p>
-                    <div className="flex items-center gap-4 mt-2 text-sm text-blue-600 dark:text-blue-400">
-                      <span><strong>Working Days:</strong> {workingDays}</span>
-                      <span><strong>Period:</strong> {formatDate(timecard.date, "MMM d, yyyy")}</span>
-                    </div>
-                  </div>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="text-center p-4 bg-card rounded-lg border">
+                <div className="flex items-center justify-center mb-2">
+                  <Calendar className="w-4 h-4 text-muted-foreground mr-1" />
+                  <span className="text-sm font-medium text-muted-foreground">Working Days</span>
                 </div>
+                <p className="text-3xl font-bold text-foreground">{workingDays}</p>
+                <p className="text-xs text-muted-foreground">days worked</p>
               </div>
 
-              {/* Multi-Day Statistics */}
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="text-center p-4 bg-card rounded-lg border">
-                  <div className="flex items-center justify-center mb-2">
-                    <Calendar className="w-4 h-4 text-muted-foreground mr-1" />
-                    <span className="text-sm font-medium text-muted-foreground">Working Days</span>
-                  </div>
-                  <p className="text-3xl font-bold text-foreground">{workingDays}</p>
-                  <p className="text-xs text-muted-foreground">days worked</p>
+              <div className="text-center p-4 bg-card rounded-lg border">
+                <div className="flex items-center justify-center mb-2">
+                  <Clock className="w-4 h-4 text-muted-foreground mr-1" />
+                  <span className="text-sm font-medium text-muted-foreground">Avg Hours/Day</span>
                 </div>
+                <p className="text-3xl font-bold text-foreground">{avgHoursPerDay.toFixed(1)}</p>
+                <p className="text-xs text-muted-foreground">hours per day</p>
+              </div>
 
-                <div className="text-center p-4 bg-card rounded-lg border">
-                  <div className="flex items-center justify-center mb-2">
-                    <Clock className="w-4 h-4 text-muted-foreground mr-1" />
-                    <span className="text-sm font-medium text-muted-foreground">Avg Hours/Day</span>
-                  </div>
-                  <p className="text-3xl font-bold text-foreground">{avgHoursPerDay.toFixed(1)}</p>
-                  <p className="text-xs text-muted-foreground">hours per day</p>
+              <div className="text-center p-4 bg-card rounded-lg border">
+                <div className="flex items-center justify-center mb-2">
+                  <Clock className="w-4 h-4 text-muted-foreground mr-1" />
+                  <span className="text-sm font-medium text-muted-foreground">Avg Break/Day</span>
                 </div>
+                <p className="text-3xl font-bold text-foreground">{Math.round(avgBreakPerDay)}</p>
+                <p className="text-xs text-muted-foreground">minutes per day</p>
+              </div>
 
-                <div className="text-center p-4 bg-card rounded-lg border">
-                  <div className="flex items-center justify-center mb-2">
-                    <Clock className="w-4 h-4 text-muted-foreground mr-1" />
-                    <span className="text-sm font-medium text-muted-foreground">Avg Break/Day</span>
-                  </div>
-                  <p className="text-3xl font-bold text-foreground">{Math.round(avgBreakPerDay)}</p>
-                  <p className="text-xs text-muted-foreground">minutes per day</p>
+              <div className="text-center p-4 bg-card rounded-lg border">
+                <div className="flex items-center justify-center mb-2">
+                  <DollarSign className="w-4 h-4 text-green-600 dark:text-green-400 mr-1" />
+                  <span className="text-sm font-medium text-muted-foreground">Avg Pay/Day</span>
                 </div>
-
-                <div className="text-center p-4 bg-card rounded-lg border">
-                  <div className="flex items-center justify-center mb-2">
-                    <DollarSign className="w-4 h-4 text-green-600 dark:text-green-400 mr-1" />
-                    <span className="text-sm font-medium text-muted-foreground">Avg Pay/Day</span>
-                  </div>
-                  <p className="text-3xl font-bold text-green-600 dark:text-green-400">${avgPayPerDay.toFixed(0)}</p>
-                  <p className="text-xs text-muted-foreground">per working day</p>
-                </div>
+                <p className="text-3xl font-bold text-green-600 dark:text-green-400">${avgPayPerDay.toFixed(0)}</p>
+                <p className="text-xs text-muted-foreground">per working day</p>
               </div>
             </div>
           </CardContent>
@@ -220,61 +198,79 @@ export function MultiDayTimecardDetail({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="text-center sm:text-left">
-              <label className="text-sm font-medium text-muted-foreground">
-                {isMultiDay ? 'Total Hours' : 'Hours Worked'}
-              </label>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="text-center p-4 bg-card rounded-lg border">
+              <div className="flex items-center justify-center mb-2">
+                <Clock className="w-4 h-4 text-muted-foreground mr-1" />
+                <span className="text-sm font-medium text-muted-foreground">
+                  {isMultiDay ? 'Total Hours' : 'Hours Worked'}
+                </span>
+              </div>
               <p className={`text-3xl font-bold ${isEditing ? 'text-yellow-600 dark:text-yellow-400' : 'text-foreground'}`}>
                 {isEditing 
                   ? (calculatedValues?.total_hours || 0).toFixed(1)
                   : (timecard.total_hours || 0).toFixed(1)
                 }
               </p>
-              {isMultiDay && !isEditing && (
-                <p className="text-sm text-muted-foreground">
+              {isMultiDay && !isEditing ? (
+                <p className="text-xs text-muted-foreground">
                   {avgHoursPerDay.toFixed(1)} hours/day avg
                 </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">hours worked</p>
               )}
             </div>
             
-            <div className="text-center sm:text-left">
-              <label className="text-sm font-medium text-muted-foreground">
-                {isMultiDay ? 'Total Break Time' : 'Break Duration'}
-              </label>
-              <p className={`text-xl font-semibold ${isEditing ? 'text-yellow-600 dark:text-yellow-400' : 'text-foreground'}`}>
+            <div className="text-center p-4 bg-card rounded-lg border">
+              <div className="flex items-center justify-center mb-2">
+                <Clock className="w-4 h-4 text-muted-foreground mr-1" />
+                <span className="text-sm font-medium text-muted-foreground">
+                  {isMultiDay ? 'Total Break Time' : 'Break Duration'}
+                </span>
+              </div>
+              <p className={`text-3xl font-bold ${isEditing ? 'text-yellow-600 dark:text-yellow-400' : 'text-foreground'}`}>
                 {Math.round(isEditing 
                   ? (calculatedValues?.break_duration || 0)
                   : (timecard.break_duration || 0)
-                )} min
+                )}
               </p>
-              {isMultiDay && !isEditing && (
-                <p className="text-sm text-muted-foreground">
+              {isMultiDay && !isEditing ? (
+                <p className="text-xs text-muted-foreground">
                   {Math.round(avgBreakPerDay)} min/day avg
                 </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">minutes</p>
               )}
             </div>
             
-            <div className="text-center sm:text-left">
-              <label className="text-sm font-medium text-muted-foreground">Pay Rate</label>
-              <p className="text-xl font-semibold text-foreground">${(timecard.pay_rate || 0).toFixed(2)}/hr</p>
-              <p className="text-sm text-muted-foreground">hourly rate</p>
+            <div className="text-center p-4 bg-card rounded-lg border">
+              <div className="flex items-center justify-center mb-2">
+                <DollarSign className="w-4 h-4 text-muted-foreground mr-1" />
+                <span className="text-sm font-medium text-muted-foreground">Pay Rate</span>
+              </div>
+              <p className="text-3xl font-bold text-foreground">${(timecard.pay_rate || 0).toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground">per hour</p>
             </div>
             
-            <div className="text-center sm:text-left">
-              <label className="text-sm font-medium text-muted-foreground">
-                {isMultiDay ? 'Total Compensation' : 'Total Pay'}
-              </label>
+            <div className="text-center p-4 bg-card rounded-lg border">
+              <div className="flex items-center justify-center mb-2">
+                <DollarSign className="w-4 h-4 text-green-600 dark:text-green-400 mr-1" />
+                <span className="text-sm font-medium text-muted-foreground">
+                  {isMultiDay ? 'Total Compensation' : 'Total Pay'}
+                </span>
+              </div>
               <p className={`text-3xl font-bold ${isEditing ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400'}`}>
                 ${isEditing 
                   ? (calculatedValues?.total_pay || 0).toFixed(2)
                   : (timecard.total_pay || 0).toFixed(2)
                 }
               </p>
-              {isMultiDay && !isEditing && (
-                <p className="text-sm text-muted-foreground">
+              {isMultiDay && !isEditing ? (
+                <p className="text-xs text-muted-foreground">
                   ${avgPayPerDay.toFixed(2)}/day avg
                 </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">total compensation</p>
               )}
             </div>
           </div>
@@ -306,7 +302,7 @@ export function MultiDayTimecardDetail({
                   </div>
 
                   {/* Time Events Grid - matching timecards page format */}
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     {/* Check In */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-muted-foreground">Check In</label>
@@ -411,7 +407,7 @@ export function MultiDayTimecardDetail({
             </div>
 
             {/* Time Events Grid */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {/* Check In */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-muted-foreground">
