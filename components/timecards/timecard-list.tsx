@@ -21,9 +21,10 @@ interface TimecardListProps {
   projectStartDate?: string // For show day validation
   projectId?: string // For project-specific navigation context
   teamAssignments?: any[] // For role badge display
+  allExpanded?: boolean // For controlling expand/collapse state
 }
 
-export function TimecardList({ timecards, onUpdate, showUserColumn = false, enableBulkSubmit = false, projectStartDate, projectId, teamAssignments = [] }: TimecardListProps) {
+export function TimecardList({ timecards, onUpdate, showUserColumn = false, enableBulkSubmit = false, projectStartDate, projectId, teamAssignments = [], allExpanded = false }: TimecardListProps) {
   const [submitting, setSubmitting] = useState<string | null>(null)
   const [showMissingBreakModal, setShowMissingBreakModal] = useState(false)
   const [pendingSubmissionId, setPendingSubmissionId] = useState<string | null>(null)
@@ -333,6 +334,9 @@ export function TimecardList({ timecards, onUpdate, showUserColumn = false, enab
                   timecard={timecard} 
                   showUserName={showUserColumn}
                   userProjectRole={userProjectRole}
+                  showRejectedFields={timecard.status === 'rejected'}
+                  defaultExpanded={allExpanded}
+                  showBreakdownToggle={true}
                 />
               </div>
             </Link>

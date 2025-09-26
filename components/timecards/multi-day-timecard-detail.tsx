@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-
+import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
@@ -12,6 +12,7 @@ import { format } from "date-fns"
 import { utcToDatetimeLocal } from "@/lib/timezone-utils"
 import { useAuth } from "@/lib/auth-context"
 import { canApproveTimecardsWithSettings } from "@/lib/role-utils"
+import { DesktopTimecardGrid } from "@/components/timecards/desktop-timecard-grid"
 
 interface MultiDayTimecardDetailProps {
   timecard: Timecard
@@ -25,6 +26,10 @@ interface MultiDayTimecardDetailProps {
   onTimeChange?: (field: string, value: string) => void
   actionButtons?: React.ReactNode
   globalSettings?: any
+  isRejectionMode?: boolean
+  selectedFields?: string[]
+  onFieldToggle?: (fieldId: string) => void
+  showRejectedFields?: boolean
 }
 
 export function MultiDayTimecardDetail({ 
@@ -34,7 +39,11 @@ export function MultiDayTimecardDetail({
   calculatedValues,
   onTimeChange,
   actionButtons,
-  globalSettings
+  globalSettings,
+  isRejectionMode = false,
+  selectedFields = [],
+  onFieldToggle,
+  showRejectedFields = false
 }: MultiDayTimecardDetailProps) {
   const { userProfile } = useAuth()
   const [isEditingAdminNotes, setIsEditingAdminNotes] = useState(false)
@@ -125,6 +134,41 @@ export function MultiDayTimecardDetail({
   }
 
   const { description, pattern } = extractDisplayInfo(timecard.admin_notes)
+
+  // Helper functions for rejection mode
+  const getFieldId = (fieldType: string, dayIndex?: number) => {
+    if (dayIndex !== undefined) {
+      return `${fieldType}_day_${dayIndex}`
+    }
+    return fieldType
+  }
+
+  const isFieldSelected = (fieldId: string) => {
+    return isRejectionMode && selectedFields.includes(fieldId)
+  }
+
+  const handleFieldClick = (fieldId: string) => {
+    if (isRejectionMode && onFieldToggle) {
+      onFieldToggle(fieldId)
+    }
+  }
+
+  const isFieldRejected = (fieldId: string) => {
+    return showRejectedFields && timecard.rejected_fields && timecard.rejected_fields.includes(fieldId)
+  }
+
+  const isDayRejected = (dayIndex: number) => {
+    if (!showRejectedFields || !timecard.rejected_fields) return false
+    
+    const dayFieldIds = [
+      getFieldId('check_in_time', dayIndex),
+      getFieldId('break_start_time', dayIndex),
+      getFieldId('break_end_time', dayIndex),
+      getFieldId('check_out_time', dayIndex)
+    ]
+    
+    return dayFieldIds.every(fieldId => timecard.rejected_fields!.includes(fieldId))
+  }
   
   // Calculate average values for multi-day timecards
   const avgHoursPerDay = isMultiDay ? (timecard.total_hours || 0) / workingDays : (timecard.total_hours || 0)
@@ -184,184 +228,251 @@ export function MultiDayTimecardDetail({
         </Card>
       )}
 
-      {/* Time Summary - Enhanced for Multi-Day */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Clock className="w-5 h-5 mr-2" />
-            {isEditing 
-              ? 'Time Summary (Editing)' 
-              : isMultiDay 
-                ? 'Total Time Summary' 
-                : 'Time Summary'
-            }
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="text-center p-4 bg-card rounded-lg border">
-              <div className="flex items-center justify-center mb-2">
-                <Clock className="w-4 h-4 text-muted-foreground mr-1" />
-                <span className="text-sm font-medium text-muted-foreground">
-                  {isMultiDay ? 'Total Hours' : 'Hours Worked'}
-                </span>
-              </div>
-              <p className={`text-3xl font-bold ${isEditing ? 'text-yellow-600 dark:text-yellow-400' : 'text-foreground'}`}>
-                {isEditing 
-                  ? (calculatedValues?.total_hours || 0).toFixed(1)
-                  : (timecard.total_hours || 0).toFixed(1)
-                }
-              </p>
-              {isMultiDay && !isEditing ? (
-                <p className="text-xs text-muted-foreground">
-                  {avgHoursPerDay.toFixed(1)} hours/day avg
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground">hours worked</p>
-              )}
-            </div>
-            
-            <div className="text-center p-4 bg-card rounded-lg border">
-              <div className="flex items-center justify-center mb-2">
-                <Clock className="w-4 h-4 text-muted-foreground mr-1" />
-                <span className="text-sm font-medium text-muted-foreground">
-                  {isMultiDay ? 'Total Break Time' : 'Break Duration'}
-                </span>
-              </div>
-              <p className={`text-3xl font-bold ${isEditing ? 'text-yellow-600 dark:text-yellow-400' : 'text-foreground'}`}>
-                {Math.round(isEditing 
-                  ? (calculatedValues?.break_duration || 0)
-                  : (timecard.break_duration || 0)
-                )}
-              </p>
-              {isMultiDay && !isEditing ? (
-                <p className="text-xs text-muted-foreground">
-                  {Math.round(avgBreakPerDay)} min/day avg
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground">minutes</p>
-              )}
-            </div>
-            
-            <div className="text-center p-4 bg-card rounded-lg border">
-              <div className="flex items-center justify-center mb-2">
-                <DollarSign className="w-4 h-4 text-muted-foreground mr-1" />
-                <span className="text-sm font-medium text-muted-foreground">Pay Rate</span>
-              </div>
-              <p className="text-3xl font-bold text-foreground">${(timecard.pay_rate || 0).toFixed(2)}</p>
-              <p className="text-xs text-muted-foreground">per hour</p>
-            </div>
-            
-            <div className="text-center p-4 bg-card rounded-lg border">
-              <div className="flex items-center justify-center mb-2">
-                <DollarSign className="w-4 h-4 text-green-600 dark:text-green-400 mr-1" />
-                <span className="text-sm font-medium text-muted-foreground">
-                  {isMultiDay ? 'Total Compensation' : 'Total Pay'}
-                </span>
-              </div>
-              <p className={`text-3xl font-bold ${isEditing ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400'}`}>
-                ${isEditing 
-                  ? (calculatedValues?.total_pay || 0).toFixed(2)
-                  : (timecard.total_pay || 0).toFixed(2)
-                }
-              </p>
-              {isMultiDay && !isEditing ? (
-                <p className="text-xs text-muted-foreground">
-                  ${avgPayPerDay.toFixed(2)}/day avg
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground">total compensation</p>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Daily Entries Breakdown - Matching timecards page format */}
+
+      {/* Responsive Timecard Display */}
       {timecard.daily_entries && timecard.daily_entries.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Calendar className="w-5 h-5 mr-2" />
-              Daily Time Breakdown
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {timecard.daily_entries.map((entry, index) => (
-                <div key={index} className="space-y-4">
-                  {/* Day Header */}
-                  <div className="flex items-center justify-between pb-2">
-                    <h3 className="text-sm font-medium text-foreground">
-                      Day {index + 1} - {formatDate(entry.work_date, "EEEE, MMM d, yyyy")}
-                    </h3>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span>{(entry.hours_worked || 0).toFixed(1)} hrs</span>
-                      <span>${(entry.daily_pay || 0).toFixed(2)}</span>
-                    </div>
+        <>
+          {/* Desktop Layout - Days as columns, categories as rows */}
+          <div className="hidden lg:block">
+            <DesktopTimecardGrid
+              timecard={timecard}
+              isRejectionMode={isRejectionMode}
+              selectedFields={selectedFields}
+              onFieldToggle={onFieldToggle}
+              actionButtons={actionButtons}
+              showSummaryInHeader={true}
+              showRejectedFields={showRejectedFields}
+            />
+          </div>
+
+          {/* Mobile Layout - Keep existing format */}
+          <div className="lg:hidden">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Calendar className="w-5 h-5 mr-2" />
+                    Daily Time Breakdown
+                    <span className={`ml-2 text-sm text-red-600 dark:text-red-400 font-normal transition-opacity ${
+                      isRejectionMode ? 'opacity-100' : 'opacity-0'
+                    }`}>
+                      (Click fields to flag issues)
+                    </span>
                   </div>
-
-                  {/* Time Events Grid - matching timecards page format */}
-                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    {/* Check In */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-muted-foreground">Check In</label>
-                      <div className="p-3 rounded-lg border border-border bg-card">
-                        <p className="text-lg font-semibold text-foreground">
-                          {formatDate(entry.check_in_time, "h:mm:ss a", "Not Recorded")}
-                        </p>
-                      </div>
+                  {actionButtons && (
+                    <div className="flex items-center space-x-2">
+                      {actionButtons}
                     </div>
-
-                    {/* Break Start */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-muted-foreground">Break Start</label>
-                      <div className={`p-3 rounded-lg border ${entry.break_start_time ? 'border-border bg-card' : 'border-dashed border-muted-foreground/30 bg-muted/30'}`}>
-                        {entry.break_start_time ? (
-                          <p className="text-lg font-semibold text-foreground">
-                            {formatDate(entry.break_start_time, "h:mm:ss a")}
-                          </p>
-                        ) : (
-                          <p className="text-lg font-semibold text-muted-foreground">Not Recorded</p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Break End */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-muted-foreground">Break End</label>
-                      <div className={`p-3 rounded-lg border ${entry.break_end_time ? 'border-border bg-card' : 'border-dashed border-muted-foreground/30 bg-muted/30'}`}>
-                        {entry.break_end_time ? (
-                          <p className="text-lg font-semibold text-foreground">
-                            {formatDate(entry.break_end_time, "h:mm:ss a")}
-                          </p>
-                        ) : (
-                          <p className="text-lg font-semibold text-muted-foreground">Not Recorded</p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Check Out */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-muted-foreground">Check Out</label>
-                      <div className="p-3 rounded-lg border border-border bg-card">
-                        <p className="text-lg font-semibold text-foreground">
-                          {formatDate(entry.check_out_time, "h:mm:ss a", "Not Recorded")}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Dividing line between days (except for last entry) */}
-                  {index < timecard.daily_entries.length - 1 && (
-                    <div className="border-t border-border my-6"></div>
                   )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {timecard.daily_entries.map((entry, index) => (
+                    <div key={index} className="space-y-4">
+                      {/* Day Header - Clickable in rejection mode */}
+                      {(() => {
+                        // Check if all fields for this day are selected
+                        const dayFieldIds = [
+                          getFieldId('check_in_time', index),
+                          getFieldId('break_start_time', index),
+                          getFieldId('break_end_time', index),
+                          getFieldId('check_out_time', index)
+                        ]
+                        const allDayFieldsSelected = dayFieldIds.every(fieldId => isFieldSelected(fieldId))
+                        
+                        const handleDayClick = () => {
+                          if (isRejectionMode && onFieldToggle) {
+                            if (allDayFieldsSelected) {
+                              // If all fields are selected, deselect them
+                              dayFieldIds.forEach(fieldId => onFieldToggle(fieldId))
+                            } else {
+                              // If not all fields are selected, select all of them
+                              dayFieldIds.forEach(fieldId => {
+                                if (!isFieldSelected(fieldId)) {
+                                  onFieldToggle(fieldId)
+                                }
+                              })
+                            }
+                          }
+                        }
+
+                        return (
+                          <div 
+                            className={`flex items-center justify-between pb-2 transition-all ${
+                              isRejectionMode 
+                                ? allDayFieldsSelected
+                                  ? 'p-2 -m-2 rounded-lg border-2 border-red-500 bg-red-50 dark:bg-red-950/20 hover:bg-red-200 dark:hover:bg-red-950/40 cursor-pointer'
+                                  : 'p-2 -m-2 rounded-lg hover:bg-muted/50 cursor-pointer'
+                                : isDayRejected(index)
+                                  ? 'p-2 -m-2 rounded-lg border-2 border-red-500 bg-red-50 dark:bg-red-950/20'
+                                  : ''
+                            }`}
+                            onClick={handleDayClick}
+                          >
+                            <h3 className="text-sm font-medium text-foreground">
+                              Day {index + 1} - {formatDate(entry.work_date, "EEEE, MMM d, yyyy")}
+                            </h3>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              <span>{(entry.hours_worked || 0).toFixed(1)} hrs</span>
+                              <span>${(entry.daily_pay || 0).toFixed(2)}</span>
+                            </div>
+                          </div>
+                        )
+                      })()}
+
+                      {/* Time Events Grid - matching timecards page format */}
+                      <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        {/* Check In */}
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-muted-foreground">Check In</label>
+                          <div 
+                            className={`p-3 rounded-lg border transition-all ${
+                              isFieldSelected(getFieldId('check_in_time', index))
+                                ? 'border-red-500 bg-red-50 dark:bg-red-950/20 hover:bg-red-200 dark:hover:bg-red-950/40 cursor-pointer'
+                                : isFieldRejected(getFieldId('check_in_time', index))
+                                  ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                                  : isRejectionMode
+                                    ? 'border-border bg-card hover:border-white cursor-pointer'
+                                    : 'border-border bg-card'
+                            }`}
+                            onClick={() => handleFieldClick(getFieldId('check_in_time', index))}
+                          >
+                            <p className="text-lg font-semibold text-foreground">
+                              {formatDate(entry.check_in_time, "h:mm a", "Not Recorded")}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Break Start */}
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-muted-foreground">Break Start</label>
+                          <div 
+                            className={`p-3 rounded-lg border transition-all ${
+                              isFieldSelected(getFieldId('break_start_time', index))
+                                ? 'border-red-500 bg-red-50 dark:bg-red-950/20 hover:bg-red-200 dark:hover:bg-red-950/40 cursor-pointer'
+                                : isFieldRejected(getFieldId('break_start_time', index))
+                                  ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                                  : isRejectionMode
+                                    ? entry.break_start_time 
+                                      ? 'border-border bg-card hover:border-white cursor-pointer'
+                                      : 'border-dashed border-muted-foreground/30 bg-muted/30 hover:border-white cursor-pointer'
+                                    : entry.break_start_time 
+                                      ? 'border-border bg-card' 
+                                      : 'border-dashed border-muted-foreground/30 bg-muted/30'
+                            }`}
+                            onClick={() => handleFieldClick(getFieldId('break_start_time', index))}
+                          >
+                            {entry.break_start_time ? (
+                              <p className="text-lg font-semibold text-foreground">
+                                {formatDate(entry.break_start_time, "h:mm a")}
+                              </p>
+                            ) : (
+                              <p className="text-lg font-semibold text-muted-foreground">Not Recorded</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Break End */}
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-muted-foreground">Break End</label>
+                          <div 
+                            className={`p-3 rounded-lg border transition-all ${
+                              isFieldSelected(getFieldId('break_end_time', index))
+                                ? 'border-red-500 bg-red-50 dark:bg-red-950/20 hover:bg-red-200 dark:hover:bg-red-950/40 cursor-pointer'
+                                : isFieldRejected(getFieldId('break_end_time', index))
+                                  ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                                  : isRejectionMode
+                                    ? entry.break_end_time 
+                                      ? 'border-border bg-card hover:border-white cursor-pointer'
+                                      : 'border-dashed border-muted-foreground/30 bg-muted/30 hover:border-white cursor-pointer'
+                                    : entry.break_end_time 
+                                      ? 'border-border bg-card' 
+                                      : 'border-dashed border-muted-foreground/30 bg-muted/30'
+                            }`}
+                            onClick={() => handleFieldClick(getFieldId('break_end_time', index))}
+                          >
+                            {entry.break_end_time ? (
+                              <p className="text-lg font-semibold text-foreground">
+                                {formatDate(entry.break_end_time, "h:mm a")}
+                              </p>
+                            ) : (
+                              <p className="text-lg font-semibold text-muted-foreground">Not Recorded</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Check Out */}
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-muted-foreground">Check Out</label>
+                          <div 
+                            className={`p-3 rounded-lg border transition-all ${
+                              isFieldSelected(getFieldId('check_out_time', index))
+                                ? 'border-red-500 bg-red-50 dark:bg-red-950/20 hover:bg-red-200 dark:hover:bg-red-950/40 cursor-pointer'
+                                : isFieldRejected(getFieldId('check_out_time', index))
+                                  ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                                  : isRejectionMode
+                                    ? 'border-border bg-card hover:border-white cursor-pointer'
+                                    : 'border-border bg-card'
+                            }`}
+                            onClick={() => handleFieldClick(getFieldId('check_out_time', index))}
+                          >
+                            <p className="text-lg font-semibold text-foreground">
+                              {formatDate(entry.check_out_time, "h:mm a", "Not Recorded")}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Dividing line between days (except for last entry) */}
+                      {index < timecard.daily_entries.length - 1 && (
+                        <div className="border-t border-border my-6"></div>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* Mobile: Time Summary Stats at bottom of Daily Time Breakdown */}
+                  <div className="mt-6 pt-4 border-t border-border">
+                    <h4 className="text-sm font-medium text-muted-foreground mb-3">Time Summary</h4>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      <div className="text-center p-3 bg-card rounded-lg border">
+                        <p className="text-sm text-muted-foreground">Rate</p>
+                        <p className="text-lg font-semibold text-foreground">
+                          ${(timecard.pay_rate || 0).toFixed(0)}/h
+                        </p>
+                      </div>
+                      
+                      <div className="text-center p-3 bg-card rounded-lg border">
+                        <p className="text-sm text-muted-foreground">Break</p>
+                        <p className="text-lg font-bold text-foreground">
+                          {Math.round((timecard.break_duration || 0))} min
+                        </p>
+                      </div>
+                      
+                      <div className="text-center p-3 bg-card rounded-lg border">
+                        <p className="text-sm text-muted-foreground">Hours</p>
+                        <p className="text-lg font-bold text-foreground">
+                          {(timecard.total_hours || 0).toFixed(1)}
+                        </p>
+                      </div>
+                      
+                      <div className="text-center p-3 bg-card rounded-lg border">
+                        <p className="text-sm text-muted-foreground">Total</p>
+                        <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                          ${(timecard.total_pay || 0).toFixed(0)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          </div>
+        </>
       )}
+
+
 
       {/* Representative Schedule (for multi-day) or Actual Times (for single day) */}
       {/* Show this section if we have main timecard times OR if we don't have daily entries */}
@@ -418,7 +529,18 @@ export function MultiDayTimecardDetail({
                       : 'Check In'
                   }
                 </label>
-                <div className="p-3 rounded-lg border border-border bg-card">
+                <div 
+                  className={`p-3 rounded-lg border transition-all ${
+                    isFieldSelected('check_in_time')
+                      ? 'border-red-500 bg-red-50 dark:bg-red-950/20 hover:bg-red-200 dark:hover:bg-red-950/40 cursor-pointer'
+                      : isFieldRejected('check_in_time')
+                        ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                        : isRejectionMode
+                          ? 'border-border bg-card hover:border-white cursor-pointer'
+                          : 'border-border bg-card'
+                  }`}
+                  onClick={() => handleFieldClick('check_in_time')}
+                >
                   {isEditing && onTimeChange ? (
                     <Input
                       type="datetime-local"
@@ -428,7 +550,7 @@ export function MultiDayTimecardDetail({
                     />
                   ) : (
                     <p className="text-lg font-semibold text-foreground">
-                      {formatDate(timecard.check_in_time, "h:mm:ss a")}
+                      {formatDate(timecard.check_in_time, "h:mm a")}
                     </p>
                   )}
                 </div>
@@ -444,11 +566,22 @@ export function MultiDayTimecardDetail({
                       : 'Break Start'
                   }
                 </label>
-                <div className={`p-3 rounded-lg border ${
-                  (isEditing ? editedTimecard.break_start_time : timecard.break_start_time) 
-                    ? 'border-border bg-card' 
-                    : 'border-dashed border-muted-foreground/30 bg-muted/30'
-                }`}>
+                <div 
+                  className={`p-3 rounded-lg border transition-all ${
+                    isFieldSelected('break_start_time')
+                      ? 'border-red-500 bg-red-50 dark:bg-red-950/20 hover:bg-red-200 dark:hover:bg-red-950/40 cursor-pointer'
+                      : isFieldRejected('break_start_time')
+                        ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                        : isRejectionMode
+                          ? (isEditing ? editedTimecard.break_start_time : timecard.break_start_time) 
+                            ? 'border-border bg-card hover:border-white cursor-pointer'
+                            : 'border-dashed border-muted-foreground/30 bg-muted/30 hover:border-white cursor-pointer'
+                          : (isEditing ? editedTimecard.break_start_time : timecard.break_start_time) 
+                            ? 'border-border bg-card' 
+                            : 'border-dashed border-muted-foreground/30 bg-muted/30'
+                  }`}
+                  onClick={() => handleFieldClick('break_start_time')}
+                >
                   {isEditing && onTimeChange ? (
                     <Input
                       type="datetime-local"
@@ -459,7 +592,7 @@ export function MultiDayTimecardDetail({
                     />
                   ) : timecard.break_start_time ? (
                     <p className="text-lg font-semibold text-foreground">
-                      {formatDate(timecard.break_start_time, "h:mm:ss a")}
+                      {formatDate(timecard.break_start_time, "h:mm a")}
                     </p>
                   ) : (
                     <p className="text-sm text-muted-foreground">Not Recorded</p>
@@ -477,11 +610,22 @@ export function MultiDayTimecardDetail({
                       : 'Break End'
                   }
                 </label>
-                <div className={`p-3 rounded-lg border ${
-                  (isEditing ? editedTimecard.break_end_time : timecard.break_end_time) 
-                    ? 'border-border bg-card' 
-                    : 'border-dashed border-muted-foreground/30 bg-muted/30'
-                }`}>
+                <div 
+                  className={`p-3 rounded-lg border transition-all ${
+                    isFieldSelected('break_end_time')
+                      ? 'border-red-500 bg-red-50 dark:bg-red-950/20 hover:bg-red-200 dark:hover:bg-red-950/40 cursor-pointer'
+                      : isFieldRejected('break_end_time')
+                        ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                        : isRejectionMode
+                          ? (isEditing ? editedTimecard.break_end_time : timecard.break_end_time) 
+                            ? 'border-border bg-card hover:border-white cursor-pointer'
+                            : 'border-dashed border-muted-foreground/30 bg-muted/30 hover:border-white cursor-pointer'
+                          : (isEditing ? editedTimecard.break_end_time : timecard.break_end_time) 
+                            ? 'border-border bg-card' 
+                            : 'border-dashed border-muted-foreground/30 bg-muted/30'
+                  }`}
+                  onClick={() => handleFieldClick('break_end_time')}
+                >
                   {isEditing && onTimeChange ? (
                     <Input
                       type="datetime-local"
@@ -492,7 +636,7 @@ export function MultiDayTimecardDetail({
                     />
                   ) : timecard.break_end_time ? (
                     <p className="text-lg font-semibold text-foreground">
-                      {formatDate(timecard.break_end_time, "h:mm:ss a")}
+                      {formatDate(timecard.break_end_time, "h:mm a")}
                     </p>
                   ) : (
                     <p className="text-sm text-muted-foreground">Not Recorded</p>
@@ -510,7 +654,18 @@ export function MultiDayTimecardDetail({
                       : 'Check Out'
                   }
                 </label>
-                <div className="p-3 rounded-lg border border-border bg-card">
+                <div 
+                  className={`p-3 rounded-lg border transition-all ${
+                    isFieldSelected('check_out_time')
+                      ? 'border-red-500 bg-red-50 dark:bg-red-950/20 hover:bg-red-200 dark:hover:bg-red-950/40 cursor-pointer'
+                      : isFieldRejected('check_out_time')
+                        ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                        : isRejectionMode
+                          ? 'border-border bg-card hover:border-white cursor-pointer'
+                          : 'border-border bg-card'
+                  }`}
+                  onClick={() => handleFieldClick('check_out_time')}
+                >
                   {isEditing && onTimeChange ? (
                     <Input
                       type="datetime-local"
@@ -520,7 +675,7 @@ export function MultiDayTimecardDetail({
                     />
                   ) : (
                     <p className="text-lg font-semibold text-foreground">
-                      {formatDate(timecard.check_out_time, "h:mm:ss a")}
+                      {formatDate(timecard.check_out_time, "h:mm a")}
                     </p>
                   )}
                 </div>
@@ -610,6 +765,25 @@ export function MultiDayTimecardDetail({
             <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
               <p className="text-sm text-blue-700 dark:text-blue-300 whitespace-pre-wrap">
                 {timecard.edit_comments}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Rejection Comments - Only show for rejected timecards */}
+      {timecard.status === 'rejected' && timecard.rejection_reason && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <AlertTriangle className="w-5 h-5 mr-2 text-red-700 dark:text-red-300" />
+              Rejection Reason
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="p-4 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+              <p className="text-sm text-foreground whitespace-pre-wrap">
+                {timecard.rejection_reason}
               </p>
             </div>
           </CardContent>

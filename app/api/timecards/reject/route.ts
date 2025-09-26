@@ -7,6 +7,7 @@ import { canApproveTimecards } from '@/lib/role-utils'
 const rejectTimecardSchema = z.object({
   timecardId: z.string().uuid(),
   comments: z.string().min(1, 'Comments are required when rejecting a timecard'), // Requirement 5.4
+  rejectedFields: z.array(z.string()).optional(), // Array of field names that were flagged
 })
 
 export async function POST(request: NextRequest) {
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { timecardId, comments } = validationResult.data
+    const { timecardId, comments, rejectedFields } = validationResult.data
 
     // Validate timecard exists and is in submitted status
     const { data: timecard, error: fetchError } = await supabase
@@ -111,7 +112,8 @@ export async function POST(request: NextRequest) {
       .from('timecard_headers')
       .update({
         status: 'rejected',
-        edit_comments: comments,
+        rejection_reason: comments,
+        rejected_fields: rejectedFields || [],
         updated_at: new Date().toISOString(),
       })
       .eq('id', timecardId)

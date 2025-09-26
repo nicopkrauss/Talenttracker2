@@ -43,6 +43,7 @@ export function ProjectTimecardList({
   const [hasData, setHasData] = useState(false)
   const [fetchingTimecards, setFetchingTimecards] = useState(false)
   const [teamAssignments, setTeamAssignments] = useState<any[]>([])
+  const [allExpanded, setAllExpanded] = useState(false)
   
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -184,22 +185,36 @@ export function ProjectTimecardList({
       {/* Filters */}
       <Card>
         <CardContent>
-          <div className="flex items-center space-x-4">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="submitted">Submitted</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="text-sm text-muted-foreground">
-              Showing {timecards.length} timecard{timecards.length !== 1 ? 's' : ''} for {project.name}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="submitted">Submitted</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="text-sm text-muted-foreground">
+                Showing {timecards.length} timecard{timecards.length !== 1 ? 's' : ''} for {project.name}
+              </div>
             </div>
+            
+            {/* Expand/Collapse All Button */}
+            {timecards.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAllExpanded(!allExpanded)}
+                className="flex items-center gap-2"
+              >
+                {allExpanded ? "Collapse All" : "Expand All"}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -212,6 +227,7 @@ export function ProjectTimecardList({
         projectStartDate={undefined} // TODO: Add project start date if needed
         projectId={projectId}
         teamAssignments={teamAssignments}
+        allExpanded={allExpanded}
       />
     </div>
   )

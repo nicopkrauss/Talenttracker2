@@ -1,13 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Calendar, Users, ChevronDown, ChevronUp, FileText } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Calendar, ChevronDown, ChevronUp, FileText } from "lucide-react"
+import { SimpleEditableField } from "./simple-editable-field"
 import type { Timecard } from "@/lib/types"
 import { format } from "date-fns"
 import { getRoleColor, getRoleDisplayName } from "@/lib/role-utils"
+import { DesktopTimecardGrid } from "./desktop-timecard-grid"
 
 interface MultiDayTimecardDisplayProps {
   timecard: Timecard
@@ -18,10 +21,35 @@ interface MultiDayTimecardDisplayProps {
   defaultExpanded?: boolean
   hideExpandToggle?: boolean
   userProjectRole?: string | null
+  showRejectedFields?: boolean
+  showBreakdownToggle?: boolean
+  // Simplified rejection mode props
+  isRejectionMode?: boolean
+  fieldEdits?: Record<string, any>
+  onFieldEdit?: (fieldId: string, newValue: any) => void
 }
 
-export function MultiDayTimecardDisplay({ timecard, showUserName = false, showAdminNotes = false, showHeaderStats = true, showTimecardHeader = false, defaultExpanded = false, hideExpandToggle = false, userProjectRole = null }: MultiDayTimecardDisplayProps) {
+export function MultiDayTimecardDisplay({ 
+  timecard, 
+  showUserName = false, 
+  showAdminNotes = false, 
+  showHeaderStats = true, 
+  showTimecardHeader = false, 
+  defaultExpanded = false, 
+  hideExpandToggle = false, 
+  userProjectRole = null, 
+  showRejectedFields = false, 
+  showBreakdownToggle = false,
+  isRejectionMode = false,
+  fieldEdits = {},
+  onFieldEdit
+}: MultiDayTimecardDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded)
+
+  // Update expanded state when defaultExpanded changes (for expand/collapse all)
+  useEffect(() => {
+    setIsExpanded(defaultExpanded)
+  }, [defaultExpanded])
 
   // Helper function to safely format dates and times
   const safeFormat = (dateString: string | null | undefined, formatString: string, fallback: string = 'Invalid') => {
@@ -34,6 +62,201 @@ export function MultiDayTimecardDisplay({ timecard, showUserName = false, showAd
   const isMultiDay = timecard.is_multi_day || false
   const workingDays = timecard.working_days || 1
   const dailyEntries = timecard.daily_entries || []
+
+  // Helper function to check if a field is rejected
+  const isFieldRejected = (fieldId: string) => {
+    return showRejectedFields && timecard.rejected_fields && timecard.rejected_fields.includes(fieldId)
+  }
+
+  // Enhanced rejection mode helper functions
+  const getFieldId = (fieldType: string, dayIndex?: number) => {
+    return dayIndex !== undefined ? `${fieldType}_day_${dayIndex}` : fieldType
+  }
+
+  const isFieldEdited = (fieldId: string) => {
+    return fieldEdits[fieldId] !== undefined
+  }
+
+  const getFieldValue = (fieldId: string, originalValue: any) => {
+    return fieldEdits[fieldId] !== undefined ? fieldEdits[fieldId] : originalValue
+  }
+
+  // EditableTimeField component for mobile layout
+  const EditableTimeField = ({ 
+    fieldId, 
+    originalValue, 
+    label 
+  }: { 
+    fieldId: string
+    originalValue: string | null | undefined
+    label: string 
+  }) => {
+    const currentValue = getFieldValue(fieldId, originalValue)
+    const isSelected = isFieldSelected(fieldId)
+    const isEdited = isFieldEdited(fieldId)
+    const isEditable = isEditMode && isSelected
+
+    // Debug logging to help troubleshoot (can be removed in production)
+    // if (isRejectionMode) {
+    //   console.log(`Field ${fieldId}:`, {
+    //     isRejectionMode,
+    //     isEditMode,
+    //     isSelected,
+    //     isEditable,
+    //     selectedFields,
+    //     fieldEdits: Object.keys(fieldEdits)
+    //   })
+    // }
+
+
+
+    const formatTime = (timeString: string | null) => {
+      if (!timeString) return "Not Recorded"
+      return new Date(timeString).toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit'
+      })
+    }
+
+    const formatTimeForInput = (timeString: string | null) => {
+      if (!timeString) return ""
+      const date = new Date(timeString)
+      return date.toTimeString().slice(0, 5) // HH:MM format
+    }
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const timeValue = e.target.value
+      if (onFieldEdit) {
+        if (timeValue) {
+          // Convert HH:MM to full datetime string
+          const today = new Date()
+          const [hours, minutes] = timeValue.split(':')
+          today.setHours(parseInt(hours), parseInt(minutes), 0, 0)
+          onFieldEdit(fieldId, today.toISOString())
+        } else {
+          onFieldEdit(fieldId, null)
+        }
+      }
+    }
+
+    const getFieldStyles = () => {
+      let baseStyles = "p-3 rounded-lg border transition-all "
+      
+      if (isRejectionMode) {
+        if (isSelected) {
+          if (isEditable) {
+            // Field is selected and in edit mode - make it very obvious
+            baseStyles += "border-2 border-blue-500 bg-blue-100 dark:bg-blue-900/30 cursor-text shadow-lg "
+          } else if (isEdited) {
+            // Field has been edited but not currently editable
+            baseStyles += "border-blue-500 bg-blue-50 dark:bg-blue-950/20 cursor-pointer "
+          } else {
+            // Field is selected but not in edit mode
+            baseStyles += "border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer "
+          }
+        } else {
+          if (originalValue) {
+            baseStyles += "border-border bg-card hover:border-white cursor-pointer "
+          } else {
+            baseStyles += "border-dashed border-muted-foreground/30 bg-muted/30 hover:border-white cursor-pointer "
+          }
+        }
+      } else {
+        if (originalValue) {
+          baseStyles += "border-border bg-card "
+        } else {
+          baseStyles += "border-dashed border-muted-foreground/30 bg-muted/30 "
+        }
+      }
+
+      return baseStyles
+    }
+
+    return (
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-muted-foreground">{label}</label>
+        <div
+          className={getFieldStyles()}
+          onClick={(e) => {
+            // Prevent any action if field is editable
+            if (isEditable) {
+              e.preventDefault()
+              e.stopPropagation()
+              return false
+            }
+            // Only handle click if field is not editable
+            handleFieldClick(fieldId)
+          }}
+        >
+          {isEditable ? (
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Edit3 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">
+                  🎯 EDITING MODE ACTIVE - FIELD IS EDITABLE
+                </span>
+              </div>
+
+              <Input
+                type="time"
+                value={formatTimeForInput(currentValue)}
+                onChange={handleInputChange}
+                onClick={(e) => e.stopPropagation()}
+                className="border-2 border-blue-500 p-2 h-auto bg-white dark:bg-gray-900 text-lg font-semibold focus:ring-2 focus:ring-blue-500"
+                autoFocus
+              />
+            </div>
+          ) : (
+            <div>
+              {isEdited && (
+                <div className="text-xs text-muted-foreground line-through mb-1">
+                  {formatTime(originalValue)}
+                </div>
+              )}
+              <p className={`text-lg font-semibold ${
+                isEdited 
+                  ? 'text-blue-600 dark:text-blue-400' 
+                  : originalValue 
+                    ? 'text-foreground' 
+                    : 'text-muted-foreground'
+              }`}>
+                {formatTime(currentValue)}
+              </p>
+
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // Helper function to check if all fields for a day are rejected
+  const isDayRejected = (dayIndex: number) => {
+    if (!showRejectedFields || !timecard.rejected_fields) return false
+
+    const dayFieldIds = [
+      `check_in_time_day_${dayIndex}`,
+      `break_start_time_day_${dayIndex}`,
+      `break_end_time_day_${dayIndex}`,
+      `check_out_time_day_${dayIndex}`
+    ]
+
+    return dayFieldIds.every(fieldId => timecard.rejected_fields!.includes(fieldId))
+  }
+
+  // Helper function to check if the first day (single day timecard) is rejected
+  const isFirstDayRejected = () => {
+    if (!showRejectedFields || !timecard.rejected_fields) return false
+
+    const dayFieldIds = [
+      'check_in_time',
+      'break_start_time',
+      'break_end_time',
+      'check_out_time'
+    ]
+
+    return dayFieldIds.every(fieldId => timecard.rejected_fields!.includes(fieldId))
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -66,15 +289,16 @@ export function MultiDayTimecardDisplay({ timecard, showUserName = false, showAd
   }
 
   return (
-    <Card className="hover:shadow-md transition-shadow gap-2">
+    <Card className="hover:shadow-md transition-shadow">
       {(showUserName || showHeaderStats) && (
-        <CardHeader className="pb-0">
+        <CardHeader className="pb-0 gap-0">
           <div className="space-y-3 sm:space-y-0">
             {/* Name and badges row - on desktop this includes stats */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-start sm:flex-1">
+            <div className="flex flex-col sm:grid sm:grid-cols-3 sm:items-center sm:gap-4">
+              {/* Left section: Name and role badge */}
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-start">
                 {showUserName && (
-                  <div className="space-y-2 sm:space-y-0 sm:flex sm:items-center sm:gap-3 flex-1">
+                  <div className="space-y-2 sm:space-y-0 sm:flex sm:items-center sm:gap-3">
                     {/* Mobile: Two-row layout to prevent name wrapping */}
                     <div className="sm:hidden space-y-2">
                       {/* Top row: Name (left) + Status badges (right) */}
@@ -93,9 +317,9 @@ export function MultiDayTimecardDisplay({ timecard, showUserName = false, showAd
                           </Badge>
                         </div>
                       </div>
-                      
-                      {/* Bottom row: Role badge (left) + Multi-day badge (right) */}
-                      <div className="flex items-center justify-between">
+
+                      {/* Bottom row: Role badge only */}
+                      <div className="flex items-center justify-start">
                         <div>
                           {userProjectRole ? (
                             <Badge variant="outline" className={`text-sm ${getRoleColor(userProjectRole)}`}>
@@ -107,19 +331,11 @@ export function MultiDayTimecardDisplay({ timecard, showUserName = false, showAd
                             </Badge>
                           )}
                         </div>
-                        <div>
-                          {isMultiDay && (
-                            <Badge variant="secondary" className="text-xs">
-                              <Users className="w-3 h-3 mr-1" />
-                              Multi-Day
-                            </Badge>
-                          )}
-                        </div>
                       </div>
                     </div>
 
                     {/* Desktop: Single row layout */}
-                    <div className="hidden sm:flex sm:items-center sm:gap-3 sm:flex-1">
+                    <div className="hidden sm:flex sm:items-center sm:gap-3">
                       <h3 className="font-semibold text-lg text-foreground">
                         {Array.isArray(timecard.profiles)
                           ? timecard.profiles[0]?.full_name || 'Unknown User'
@@ -138,51 +354,72 @@ export function MultiDayTimecardDisplay({ timecard, showUserName = false, showAd
                   </div>
                 )}
               </div>
-              
-              {/* Desktop: Stats and badges in same row */}
-              {showHeaderStats && (
-                <div className="hidden sm:flex sm:items-center sm:gap-4">
-                  <div className="flex items-baseline gap-1 text-right">
-                    <p className="text-lg font-semibold text-foreground">
-                      ${(timecard.pay_rate || 0).toFixed(0)}/h
-                    </p>
-                    <p className="text-xs text-muted-foreground">Rate</p>
-                  </div>
-                  <div className="flex items-baseline gap-1 text-right">
-                    <p className="text-lg font-bold text-foreground">
-                      {(timecard.total_hours || 0).toFixed(1)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Hours</p>
-                  </div>
-                  <div className="flex items-baseline gap-1 text-right">
-                    <p className="text-lg font-bold text-foreground">
-                      10
-                    </p>
-                    <p className="text-xs text-muted-foreground">Adjusted Hours</p>
-                  </div>
-                  <div className="flex items-baseline gap-1 text-right">
-                    <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                      ${(timecard.total_pay || 0).toFixed(0)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Total</p>
-                  </div>
+
+              {/* Center section: Breakdown Toggle Button */}
+              {showBreakdownToggle && (
+                <div className="hidden sm:flex sm:justify-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setIsExpanded(!isExpanded)
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    {isExpanded ? (
+                      <>
+                        <ChevronUp className="w-4 h-4" />
+                        Hide Details
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="w-4 h-4" />
+                        Show Details
+                      </>
+                    )}
+                  </Button>
                 </div>
               )}
-              
-              {/* Desktop badges */}
-              <div className="hidden sm:flex sm:items-center sm:gap-2 sm:ml-4">
+
+              {/* Right section: Stats and badges */}
+              <div className="hidden sm:flex sm:items-center sm:justify-end sm:gap-4">
+                {showHeaderStats && (
+                  <>
+                    <div className="flex items-baseline gap-1 text-right">
+                      <p className="text-lg font-semibold text-foreground">
+                        ${(timecard.pay_rate || 0).toFixed(0)}/h
+                      </p>
+                      <p className="text-xs text-muted-foreground">Rate</p>
+                    </div>
+                    <div className="flex items-baseline gap-1 text-right">
+                      <p className="text-lg font-bold text-foreground">
+                        {(timecard.total_hours || 0).toFixed(1)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Hours</p>
+                    </div>
+                    <div className="flex items-baseline gap-1 text-right">
+                      <p className="text-lg font-bold text-foreground">
+                        10
+                      </p>
+                      <p className="text-xs text-muted-foreground whitespace-nowrap">Adjusted Hours</p>
+                    </div>
+                    <div className="flex items-baseline gap-1 text-right">
+                      <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                        ${(timecard.total_pay || 0).toFixed(0)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Total</p>
+                    </div>
+                  </>
+                )}
+
                 <Badge
                   variant="outline"
                   className={getStatusColor(timecard.status)}
                 >
                   {getStatusText(timecard.status)}
                 </Badge>
-                {isMultiDay && (
-                  <Badge variant="secondary" className="text-xs">
-                    <Users className="w-3 h-3 mr-1" />
-                    Multi-Day
-                  </Badge>
-                )}
               </div>
             </div>
 
@@ -196,7 +433,7 @@ export function MultiDayTimecardDisplay({ timecard, showUserName = false, showAd
                     ${(timecard.pay_rate || 0).toFixed(0)}/h
                   </p>
                 </div>
-                
+
                 {/* Hours - Top Right on mobile */}
                 <div className="text-center p-3 bg-card rounded-lg border">
                   <p className="text-sm text-muted-foreground">Hours</p>
@@ -204,15 +441,15 @@ export function MultiDayTimecardDisplay({ timecard, showUserName = false, showAd
                     {(timecard.total_hours || 0).toFixed(1)}
                   </p>
                 </div>
-                
+
                 {/* Adjusted Hours - Bottom Left on mobile */}
                 <div className="text-center p-3 bg-card rounded-lg border">
-                  <p className="text-sm text-muted-foreground">Adjusted Hours</p>
+                  <p className="text-sm text-muted-foreground whitespace-nowrap">Adjusted Hours</p>
                   <p className="text-lg font-bold text-foreground">
                     10
                   </p>
                 </div>
-                
+
                 {/* Total - Bottom Right on mobile */}
                 <div className="text-center p-3 bg-card rounded-lg border">
                   <p className="text-sm text-muted-foreground">Total</p>
@@ -252,167 +489,177 @@ export function MultiDayTimecardDisplay({ timecard, showUserName = false, showAd
           </div>
         )}
 
-        {/* Time Details Section - Show first day by default */}
-        {timecard.check_in_time && timecard.check_out_time && (
-          <div className="space-y-4">
-            {/* First Day (always shown) */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium text-foreground">
-                  {isMultiDay
-                    ? `Day 1 - ${safeFormat(timecard.date, "EEEE, MMM d, yyyy")}`
-                    : safeFormat(timecard.date, "EEEE, MMM d, yyyy")
-                  }
-                </h3>
-                {isMultiDay && !hideExpandToggle && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      setIsExpanded(!isExpanded)
-                    }}
-                    className="text-xs"
-                  >
-                    {isExpanded ? (
-                      <>
-                        <ChevronUp className="w-3 h-3 mr-1" />
-                        Show Less
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="w-3 h-3 mr-1" />
-                        Show {workingDays - 1} More Days
-                      </>
-                    )}
-                  </Button>
-                )}
-              </div>
+        {/* Mobile Breakdown Toggle Button - Show when showBreakdownToggle is true */}
+        {showBreakdownToggle && (
+          <div className="flex justify-center mb-4 sm:hidden">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setIsExpanded(!isExpanded)
+              }}
+              className="flex items-center gap-2"
+            >
+              {isExpanded ? (
+                <>
+                  <ChevronUp className="w-4 h-4" />
+                  Hide Daily Breakdown
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="w-4 h-4" />
+                  Show Daily Breakdown
+                </>
+              )}
+            </Button>
+          </div>
+        )}
 
-              {/* Time Events Grid - matching timecard details page */}
-              <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-                {/* Check In */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Check In</label>
-                  <div className="p-3 rounded-lg border border-border bg-card">
-                    <p className="text-lg font-semibold text-foreground">
-                      {safeFormat(timecard.check_in_time, "h:mm:ss a", "Not recorded")}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Break Start */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Break Start</label>
-                  <div className={`p-3 rounded-lg border ${timecard.break_start_time ? 'border-border bg-card' : 'border-dashed border-muted-foreground/30 bg-muted/30'}`}>
-                    {timecard.break_start_time ? (
-                      <p className="text-lg font-semibold text-foreground">
-                        {safeFormat(timecard.break_start_time, "h:mm:ss a")}
-                      </p>
-                    ) : (
-                      <p className="text-lg font-semibold text-muted-foreground">No break taken</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Break End */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Break End</label>
-                  <div className={`p-3 rounded-lg border ${timecard.break_end_time ? 'border-border bg-card' : 'border-dashed border-muted-foreground/30 bg-muted/30'}`}>
-                    {timecard.break_end_time ? (
-                      <p className="text-lg font-semibold text-foreground">
-                        {safeFormat(timecard.break_end_time, "h:mm:ss a")}
-                      </p>
-                    ) : (
-                      <p className="text-lg font-semibold text-muted-foreground">No break taken</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Check Out */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Check Out</label>
-                  <div className="p-3 rounded-lg border border-border bg-card">
-                    <p className="text-lg font-semibold text-foreground">
-                      {safeFormat(timecard.check_out_time, "h:mm:ss a", "Not recorded")}
-                    </p>
-                  </div>
-                </div>
-              </div>
+        {/* Time Details Section - Desktop uses grid, mobile uses existing format */}
+        {timecard.check_in_time && timecard.check_out_time && (!showBreakdownToggle || isExpanded) && (
+          <div className={showBreakdownToggle ? "pt-4" : ""}>
+            {/* Desktop: Use DesktopTimecardGrid (same as approve tab) */}
+            <div className="hidden lg:block">
+              <DesktopTimecardGrid
+                timecard={timecard}
+                isRejectionMode={false}
+                selectedFields={[]}
+                onFieldToggle={() => { }}
+                showHeader={false}
+                showRejectedFields={showRejectedFields}
+              />
             </div>
 
-            {/* Additional Days (when expanded) */}
-            {isMultiDay && isExpanded && dailyEntries.length > 1 && (
-              <div className="space-y-0">
-                {dailyEntries.slice(1).map((entry, index) => {
-                  const dayNumber = index + 2
+            {/* Mobile: Keep existing format */}
+            <div className="lg:hidden space-y-4">
+              {/* First Day (always shown) */}
+              <div className="space-y-1">
+                <div className={`${isFirstDayRejected()
+                  ? 'p-2 -m-2 rounded-lg border-2 border-red-500 bg-red-50 dark:bg-red-950/20'
+                  : ''
+                  }`}>
+                  <h3 className="text-lg font-semibold text-foreground">
+                    {safeFormat(timecard.date, "MMM d, yyyy")}
+                  </h3>
+                </div>
 
-                  return (
-                    <div key={`day-${dayNumber}`} className="space-y-1">
-                      {/* Dividing line between days */}
-                      <div className="border-t border-border my-4"></div>
+                {/* Time Events Grid - using EditableTimeField components */}
+                <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+                  <SimpleEditableField
+                    fieldId={isMultiDay ? getFieldId('check_in_time', 0) : "check_in_time"}
+                    originalValue={isMultiDay ? (dailyEntries[0]?.check_in_time || null) : (timecard.check_in_time || null)}
+                    label="Check In"
+                    isRejectionMode={isRejectionMode}
+                    fieldEdits={fieldEdits}
+                    onFieldEdit={onFieldEdit || (() => {})}
+                  />
+                  <SimpleEditableField
+                    fieldId={isMultiDay ? getFieldId('break_start_time', 0) : "break_start_time"}
+                    originalValue={isMultiDay ? (dailyEntries[0]?.break_start_time || null) : (timecard.break_start_time || null)}
+                    label="Break Start"
+                    isRejectionMode={isRejectionMode}
+                    fieldEdits={fieldEdits}
+                    onFieldEdit={onFieldEdit || (() => {})}
+                  />
+                  <SimpleEditableField
+                    fieldId={isMultiDay ? getFieldId('break_end_time', 0) : "break_end_time"}
+                    originalValue={isMultiDay ? (dailyEntries[0]?.break_end_time || null) : (timecard.break_end_time || null)}
+                    label="Break End"
+                    isRejectionMode={isRejectionMode}
+                    fieldEdits={fieldEdits}
+                    onFieldEdit={onFieldEdit || (() => {})}
+                  />
+                  <SimpleEditableField
+                    fieldId={isMultiDay ? getFieldId('check_out_time', 0) : "check_out_time"}
+                    originalValue={isMultiDay ? (dailyEntries[0]?.check_out_time || null) : (timecard.check_out_time || null)}
+                    label="Check Out"
+                    isRejectionMode={isRejectionMode}
+                    fieldEdits={fieldEdits}
+                    onFieldEdit={onFieldEdit || (() => {})}
+                  />
+                </div>
+              </div>
 
-                      <div>
-                        <h3 className="text-sm font-medium text-foreground">
-                          Day {dayNumber} - {safeFormat(entry.work_date, "EEEE, MMM d, yyyy")}
-                        </h3>
+              {/* Additional Days (when expanded) */}
+              {isMultiDay && isExpanded && dailyEntries.length > 1 && (
+                <div className="space-y-0">
+                  {dailyEntries.slice(1).map((entry, index) => {
+                    const dayNumber = index + 2
+
+                    return (
+                      <div key={`day-${dayNumber}`} className="space-y-1">
+                        {/* Dividing line between days */}
+                        <div className="border-t border-border my-4"></div>
+
+                        <div className={`${isDayRejected(index + 1)
+                          ? 'p-2 -m-2 rounded-lg border-2 border-red-500 bg-red-50 dark:bg-red-950/20'
+                          : ''
+                          }`}>
+                          <h3 className="text-lg font-semibold text-foreground">
+                            {safeFormat(entry.work_date, "MMM d, yyyy")}
+                          </h3>
+                        </div>
+
+                        {/* Time grid for this specific day - using EditableTimeField components */}
+                        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+                          <SimpleEditableField
+                            fieldId={getFieldId('check_in_time', index + 1)}
+                            originalValue={entry.check_in_time || null}
+                            label="Check In"
+                            isRejectionMode={isRejectionMode}
+                            fieldEdits={fieldEdits}
+                            onFieldEdit={onFieldEdit || (() => {})}
+                          />
+                          <SimpleEditableField
+                            fieldId={getFieldId('break_start_time', index + 1)}
+                            originalValue={entry.break_start_time || null}
+                            label="Break Start"
+                            isRejectionMode={isRejectionMode}
+                            fieldEdits={fieldEdits}
+                            onFieldEdit={onFieldEdit || (() => {})}
+                          />
+                          <SimpleEditableField
+                            fieldId={getFieldId('break_end_time', index + 1)}
+                            originalValue={entry.break_end_time || null}
+                            label="Break End"
+                            isRejectionMode={isRejectionMode}
+                            fieldEdits={fieldEdits}
+                            onFieldEdit={onFieldEdit || (() => {})}
+                          />
+                          <SimpleEditableField
+                            fieldId={getFieldId('check_out_time', index + 1)}
+                            originalValue={entry.check_out_time || null}
+                            label="Check Out"
+                            isRejectionMode={isRejectionMode}
+                            fieldEdits={fieldEdits}
+                            onFieldEdit={onFieldEdit || (() => {})}
+                          />
+                        </div>
                       </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
 
-                      {/* Time grid for this specific day */}
-                      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-muted-foreground">Check In</label>
-                          <div className="p-3 rounded-lg border border-border bg-card">
-                            <p className="text-lg font-semibold text-foreground">
-                              {safeFormat(entry.check_in_time, "h:mm:ss a", "Not recorded")}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-muted-foreground">Break Start</label>
-                          <div className={`p-3 rounded-lg border ${entry.break_start_time ? 'border-border bg-card' : 'border-dashed border-muted-foreground/30 bg-muted/30'}`}>
-                            {entry.break_start_time ? (
-                              <p className="text-lg font-semibold text-foreground">
-                                {safeFormat(entry.break_start_time, "h:mm:ss a")}
-                              </p>
-                            ) : (
-                              <p className="text-lg font-semibold text-muted-foreground">No break taken</p>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-muted-foreground">Break End</label>
-                          <div className={`p-3 rounded-lg border ${entry.break_end_time ? 'border-border bg-card' : 'border-dashed border-muted-foreground/30 bg-muted/30'}`}>
-                            {entry.break_end_time ? (
-                              <p className="text-lg font-semibold text-foreground">
-                                {safeFormat(entry.break_end_time, "h:mm:ss a")}
-                              </p>
-                            ) : (
-                              <p className="text-lg font-semibold text-muted-foreground">No break taken</p>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-muted-foreground">Check Out</label>
-                          <div className="p-3 rounded-lg border border-border bg-card">
-                            <p className="text-lg font-semibold text-foreground">
-                              {safeFormat(entry.check_out_time, "h:mm:ss a", "Not recorded")}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
+            {/* Rejection Comments - Only show for rejected timecards when details are expanded */}
+            {timecard.status === 'rejected' && timecard.rejection_reason && (
+              <div className="mt-4 p-4 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+                <div className="flex items-start gap-2 mb-2">
+                  <FileText className="w-4 h-4 text-red-700 dark:text-red-300 mt-0.5" />
+                  <p className="text-sm font-medium text-red-700 dark:text-red-300">
+                    Rejection Reason:
+                  </p>
+                </div>
+                <p className="text-sm text-foreground whitespace-pre-wrap">
+                  {timecard.rejection_reason}
+                </p>
               </div>
             )}
           </div>
         )}
-
 
       </CardContent>
     </Card>

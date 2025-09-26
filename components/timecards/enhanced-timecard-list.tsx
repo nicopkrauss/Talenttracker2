@@ -207,6 +207,7 @@ export function EnhancedTimecardList({
                   <MultiDayTimecardDisplay 
                     timecard={timecard} 
                     showUserName={showUserColumn}
+                    showRejectedFields={timecard.status === 'rejected'}
                   />
                 </Link>
                 
@@ -274,6 +275,7 @@ export function EnhancedTimecardList({
                   <MultiDayTimecardDisplay 
                     timecard={timecard} 
                     showUserName={showUserColumn}
+                    showRejectedFields={timecard.status === 'rejected'}
                   />
                 </Link>
                 

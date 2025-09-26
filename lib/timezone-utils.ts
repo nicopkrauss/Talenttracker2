@@ -60,7 +60,7 @@ export function datetimeLocalToUtc(datetimeLocal: string): string {
 /**
  * Format a UTC timestamp for display in the user's local timezone
  */
-export function formatTimeForDisplay(utcTimestamp: string | null, formatString: string = "h:mm:ss a"): string {
+export function formatTimeForDisplay(utcTimestamp: string | null, formatString: string = "h:mm a"): string {
   if (!utcTimestamp) return ''
   
   const date = new Date(utcTimestamp)
@@ -69,7 +69,6 @@ export function formatTimeForDisplay(utcTimestamp: string | null, formatString: 
   return new Intl.DateTimeFormat('en-US', {
     hour: 'numeric',
     minute: '2-digit',
-    second: '2-digit',
     hour12: true
   }).format(date)
 }

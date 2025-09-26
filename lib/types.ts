@@ -118,6 +118,8 @@ export interface Timecard {
   submitted_at?: string
   approved_at?: string
   approved_by?: string
+  rejection_reason?: string
+  rejected_fields?: string[]
   created_at: string
   updated_at: string
   

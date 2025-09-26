@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Clock, Calendar, AlertTriangle, ArrowLeft, Check, X, Edit, Loader2, Save, RotateCcw } from "lucide-react"
+import { Label } from "@/components/ui/label"
+import { Clock, Calendar, AlertTriangle, ArrowLeft, Check, X, Edit, Loader2, Save, RotateCcw, AlertCircle } from "lucide-react"
 import type { Timecard } from "@/lib/types"
 import { format } from "date-fns"
 import Link from "next/link"
@@ -48,6 +49,13 @@ export default function TimecardDetailPage() {
   const [showEditReturnDialog, setShowEditReturnDialog] = useState(false)
   const [comments, setComments] = useState("")
   const [editReason, setEditReason] = useState("")
+  
+  // Rejection mode states
+  const [isRejectionMode, setIsRejectionMode] = useState(false)
+  const [selectedFields, setSelectedFields] = useState<string[]>([])
+  const [showReasonDialog, setShowReasonDialog] = useState(false)
+  const [rejectionReason, setRejectionReason] = useState("")
+  const [loadingRejection, setLoadingRejection] = useState(false)
   
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -203,6 +211,106 @@ export default function TimecardDetailPage() {
     } finally {
       setActionLoading(null)
     }
+  }
+
+  // Rejection mode functions
+  const enterRejectionMode = () => {
+    setIsRejectionMode(true)
+    setSelectedFields([])
+  }
+
+  const exitRejectionMode = () => {
+    setIsRejectionMode(false)
+    setSelectedFields([])
+  }
+
+  const toggleFieldSelection = (fieldId: string) => {
+    setSelectedFields(prev => 
+      prev.includes(fieldId) 
+        ? prev.filter(id => id !== fieldId)
+        : [...prev, fieldId]
+    )
+  }
+
+  const confirmRejection = () => {
+    setShowReasonDialog(true)
+  }
+
+  const submitRejection = async () => {
+    if (!timecard || !rejectionReason.trim()) return
+
+    setLoadingRejection(true)
+    try {
+      const response = await fetch('/api/timecards/reject', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          timecardId: timecard.id,
+          comments: rejectionReason.trim(),
+          rejectedFields: selectedFields,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to reject timecard')
+      }
+
+      // Reset rejection state and refresh data
+      setIsRejectionMode(false)
+      setSelectedFields([])
+      setShowReasonDialog(false)
+      setRejectionReason("")
+      
+      await fetchTimecard()
+    } catch (error) {
+      console.error('Error rejecting timecard:', error)
+      setError(error instanceof Error ? error.message : 'Failed to reject timecard')
+    } finally {
+      setLoadingRejection(false)
+    }
+  }
+
+  const closeReasonDialog = () => {
+    setShowReasonDialog(false)
+    setRejectionReason("")
+  }
+
+  // Field mapping for rejection display names
+  const getFieldDisplayName = (fieldId: string) => {
+    const fieldMap: Record<string, string> = {
+      'total_hours': 'Total Hours',
+      'total_break_duration': 'Total Break Time',
+      'pay_rate': 'Pay Rate',
+      'total_pay': 'Total Pay',
+      'check_in_time': 'Check In',
+      'break_start_time': 'Break Start',
+      'break_end_time': 'Break End',
+      'check_out_time': 'Check Out'
+    }
+    
+    // Handle day-specific fields
+    if (fieldId.includes('_day_')) {
+      const parts = fieldId.split('_day_')
+      const baseField = parts[0]
+      const dayIndex = parseInt(parts[1])
+      
+      if (!isNaN(dayIndex) && timecard?.daily_entries && timecard.daily_entries[dayIndex]) {
+        const entry = timecard.daily_entries[dayIndex]
+        const date = new Date(entry.work_date).toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric' 
+        })
+        return `${date} - ${fieldMap[baseField] || baseField}`
+      }
+      
+      // Fallback if we can't get the date
+      return `${fieldMap[baseField] || baseField} (Day ${dayIndex + 1})`
+    }
+    
+    return fieldMap[fieldId] || fieldId
   }
 
   // Calculate timecard values in real-time
@@ -556,6 +664,10 @@ export default function TimecardDetailPage() {
           calculatedValues={calculatedValues}
           onTimeChange={handleTimeChange}
           globalSettings={globalSettings}
+          isRejectionMode={isRejectionMode}
+          selectedFields={selectedFields}
+          onFieldToggle={toggleFieldSelection}
+          showRejectedFields={timecard.status === 'rejected'}
           actionButtons={
             /* Action Buttons - Right to Left: Approve, Reject, Edit & Return */
             isEditing ? (
@@ -584,6 +696,25 @@ export default function TimecardDetailPage() {
                   Save
                 </Button>
               </>
+            ) : isRejectionMode ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={exitRejectionMode}
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={confirmRejection}
+                  disabled={selectedFields.length === 0}
+                  className="bg-red-600 dark:bg-red-800 hover:bg-red-700 dark:hover:bg-red-900 text-white"
+                >
+                  Confirm Rejection
+                </Button>
+              </>
             ) : (
               <>
                 {/* Submitted timecard actions */}
@@ -604,17 +735,13 @@ export default function TimecardDetailPage() {
                     </Button>
                     
                     <Button 
-                      onClick={() => setShowRejectDialog(true)}
+                      onClick={enterRejectionMode}
                       disabled={actionLoading !== null}
                       size="sm"
-                      variant="destructive"
-                      className="gap-2"
+                      variant="outline"
+                      className="bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-white dark:border-red-700 hover:bg-red-100 dark:hover:bg-red-950/50 hover:border-red-100 dark:hover:border-red-800 gap-2"
                     >
-                      {actionLoading === 'reject' ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <X className="w-4 h-4" />
-                      )}
+                      <AlertCircle className="w-4 h-4" />
                       Reject
                     </Button>
                     
@@ -622,7 +749,7 @@ export default function TimecardDetailPage() {
                       onClick={() => setShowApproveDialog(true)}
                       disabled={actionLoading !== null}
                       size="sm"
-                      className="bg-green-600 hover:bg-green-700 text-white gap-2"
+                      className="bg-green-600/20 border border-green-600 text-green-400 hover:bg-green-600/30 hover:border-green-700 gap-2"
                     >
                       {actionLoading === 'approve' ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -936,6 +1063,158 @@ export default function TimecardDetailPage() {
                   <Save className="w-4 h-4 mr-2" />
                 )}
                 Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Rejection Reason Dialog */}
+        <Dialog open={showReasonDialog} onOpenChange={setShowReasonDialog}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="text-red-600 dark:text-red-400">Reject Timecard</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              {selectedFields.length > 0 && (
+                <div>
+                  <Label className="text-sm font-medium">Selected problematic fields:</Label>
+                  <div className="mt-2 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+                    {(() => {
+                      // Group fields by date
+                      const groupedFields: Record<string, string[]> = {}
+                      const summaryFields: string[] = []
+                      
+                      // Define field order for consistent display
+                      const fieldOrder = ['check_in_time', 'break_start_time', 'break_end_time', 'check_out_time']
+                      const fieldMap: Record<string, string> = {
+                        'check_in_time': 'Check In',
+                        'break_start_time': 'Break Start',
+                        'break_end_time': 'Break End',
+                        'check_out_time': 'Check Out'
+                      }
+                      
+                      selectedFields.forEach(fieldId => {
+                        if (fieldId.includes('_day_')) {
+                          const parts = fieldId.split('_day_')
+                          const dayIndex = parseInt(parts[1])
+                          
+                          if (!isNaN(dayIndex) && timecard?.daily_entries && timecard.daily_entries[dayIndex]) {
+                            const entry = timecard.daily_entries[dayIndex]
+                            const date = new Date(entry.work_date).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric' 
+                            })
+                            
+                            if (!groupedFields[date]) {
+                              groupedFields[date] = []
+                            }
+                            
+                            groupedFields[date].push(fieldMap[parts[0]] || parts[0])
+                          }
+                        } else {
+                          summaryFields.push(getFieldDisplayName(fieldId))
+                        }
+                      })
+                      
+                      // Sort fields within each date group according to chronological order
+                      Object.keys(groupedFields).forEach(date => {
+                        groupedFields[date] = groupedFields[date].sort((a, b) => {
+                          const aIndex = fieldOrder.findIndex(field => fieldMap[field] === a)
+                          const bIndex = fieldOrder.findIndex(field => fieldMap[field] === b)
+                          return aIndex - bIndex
+                        })
+                      })
+                      
+                      return (
+                        <div className="text-sm text-red-700 dark:text-red-300 space-y-3">
+                          {/* Summary fields first */}
+                          {summaryFields.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {summaryFields.map((field, index) => (
+                                <span 
+                                  key={index} 
+                                  className="px-2 py-1 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded text-xs font-medium"
+                                >
+                                  {field}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* Grouped by date - horizontal layout */}
+                          {Object.keys(groupedFields).length > 0 && (
+                            <div className="space-y-2">
+                              {/* Date headers */}
+                              <div className="flex gap-4">
+                                {Object.keys(groupedFields).map((date) => (
+                                  <div key={date} className="flex-1 min-w-0">
+                                    <div className="font-medium text-center pb-2 border-b border-red-300 dark:border-red-700">
+                                      {date}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              
+                              {/* Fields under each date */}
+                              <div className="flex gap-4">
+                                {Object.entries(groupedFields).map(([date, fields]) => (
+                                  <div key={date} className="flex-1 min-w-0">
+                                    <div className="flex flex-col gap-1">
+                                      {fields.map((field, index) => (
+                                        <span 
+                                          key={index}
+                                          className="px-2 py-1 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded text-xs font-medium text-center"
+                                        >
+                                          {field}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <Label htmlFor="rejection-reason" className="text-sm font-medium">
+                  Reason for rejection <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  id="rejection-reason"
+                  placeholder="Please explain the issues with this timecard..."
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  className="mt-1 min-h-[100px]"
+                />
+                {!rejectionReason.trim() && (
+                  <p className="text-xs text-red-500 mt-1">
+                    A reason is required when rejecting a timecard
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={closeReasonDialog}
+                disabled={loadingRejection}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={submitRejection}
+                disabled={!rejectionReason.trim() || loadingRejection}
+                className="bg-red-600 dark:bg-red-800 hover:bg-red-700 dark:hover:bg-red-900 text-white"
+              >
+                {loadingRejection ? 'Rejecting...' : 'Reject Timecard'}
               </Button>
             </DialogFooter>
           </DialogContent>

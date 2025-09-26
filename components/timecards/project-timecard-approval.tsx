@@ -5,9 +5,14 @@ import { createBrowserClient } from "@supabase/ssr"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { DollarSign, FileText, AlertCircle, ChevronLeft, ChevronRight, Check, Clock } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { DollarSign, FileText, AlertCircle, ChevronLeft, ChevronRight, Check, Clock, X, Edit3 } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import type { Timecard } from "@/lib/types"
 import { MultiDayTimecardDisplay } from "@/components/timecards/multi-day-timecard-display"
+import { DesktopTimecardGrid } from "@/components/timecards/desktop-timecard-grid"
 import { getRoleColor, getRoleDisplayName } from "@/lib/role-utils"
 
 interface Project {
@@ -24,13 +29,14 @@ interface ProjectTimecardApprovalProps {
 }
 
 /**
- * Project-specific timecard approval component that shows submitted timecards
+ * 
+Project-specific timecard approval component that shows submitted timecards
  * for a specific project and allows admin users to approve/reject them
  */
-export function ProjectTimecardApproval({ 
-  projectId, 
-  project, 
-  onRefreshData 
+export function ProjectTimecardApproval({
+  projectId,
+  project,
+  onRefreshData
 }: ProjectTimecardApprovalProps) {
   const [submittedTimecards, setSubmittedTimecards] = useState<Timecard[]>([])
   const [currentApprovalIndex, setCurrentApprovalIndex] = useState(0)
@@ -38,7 +44,14 @@ export function ProjectTimecardApproval({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [teamAssignments, setTeamAssignments] = useState<any[]>([])
-  
+
+  // Simple rejection mode state - only what we need
+  const [isRejectionMode, setIsRejectionMode] = useState(false)
+  const [fieldEdits, setFieldEdits] = useState<Record<string, any>>({})
+  const [showReasonDialog, setShowReasonDialog] = useState(false)
+  const [rejectionReason, setRejectionReason] = useState("")
+  const [loadingRejection, setLoadingRejection] = useState(false)
+
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -48,22 +61,22 @@ export function ProjectTimecardApproval({
     try {
       const response = await fetch(`/api/timecards-v2?status=submitted&project_id=${projectId}`)
       const result = await response.json()
-      
+
       if (!response.ok) {
         console.error("Error fetching submitted timecards for approval:", result.error)
         setSubmittedTimecards([])
         return
       }
-      
+
       const data = result.data || []
       setSubmittedTimecards(data)
-      
+
       // Fetch team assignments to get project roles
       const teamResponse = await fetch(`/api/projects/${projectId}/team-assignments`)
       const teamResult = await teamResponse.json()
       const assignments = teamResponse.ok ? teamResult.assignments || [] : []
       setTeamAssignments(assignments)
-      
+
       // Reset current index if it's out of bounds
       if (data.length > 0 && currentApprovalIndex >= data.length) {
         setCurrentApprovalIndex(0)
@@ -88,6 +101,137 @@ export function ProjectTimecardApproval({
     if (currentApprovalIndex < submittedTimecards.length - 1) {
       setCurrentApprovalIndex(currentApprovalIndex + 1)
     }
+  }
+
+  // Simplified rejection mode functions
+  const enterRejectionMode = () => {
+    setIsRejectionMode(true)
+    setFieldEdits({})
+  }
+
+  const exitRejectionMode = () => {
+    setIsRejectionMode(false)
+    setFieldEdits({})
+  }
+
+  const handleFieldEdit = (fieldId: string, newValue: any) => {
+    setFieldEdits(prev => ({
+      ...prev,
+      [fieldId]: newValue
+    }))
+  }
+
+  const confirmRejection = () => {
+    setShowReasonDialog(true)
+  }
+
+  const submitRejection = async () => {
+    const currentTimecard = submittedTimecards[currentApprovalIndex]
+    if (!currentTimecard || !rejectionReason.trim()) return
+
+    setLoadingRejection(true)
+    try {
+      const hasEdits = Object.keys(fieldEdits).length > 0
+      const rejectedFields = Object.keys(fieldEdits) // Fields that were edited are the rejected fields
+
+      if (hasEdits) {
+        // Apply edits and return to draft
+        const response = await fetch('/api/timecards/edit', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            timecardId: currentTimecard.id,
+            updates: fieldEdits,
+            editComment: rejectionReason.trim(),
+            returnToDraft: true,
+          }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to edit and return timecard')
+        }
+      } else {
+        // Standard rejection without edits
+        const response = await fetch('/api/timecards/reject', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            timecardId: currentTimecard.id,
+            comments: rejectionReason.trim(),
+            rejectedFields: rejectedFields,
+          }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to reject timecard')
+        }
+      }
+
+      // Reset rejection state and refresh data
+      exitRejectionMode()
+      setShowReasonDialog(false)
+      setRejectionReason("")
+
+      await fetchSubmittedTimecards()
+      if (onRefreshData) {
+        onRefreshData()
+      }
+
+      // If this was the last timecard, go to previous, otherwise stay at same index
+      if (currentApprovalIndex >= submittedTimecards.length - 1 && submittedTimecards.length > 1) {
+        setCurrentApprovalIndex(Math.max(0, currentApprovalIndex - 1))
+      }
+    } catch (error) {
+      console.error('Error processing timecard:', error)
+      setError(error instanceof Error ? error.message : 'Failed to process timecard')
+    } finally {
+      setLoadingRejection(false)
+    }
+  }
+
+  const closeReasonDialog = () => {
+    setShowReasonDialog(false)
+    setRejectionReason("")
+  }
+
+  // Field mapping for rejection
+  const getFieldDisplayName = (fieldId: string) => {
+    const fieldMap: Record<string, string> = {
+      'total_hours': 'Total Hours',
+      'total_break_duration': 'Total Break Time',
+      'pay_rate': 'Pay Rate',
+      'total_pay': 'Total Pay',
+      'check_in_time': 'Check In',
+      'break_start_time': 'Break Start',
+      'break_end_time': 'Break End',
+      'check_out_time': 'Check Out'
+    }
+
+    // Handle day-specific fields
+    if (fieldId.includes('_day_')) {
+      const parts = fieldId.split('_day_')
+      const baseField = parts[0]
+      const dayIndex = parseInt(parts[1])
+
+      if (!isNaN(dayIndex) && currentTimecard?.daily_entries && currentTimecard.daily_entries[dayIndex]) {
+        const entry = currentTimecard.daily_entries[dayIndex]
+        const date = new Date(entry.work_date).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric'
+        })
+        return `${date} - ${fieldMap[baseField] || baseField}`
+      }
+
+      return `${fieldMap[baseField] || baseField} (Day ${dayIndex + 1})`
+    }
+
+    return fieldMap[fieldId] || fieldId
   }
 
   // Approve current timecard
@@ -117,7 +261,7 @@ export function ProjectTimecardApproval({
       if (onRefreshData) {
         onRefreshData()
       }
-      
+
       // If this was the last timecard, go to previous, otherwise stay at same index
       if (currentApprovalIndex >= submittedTimecards.length - 1 && submittedTimecards.length > 1) {
         setCurrentApprovalIndex(Math.max(0, currentApprovalIndex - 1))
@@ -148,9 +292,9 @@ export function ProjectTimecardApproval({
       <Card>
         <CardContent className="p-6">
           <div className="text-center space-y-4">
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
+            <AlertCircle className="h-12 w-12 text-red-600 dark:text-red-400 mx-auto" />
             <div>
-              <h3 className="text-lg font-semibold text-red-700 dark:text-red-400">Error Loading Timecards</h3>
+              <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">Error Loading Timecards</h3>
               <p className="text-muted-foreground mt-2">{error}</p>
             </div>
             <Button onClick={fetchSubmittedTimecards} variant="outline">
@@ -185,6 +329,10 @@ export function ProjectTimecardApproval({
   const userAssignment = teamAssignments.find(assignment => assignment.user_id === currentTimecard.user_id)
   const userProjectRole = userAssignment?.role || null
 
+  // Simplified button logic
+  const hasEdits = Object.keys(fieldEdits).length > 0
+  const buttonText = hasEdits ? "Apply Changes & Return" : "Reject Without Changes"
+
   return (
     <div className="space-y-4">
       {/* Approval Header */}
@@ -193,7 +341,7 @@ export function ProjectTimecardApproval({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="text-lg text-white font-medium">
-                {Array.isArray(currentTimecard.profiles) 
+                {Array.isArray(currentTimecard.profiles)
                   ? currentTimecard.profiles[0]?.full_name || 'Unknown User'
                   : currentTimecard.profiles?.full_name || 'Unknown User'}
               </div>
@@ -214,339 +362,276 @@ export function ProjectTimecardApproval({
         </CardContent>
       </Card>
 
-      {/* Time Summary - Enhanced for Multi-Day */}
+      {/* Responsive Timecard Display */}
+      {/* Desktop Layout - Days as columns, categories as rows */}
+      <div className="hidden lg:block">
+        <DesktopTimecardGrid
+          timecard={currentTimecard}
+          isRejectionMode={isRejectionMode}
+          selectedFields={Object.keys(fieldEdits)}
+          fieldEdits={fieldEdits}
+          onFieldEdit={handleFieldEdit}
+          showSummaryInHeader={true}
+          actionButtons={
+            isRejectionMode ? (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={exitRejectionMode}
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={confirmRejection}
+                  className="bg-red-600 dark:bg-red-800 hover:bg-red-700 dark:hover:bg-red-900 text-white"
+                >
+                  {buttonText}
+                </Button>
+              </div>
+            ) : undefined
+          }
+        />
+      </div>
+
+      {/* Mobile Layout - Simplified */}
+      <div className="lg:hidden">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <DollarSign className="w-5 h-5 mr-2" />
-              {currentTimecard.is_multi_day ? 'Total Time Summary' : 'Time Summary'}
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Clock className="w-5 h-5 mr-2" />
+                {currentTimecard.is_multi_day ? 'Daily Time Breakdown' : 'Time Details'}
+                <span className={`ml-2 text-sm font-normal transition-opacity ${isRejectionMode
+                  ? 'text-red-600 dark:text-red-400 opacity-100'
+                  : 'opacity-0'
+                  }`}>
+                  (Click fields to edit)
+                </span>
+              </div>
             </CardTitle>
+
+            <div className={`mt-3 flex items-center justify-end gap-2 transition-opacity ${isRejectionMode ? 'opacity-100' : 'opacity-0 pointer-events-none'
+              }`}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exitRejectionMode}
+                disabled={!isRejectionMode}
+              >
+                <X className="w-4 h-4 mr-1" />
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={confirmRejection}
+                disabled={!isRejectionMode}
+                className="bg-red-600 dark:bg-red-800 hover:bg-red-700 dark:hover:bg-red-900 text-white"
+              >
+                {buttonText}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="text-center p-4 bg-card rounded-lg border">
-                <div className="flex items-center justify-center mb-2">
-                  <Clock className="w-4 h-4 text-muted-foreground mr-1" />
-                  <span className="text-sm font-medium text-muted-foreground">
-                    {currentTimecard.is_multi_day ? 'Total Hours' : 'Hours Worked'}
-                  </span>
-                </div>
-                <p className="text-3xl font-bold text-foreground">
-                  {(currentTimecard.total_hours || 0).toFixed(1)}
-                </p>
-                {currentTimecard.is_multi_day && currentTimecard.working_days > 1 ? (
-                  <p className="text-xs text-muted-foreground">
-                    {((currentTimecard.total_hours || 0) / (currentTimecard.working_days || 1)).toFixed(1)} hours/day avg
-                  </p>
-                ) : (
-                  <p className="text-xs text-muted-foreground">hours worked</p>
-                )}
-              </div>
-              
-              <div className="text-center p-4 bg-card rounded-lg border">
-                <div className="flex items-center justify-center mb-2">
-                  <Clock className="w-4 h-4 text-muted-foreground mr-1" />
-                  <span className="text-sm font-medium text-muted-foreground">
-                    {currentTimecard.is_multi_day ? 'Total Break Time' : 'Break Duration'}
-                  </span>
-                </div>
-                <p className="text-3xl font-bold text-foreground">
-                  {Math.round((currentTimecard.total_break_duration || currentTimecard.break_duration || 0) * 60)}
-                </p>
-                {currentTimecard.is_multi_day && currentTimecard.working_days > 1 ? (
-                  <p className="text-xs text-muted-foreground">
-                    {Math.round(((currentTimecard.total_break_duration || 0) * 60) / (currentTimecard.working_days || 1))} min/day avg
-                  </p>
-                ) : (
-                  <p className="text-xs text-muted-foreground">minutes</p>
-                )}
-              </div>
-              
-              <div className="text-center p-4 bg-card rounded-lg border">
-                <div className="flex items-center justify-center mb-2">
-                  <DollarSign className="w-4 h-4 text-muted-foreground mr-1" />
-                  <span className="text-sm font-medium text-muted-foreground">Pay Rate</span>
-                </div>
-                <p className="text-3xl font-bold text-foreground">${(currentTimecard.pay_rate || 0).toFixed(2)}</p>
-                <p className="text-xs text-muted-foreground">per hour</p>
-              </div>
-              
-              <div className="text-center p-4 bg-card rounded-lg border">
-                <div className="flex items-center justify-center mb-2">
-                  <DollarSign className="w-4 h-4 text-green-600 dark:text-green-400 mr-1" />
-                  <span className="text-sm font-medium text-muted-foreground">
-                    {currentTimecard.is_multi_day ? 'Total Compensation' : 'Total Pay'}
-                  </span>
-                </div>
-                <p className="text-3xl font-bold text-green-600 dark:text-green-400">
-                  ${(currentTimecard.total_pay || 0).toFixed(2)}
-                </p>
-                {currentTimecard.is_multi_day && currentTimecard.working_days > 1 ? (
-                  <p className="text-xs text-muted-foreground">
-                    ${((currentTimecard.total_pay || 0) / (currentTimecard.working_days || 1)).toFixed(2)}/day avg
-                  </p>
-                ) : (
-                  <p className="text-xs text-muted-foreground">total compensation</p>
-                )}
-              </div>
-            </div>
+            <MultiDayTimecardDisplay
+              timecard={currentTimecard}
+              isRejectionMode={isRejectionMode}
+              fieldEdits={fieldEdits}
+              onFieldEdit={handleFieldEdit}
+            />
           </CardContent>
         </Card>
+      </div>
 
-        {/* Time Details - Matching timecard details page format */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Clock className="w-5 h-5 mr-2" />
-              {currentTimecard.is_multi_day ? 'Daily Time Breakdown' : 'Time Details'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {currentTimecard.is_multi_day && currentTimecard.daily_entries && currentTimecard.daily_entries.length > 0 ? (
-              <div className="space-y-6">
-                {currentTimecard.daily_entries.map((entry, index) => (
-                  <div key={index} className="space-y-4">
-                    {/* Day Header */}
-                    <div className="flex items-center justify-between pb-2">
-                      <h3 className="text-sm font-medium text-foreground">
-                        Day {index + 1} - {new Date(entry.work_date).toLocaleDateString('en-US', { 
-                          weekday: 'long', 
-                          month: 'short', 
-                          day: 'numeric', 
-                          year: 'numeric' 
-                        })}
-                      </h3>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span>{(entry.hours_worked || 0).toFixed(1)} hrs</span>
-                        <span>${(entry.daily_pay || 0).toFixed(2)}</span>
-                      </div>
-                    </div>
+      {/* Navigation and Action Buttons */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between gap-4">
+            {/* Previous Button - Arrow only on mobile */}
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={goToPreviousTimecard}
+              disabled={currentApprovalIndex === 0}
+              className="flex items-center gap-2"
+            >
+              <ChevronLeft className="w-5 h-5" />
+              <span className="hidden sm:inline">Previous</span>
+            </Button>
 
-                    {/* Time Events Grid - matching timecard details page format */}
-                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                      {/* Check In */}
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">Check In</label>
-                        <div className="p-3 rounded-lg border border-border bg-card">
-                          <p className="text-lg font-semibold text-foreground">
-                            {entry.check_in_time 
-                              ? new Date(entry.check_in_time).toLocaleTimeString('en-US', { 
-                                  hour: 'numeric', 
-                                  minute: '2-digit', 
-                                  second: '2-digit' 
-                                })
-                              : "Not Recorded"
-                            }
-                          </p>
-                        </div>
-                      </div>
+            {/* Reject Button - Icon + text on all sizes */}
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={isRejectionMode ? exitRejectionMode : enterRejectionMode}
+              disabled={loadingApproval}
+              className={`flex items-center gap-2 ${isRejectionMode
+                ? 'bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700 hover:bg-red-200 dark:hover:bg-red-950/40'
+                : 'bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-white dark:border-red-700 hover:bg-red-100 dark:hover:bg-red-950/50 hover:border-red-100 dark:hover:border-red-800'
+                }`}
+            >
+              {isRejectionMode ? (
+                <>
+                  <X className="w-5 h-5" />
+                  <span className="hidden sm:inline">Cancel</span>
+                </>
+              ) : (
+                <>
+                  <X className="w-5 h-5" />
+                  <span className="hidden sm:inline">Reject</span>
+                </>
+              )}
+            </Button>
 
-                      {/* Break Start */}
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">Break Start</label>
-                        <div className={`p-3 rounded-lg border ${entry.break_start_time ? 'border-border bg-card' : 'border-dashed border-muted-foreground/30 bg-muted/30'}`}>
-                          {entry.break_start_time ? (
-                            <p className="text-lg font-semibold text-foreground">
-                              {new Date(entry.break_start_time).toLocaleTimeString('en-US', { 
-                                hour: 'numeric', 
-                                minute: '2-digit', 
-                                second: '2-digit' 
-                              })}
-                            </p>
-                          ) : (
-                            <p className="text-lg font-semibold text-muted-foreground">Not Recorded</p>
-                          )}
-                        </div>
-                      </div>
+            {/* Approve Button - Icon + text on all sizes */}
+            <Button
+              size="lg"
+              onClick={approveCurrentTimecard}
+              disabled={loadingApproval}
+              className="bg-green-600/20 border border-green-600 text-green-400 hover:bg-green-600/30 hover:border-green-700 flex items-center gap-2"
+            >
+              <Check className="w-5 h-5" />
+              <span className="hidden sm:inline">{loadingApproval ? 'Approving...' : 'Approve'}</span>
+            </Button>
 
-                      {/* Break End */}
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">Break End</label>
-                        <div className={`p-3 rounded-lg border ${entry.break_end_time ? 'border-border bg-card' : 'border-dashed border-muted-foreground/30 bg-muted/30'}`}>
-                          {entry.break_end_time ? (
-                            <p className="text-lg font-semibold text-foreground">
-                              {new Date(entry.break_end_time).toLocaleTimeString('en-US', { 
-                                hour: 'numeric', 
-                                minute: '2-digit', 
-                                second: '2-digit' 
-                              })}
-                            </p>
-                          ) : (
-                            <p className="text-lg font-semibold text-muted-foreground">Not Recorded</p>
-                          )}
-                        </div>
-                      </div>
+            {/* Next Button - Arrow only on mobile */}
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={goToNextTimecard}
+              disabled={currentApprovalIndex === submittedTimecards.length - 1}
+              className="flex items-center gap-2"
+            >
+              <span className="hidden sm:inline">Next</span>
+              <ChevronRight className="w-5 h-5" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-                      {/* Check Out */}
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">Check Out</label>
-                        <div className="p-3 rounded-lg border border-border bg-card">
-                          <p className="text-lg font-semibold text-foreground">
-                            {entry.check_out_time 
-                              ? new Date(entry.check_out_time).toLocaleTimeString('en-US', { 
-                                  hour: 'numeric', 
-                                  minute: '2-digit', 
-                                  second: '2-digit' 
-                                })
-                              : "Not Recorded"
-                            }
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+      {/* Enhanced Rejection Reason Dialog */}
+      <Dialog open={showReasonDialog} onOpenChange={setShowReasonDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className={Object.keys(fieldEdits).length > 0 ? "text-blue-600 dark:text-blue-400" : "text-red-600 dark:text-red-400"}>
+              {Object.keys(fieldEdits).length > 0 ? 'Return Timecard with Changes' : 'Reject Timecard'}
+            </DialogTitle>
+          </DialogHeader>
 
-                    {/* Dividing line between days (except for last entry) */}
-                    {index < currentTimecard.daily_entries.length - 1 && (
-                      <div className="border-t border-border my-6"></div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              /* Single Day Layout */
-              <div className="space-y-4">
-                {/* Date Header */}
-                <div className="text-center pb-2 border-b border-border">
-                  <h3 className="text-lg font-medium text-foreground">
-                    {new Date(currentTimecard.date).toLocaleDateString('en-US', { 
-                      weekday: 'long', 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric' 
-                    })}
-                  </h3>
-                </div>
-
-                {/* Time Events Grid */}
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  {/* Check In */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground">Check In</label>
-                    <div className="p-3 rounded-lg border border-border bg-card">
-                      <p className="text-lg font-semibold text-foreground">
-                        {currentTimecard.check_in_time 
-                          ? new Date(currentTimecard.check_in_time).toLocaleTimeString('en-US', { 
-                              hour: 'numeric', 
-                              minute: '2-digit', 
-                              second: '2-digit' 
-                            })
-                          : "Not Recorded"
-                        }
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Break Start */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground">Break Start</label>
-                    <div className={`p-3 rounded-lg border ${currentTimecard.break_start_time ? 'border-border bg-card' : 'border-dashed border-muted-foreground/30 bg-muted/30'}`}>
-                      {currentTimecard.break_start_time ? (
-                        <p className="text-lg font-semibold text-foreground">
-                          {new Date(currentTimecard.break_start_time).toLocaleTimeString('en-US', { 
-                            hour: 'numeric', 
-                            minute: '2-digit', 
-                            second: '2-digit' 
-                          })}
-                        </p>
-                      ) : (
-                        <p className="text-lg font-semibold text-muted-foreground">Not Recorded</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Break End */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground">Break End</label>
-                    <div className={`p-3 rounded-lg border ${currentTimecard.break_end_time ? 'border-border bg-card' : 'border-dashed border-muted-foreground/30 bg-muted/30'}`}>
-                      {currentTimecard.break_end_time ? (
-                        <p className="text-lg font-semibold text-foreground">
-                          {new Date(currentTimecard.break_end_time).toLocaleTimeString('en-US', { 
-                            hour: 'numeric', 
-                            minute: '2-digit', 
-                            second: '2-digit' 
-                          })}
-                        </p>
-                      ) : (
-                        <p className="text-lg font-semibold text-muted-foreground">Not Recorded</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Check Out */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground">Check Out</label>
-                    <div className="p-3 rounded-lg border border-border bg-card">
-                      <p className="text-lg font-semibold text-foreground">
-                        {currentTimecard.check_out_time 
-                          ? new Date(currentTimecard.check_out_time).toLocaleTimeString('en-US', { 
-                              hour: 'numeric', 
-                              minute: '2-digit', 
-                              second: '2-digit' 
-                            })
-                          : "Not Recorded"
-                        }
-                      </p>
-                    </div>
+          <div className="space-y-4">
+            {Object.keys(fieldEdits).length > 0 && (
+              <div>
+                <Label className="text-sm font-medium">Modified fields:</Label>
+                <div className="mt-2 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+                  <div className="flex flex-wrap gap-2">
+                    {Object.keys(fieldEdits).map((fieldId, index) => (
+                      <span
+                        key={index}
+                        className="px-2 py-1 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded text-xs font-medium"
+                      >
+                        {getFieldDisplayName(fieldId)}
+                      </span>
+                    ))}
                   </div>
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
 
-      
-      {/* Navigation and Approve Controls */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-center space-x-4">
-            <Button
-            variant="outline"
-            size="lg"
-            onClick={goToPreviousTimecard}
-            disabled={currentApprovalIndex === 0}
-            className="flex items-center gap-2"
-          >
-            <ChevronLeft className="w-5 h-5" />
-            Previous
-          </Button>
+            {/* Show changes made */}
+            {Object.keys(fieldEdits).length > 0 && (
+              <div>
+                <Label className="text-sm font-medium">Changes made:</Label>
+                <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <div className="space-y-2">
+                    {Object.entries(fieldEdits).map(([fieldId, newValue]) => {
+                      const originalValue = (() => {
+                        if (fieldId.includes('_day_')) {
+                          const parts = fieldId.split('_day_')
+                          const dayIndex = parseInt(parts[1])
+                          const fieldName = parts[0]
 
-            <Button
-            variant="outline"
-            size="lg"
-            onClick={() => {
-              // TODO: Implement reject functionality
-              console.log('Reject timecard:', submittedTimecards[currentApprovalIndex]?.id)
-            }}
-            disabled={loadingApproval}
-            className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 flex items-center gap-2"
-          >
-            <AlertCircle className="w-5 h-5" />
-            Reject
-          </Button>
+                          if (!isNaN(dayIndex) && currentTimecard?.daily_entries && currentTimecard.daily_entries[dayIndex]) {
+                            return currentTimecard.daily_entries[dayIndex][fieldName as keyof typeof currentTimecard.daily_entries[0]]
+                          }
+                        } else {
+                          return currentTimecard[fieldId as keyof typeof currentTimecard]
+                        }
+                        return null
+                      })()
 
-            <Button
-            size="lg"
-            onClick={approveCurrentTimecard}
-            disabled={loadingApproval}
-            className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
-          >
-            <Check className="w-5 h-5" />
-            {loadingApproval ? 'Approving...' : 'Approve'}
-          </Button>
+                      const formatTime = (timeString: string | null) => {
+                        if (!timeString) return "Not Recorded"
+                        return new Date(timeString).toLocaleTimeString('en-US', {
+                          hour: 'numeric',
+                          minute: '2-digit'
+                        })
+                      }
 
-            <Button
-            variant="outline"
-            size="lg"
-            onClick={goToNextTimecard}
-            disabled={currentApprovalIndex === submittedTimecards.length - 1}
-            className="flex items-center gap-2"
-          >
-            Next
-            <ChevronRight className="w-5 h-5" />
-          </Button>
+                      return (
+                        <div key={fieldId} className="text-sm">
+                          <span className="font-medium text-blue-700 dark:text-blue-300">
+                            {getFieldDisplayName(fieldId)}:
+                          </span>
+                          <span className="ml-2 text-muted-foreground line-through">
+                            {formatTime(originalValue as string)}
+                          </span>
+                          <span className="mx-2 text-blue-600 dark:text-blue-400">→</span>
+                          <span className="font-medium text-blue-600 dark:text-blue-400">
+                            {formatTime(newValue)}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <Label htmlFor="rejection-reason" className="text-sm font-medium">
+                {Object.keys(fieldEdits).length > 0 ? 'Explanation of changes' : 'Reason for rejection'} <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
+                id="rejection-reason"
+                placeholder={Object.keys(fieldEdits).length > 0
+                  ? "Explain the corrections made and any remaining issues..."
+                  : "Please explain the issues with this timecard..."
+                }
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                className="mt-1 min-h-[100px]"
+              />
+              {!rejectionReason.trim() && (
+                <p className="text-xs text-red-500 mt-1">
+                  {Object.keys(fieldEdits).length > 0
+                    ? 'An explanation is required when making changes'
+                    : 'A reason is required when rejecting a timecard'
+                  }
+                </p>
+              )}
+            </div>
           </div>
-        </CardContent>
-      </Card>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={closeReasonDialog}
+              disabled={loadingRejection}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={submitRejection}
+              disabled={!rejectionReason.trim() || loadingRejection}
+              className="bg-red-600 dark:bg-red-800 hover:bg-red-700 dark:hover:bg-red-900 text-white"
+            >
+              {loadingRejection ? 'Processing...' : buttonText}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -100,6 +100,7 @@ export async function GET(request: NextRequest) {
         approved_at,
         approved_by,
         rejection_reason,
+        rejected_fields,
         created_at,
         updated_at,
         daily_entries:timecard_daily_entries(
@@ -173,6 +174,7 @@ export async function GET(request: NextRequest) {
           approved_at: timecard.approved_at,
           approved_by: timecard.approved_by,
           rejection_reason: timecard.rejection_reason,
+          rejected_fields: timecard.rejected_fields,
           created_at: timecard.created_at,
           updated_at: timecard.updated_at,
           pay_rate: timecard.pay_rate,
