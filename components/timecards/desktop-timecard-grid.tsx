@@ -41,6 +41,7 @@ export function DesktopTimecardGrid({
 
   const [editingField, setEditingField] = useState<string | null>(null)
   const [activeSegment, setActiveSegment] = useState<'hours' | 'minutes' | 'ampm' | null>(null)
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
   // CSS to hide time picker completely and style segment highlighting
   const timeInputStyles = `
@@ -69,6 +70,20 @@ export function DesktopTimecardGrid({
       font-weight: 600;
     }
     .dark .time-segment.active {
+      background: rgba(59, 130, 246, 0.35);
+      color: rgb(147, 197, 253);
+    }
+    .time-segment-compact {
+      border-radius: 3px;
+      transition: all 0.2s ease;
+      display: inline;
+    }
+    .time-segment-compact.active {
+      background: rgba(59, 130, 246, 0.25);
+      color: rgb(29, 78, 216);
+      font-weight: 600;
+    }
+    .dark .time-segment-compact.active {
       background: rgba(59, 130, 246, 0.35);
       color: rgb(147, 197, 253);
     }
@@ -120,8 +135,81 @@ export function DesktopTimecardGrid({
     }
   }
 
+  // Helper function to validate time order
+  const validateTimeOrder = (fieldId: string, newTimeValue: string, dayIndex: number) => {
+    const fieldType = fieldId.split('_')[0] + '_' + fieldId.split('_')[1] + '_' + fieldId.split('_')[2] // e.g., "check_in_time"
+    const dayEntry = dayColumns[dayIndex]?.entry
+    
+    if (!dayEntry) return true
+    
+    // Convert time string to minutes for comparison
+    const timeToMinutes = (timeStr: string) => {
+      if (!timeStr) return null
+      const [hours, minutes] = timeStr.split(':').map(Number)
+      return hours * 60 + minutes
+    }
+    
+    const newMinutes = timeToMinutes(newTimeValue)
+    if (newMinutes === null) return true
+    
+    // Get current times (use edited values if they exist)
+    const getFieldValue = (field: string) => {
+      const editedFieldId = `${field}_day_${dayIndex}`
+      const editedValue = fieldEdits[editedFieldId]
+      if (editedValue) return formatTimeForInput(editedValue)
+      return formatTimeForInput(dayEntry[field])
+    }
+    
+    const checkInTime = fieldType === 'check_in_time' ? newTimeValue : getFieldValue('check_in_time')
+    const breakStartTime = fieldType === 'break_start_time' ? newTimeValue : getFieldValue('break_start_time')
+    const breakEndTime = fieldType === 'break_end_time' ? newTimeValue : getFieldValue('break_end_time')
+    const checkOutTime = fieldType === 'check_out_time' ? newTimeValue : getFieldValue('check_out_time')
+    
+    const checkInMinutes = timeToMinutes(checkInTime)
+    const breakStartMinutes = timeToMinutes(breakStartTime)
+    const breakEndMinutes = timeToMinutes(breakEndTime)
+    const checkOutMinutes = timeToMinutes(checkOutTime)
+    
+    // Validation rules - return error message instead of showing alert
+    if (checkInMinutes && breakStartMinutes && checkInMinutes >= breakStartMinutes) {
+      return 'Check-in time must be before break start time'
+    }
+    
+    if (breakStartMinutes && breakEndMinutes && breakStartMinutes >= breakEndMinutes) {
+      return 'Break start time must be before break end time'
+    }
+    
+    if (breakEndMinutes && checkOutMinutes && breakEndMinutes >= checkOutMinutes) {
+      return 'Break end time must be before check-out time'
+    }
+    
+    if (checkInMinutes && checkOutMinutes && checkInMinutes >= checkOutMinutes) {
+      return 'Check-in time must be before check-out time'
+    }
+    
+    return null // No error
+  }
+
   const handleInputChange = (fieldId: string, timeValue: string, originalValue: any) => {
     if (onFieldEdit && timeValue) {
+      // Extract day index from field ID
+      const dayIndex = parseInt(fieldId.split('_').pop() || '0')
+      
+      // Validate time order
+      const validationError = validateTimeOrder(fieldId, timeValue, dayIndex)
+      if (validationError) {
+        // Show inline error and don't save
+        setValidationErrors(prev => ({ ...prev, [fieldId]: validationError }))
+        return
+      } else {
+        // Clear any existing error for this field
+        setValidationErrors(prev => {
+          const newErrors = { ...prev }
+          delete newErrors[fieldId]
+          return newErrors
+        })
+      }
+      
       // Convert HH:MM to full datetime string
       const today = new Date()
       const [hours, minutes] = timeValue.split(':')
@@ -145,42 +233,39 @@ export function DesktopTimecardGrid({
   const handleInputBlur = () => {
     setEditingField(null)
     setActiveSegment(null)
+    // Clear validation errors when field stops being edited
+    setValidationErrors({})
   }
 
-  // Helper function to create segmented time display
+  // Helper function to create segmented time display that matches normal text exactly
   const createSegmentedTimeDisplay = (timeString: string, isEdited: boolean, hasValue: boolean = true) => {
     const formatted = formatTime(timeString)
     if (formatted === "Not Recorded") {
-      return <span className="text-muted-foreground">{formatted}</span>
+      return formatted
     }
 
     // Parse the formatted time (e.g., "8:30 AM")
     const timeMatch = formatted.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
     if (!timeMatch) {
-      return <span>{formatted}</span>
+      return formatted
     }
 
     const [, hours, minutes, ampm] = timeMatch
-    const baseColorClass = isEdited 
-      ? 'text-red-600 dark:text-red-400' 
-      : hasValue 
-        ? 'text-foreground' 
-        : 'text-muted-foreground'
 
     return (
-      <span className={`text-lg font-semibold ${baseColorClass}`}>
-        <span className={`time-segment ${activeSegment === 'hours' ? 'active' : ''}`}>
+      <>
+        <span className={`time-segment-compact ${activeSegment === 'hours' ? 'active' : ''}`}>
           {hours}
         </span>
-        <span className="time-separator">:</span>
-        <span className={`time-segment ${activeSegment === 'minutes' ? 'active' : ''}`}>
+        <span>:</span>
+        <span className={`time-segment-compact ${activeSegment === 'minutes' ? 'active' : ''}`}>
           {minutes}
         </span>
-        <span className="time-separator"> </span>
-        <span className={`time-segment ${activeSegment === 'ampm' ? 'active' : ''}`}>
+        <span> </span>
+        <span className={`time-segment-compact ${activeSegment === 'ampm' ? 'active' : ''}`}>
           {ampm}
         </span>
-      </span>
+      </>
     )
   }
 
@@ -228,6 +313,13 @@ export function DesktopTimecardGrid({
 
   // Handle keyboard navigation - use logical state tracking since selectionStart doesn't work
   const handleTimeInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Handle Enter key to confirm edit
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleInputBlur() // This will exit editing mode
+      return
+    }
+    
     // Don't prevent default - let native time picker handle navigation
     
     // Since selectionStart doesn't work with native time pickers,
@@ -334,14 +426,29 @@ export function DesktopTimecardGrid({
 
   // Helper component to render editable time field
   const renderTimeField = (fieldId: string, originalValue: any, currentValue: any, isEdited: boolean, isEditing: boolean, hasValue: boolean = true) => (
-    <div className="text-center">
+    <div className="flex flex-col items-center justify-center h-full">
       {isEdited && !isEditing && (
-        <div className="text-xs text-muted-foreground line-through mb-1">
+        <div className="text-xs text-muted-foreground line-through leading-none mb-0">
           {formatTime(originalValue)}
         </div>
       )}
-      {isEditing ? (
-        <div className="flex justify-center relative time-input-overlay">
+      <div className="relative">
+        {isEditing ? (
+          <p className="text-lg font-semibold leading-tight m-0">
+            {createSegmentedTimeDisplay(currentValue, isEdited, hasValue)}
+          </p>
+        ) : (
+          <p className={`text-lg font-semibold leading-tight m-0 ${
+            isEdited 
+              ? 'text-red-600 dark:text-red-400' 
+              : hasValue 
+                ? 'text-foreground' 
+                : 'text-muted-foreground'
+          }`}>
+            {formatTime(currentValue)}
+          </p>
+        )}
+        {isEditing && (
           <input
             type="time"
             step="300"
@@ -351,29 +458,13 @@ export function DesktopTimecardGrid({
             onClick={handleTimeInputClick}
             onKeyDown={handleTimeInputKeyDown}
             onBlur={handleInputBlur}
-            className="text-center bg-transparent border-none outline-none text-lg font-semibold"
-            style={{ 
-              width: 'auto',
-              minWidth: '80px',
-              maxWidth: '100px'
-            }}
+            className="absolute inset-0 opacity-0"
+
             autoFocus
           />
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            {createSegmentedTimeDisplay(currentValue, isEdited, hasValue)}
-          </div>
-        </div>
-      ) : (
-        <p className={`text-lg font-semibold ${
-          isEdited 
-            ? 'text-red-600 dark:text-red-400' 
-            : hasValue 
-              ? 'text-foreground' 
-              : 'text-muted-foreground'
-        }`}>
-          {formatTime(currentValue)}
-        </p>
-      )}
+        )}
+
+      </div>
     </div>
   )
 
@@ -507,44 +598,15 @@ export function DesktopTimecardGrid({
 
           {/* Day column headers */}
           {dayColumns.map((day, index) => {
-            // Check if all fields for this day are selected
-            const dayFieldIds = [
-              `check_in_time_day_${index}`,
-              `break_start_time_day_${index}`,
-              `break_end_time_day_${index}`,
-              `check_out_time_day_${index}`
-            ]
-            const allDayFieldsSelected = dayFieldIds.every(fieldId => isFieldSelected(fieldId))
+
             
-            const handleDayClick = () => {
-              if (isRejectionMode && onFieldToggle) {
-                if (allDayFieldsSelected) {
-                  // If all fields are selected, deselect them
-                  dayFieldIds.forEach(fieldId => onFieldToggle(fieldId))
-                } else {
-                  // If not all fields are selected, select all of them
-                  dayFieldIds.forEach(fieldId => {
-                    if (!isFieldSelected(fieldId)) {
-                      onFieldToggle(fieldId)
-                    }
-                  })
-                }
-              }
-            }
+
 
             return (
               <div key={index} className="text-center">
                 <div 
-                  className={`flex flex-col items-center gap-2 p-3 border rounded-lg transition-all ${
-                    isRejectionMode 
-                      ? allDayFieldsSelected
-                        ? 'border-red-500 bg-red-50 dark:bg-red-950/20 hover:bg-red-200 dark:hover:bg-red-950/40 cursor-pointer'
-                        : 'border-border hover:border-white cursor-pointer'
-                      : isDayRejected(index)
-                        ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
-                        : 'border-border'
-                  }`}
-                  onClick={handleDayClick}
+                  className="flex flex-col items-center gap-2 p-3 border rounded-lg border-border"
+
                 >
                 {/* Day name with small labels */}
                 <div className="relative w-full text-xs">
@@ -596,22 +658,30 @@ export function DesktopTimecardGrid({
               return (
                 <div
                   key={index}
-                  className={`p-3 rounded-lg border transition-all ${
+                  className={`${isEdited ? 'py-1 px-3' : 'p-3'} rounded-lg border transition-all relative ${
                     isEditing
-                      ? 'border-2 border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
+                      ? 'border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
                       : isEdited
                         ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
                         : isSelected
-                          ? 'border-red-500 bg-red-50 dark:bg-red-950/20 hover:bg-red-200 dark:hover:bg-red-950/40 cursor-pointer'
+                          ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
                           : isFieldRejected(fieldId)
                             ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
                             : isRejectionMode
-                              ? 'border-border bg-card hover:border-red-200 hover:bg-red-50 dark:hover:bg-red-950/20 cursor-pointer'
+                              ? 'border-border bg-card hover:border-white cursor-pointer'
                               : 'border-border bg-card'
                   }`}
                   onClick={() => !isEditing && handleFieldClick(fieldId)}
                 >
                   {renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, true)}
+                  {validationErrors[fieldId] && (
+                    <div className="absolute top-full left-0 right-0 mt-1 p-2 bg-background border border-white rounded-lg text-xs text-white z-10 flex items-center gap-2">
+                      <svg className="w-3 h-3 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      <span>{validationErrors[fieldId]}</span>
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -635,19 +705,19 @@ export function DesktopTimecardGrid({
               return (
                 <div
                   key={index}
-                  className={`p-3 rounded-lg border transition-all ${
+                  className={`${isEdited ? 'py-1 px-3' : 'p-3'} rounded-lg border transition-all relative ${
                     isEditing
-                      ? 'border-2 border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
+                      ? 'border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
                       : isEdited
                         ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
                         : isSelected
-                          ? 'border-red-500 bg-red-50 dark:bg-red-950/20 hover:bg-red-200 dark:hover:bg-red-950/40 cursor-pointer'
+                          ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
                           : isFieldRejected(fieldId)
                             ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
                             : isRejectionMode
                               ? hasBreak
-                                ? 'border-border bg-card hover:border-red-200 hover:bg-red-50 dark:hover:bg-red-950/20 cursor-pointer'
-                                : 'border-dashed border-muted-foreground/30 bg-muted/30 hover:border-red-200 hover:bg-red-50 dark:hover:bg-red-950/20 cursor-pointer'
+                                ? 'border-border bg-card hover:border-white cursor-pointer'
+                                : 'border-dashed border-muted-foreground/30 bg-muted/30 hover:border-white cursor-pointer'
                               : hasBreak
                                 ? 'border-border bg-card'
                                 : 'border-dashed border-muted-foreground/30 bg-muted/30'
@@ -655,6 +725,14 @@ export function DesktopTimecardGrid({
                   onClick={() => !isEditing && handleFieldClick(fieldId)}
                 >
                   {renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, hasBreak)}
+                  {validationErrors[fieldId] && (
+                    <div className="absolute top-full left-0 right-0 mt-1 p-2 bg-background border border-white rounded-lg text-xs text-white z-10 flex items-center gap-2">
+                      <svg className="w-3 h-3 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      <span>{validationErrors[fieldId]}</span>
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -678,19 +756,19 @@ export function DesktopTimecardGrid({
               return (
                 <div
                   key={index}
-                  className={`p-3 rounded-lg border transition-all ${
+                  className={`${isEdited ? 'py-1 px-3' : 'p-3'} rounded-lg border transition-all relative ${
                     isEditing
-                      ? 'border-2 border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
+                      ? 'border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
                       : isEdited
                         ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
                         : isSelected
-                          ? 'border-red-500 bg-red-50 dark:bg-red-950/20 hover:bg-red-200 dark:hover:bg-red-950/40 cursor-pointer'
+                          ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
                           : isFieldRejected(fieldId)
                             ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
                             : isRejectionMode
                               ? hasBreak
-                                ? 'border-border bg-card hover:border-red-200 hover:bg-red-50 dark:hover:bg-red-950/20 cursor-pointer'
-                                : 'border-dashed border-muted-foreground/30 bg-muted/30 hover:border-red-200 hover:bg-red-50 dark:hover:bg-red-950/20 cursor-pointer'
+                                ? 'border-border bg-card hover:border-white cursor-pointer'
+                                : 'border-dashed border-muted-foreground/30 bg-muted/30 hover:border-white cursor-pointer'
                               : hasBreak
                                 ? 'border-border bg-card'
                                 : 'border-dashed border-muted-foreground/30 bg-muted/30'
@@ -698,6 +776,14 @@ export function DesktopTimecardGrid({
                   onClick={() => !isEditing && handleFieldClick(fieldId)}
                 >
                   {renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, hasBreak)}
+                  {validationErrors[fieldId] && (
+                    <div className="absolute top-full left-0 right-0 mt-1 p-2 bg-background border border-white rounded-lg text-xs text-white z-10 flex items-center gap-2">
+                      <svg className="w-3 h-3 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      <span>{validationErrors[fieldId]}</span>
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -720,22 +806,30 @@ export function DesktopTimecardGrid({
               return (
                 <div
                   key={index}
-                  className={`p-3 rounded-lg border transition-all ${
+                  className={`${isEdited ? 'py-1 px-3' : 'p-3'} rounded-lg border transition-all relative ${
                     isEditing
-                      ? 'border-2 border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
+                      ? 'border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
                       : isEdited
                         ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
                         : isSelected
-                          ? 'border-red-500 bg-red-50 dark:bg-red-950/20 hover:bg-red-200 dark:hover:bg-red-950/40 cursor-pointer'
+                          ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
                           : isFieldRejected(fieldId)
                             ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
                             : isRejectionMode
-                              ? 'border-border bg-card hover:border-red-200 hover:bg-red-50 dark:hover:bg-red-950/20 cursor-pointer'
+                              ? 'border-border bg-card hover:border-white cursor-pointer'
                               : 'border-border bg-card'
                   }`}
                   onClick={() => !isEditing && handleFieldClick(fieldId)}
                 >
                   {renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, true)}
+                  {validationErrors[fieldId] && (
+                    <div className="absolute top-full left-0 right-0 mt-1 p-2 bg-background border border-white rounded-lg text-xs text-white z-10 flex items-center gap-2">
+                      <svg className="w-3 h-3 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      <span>{validationErrors[fieldId]}</span>
+                    </div>
+                  )}
                 </div>
               )
             })}

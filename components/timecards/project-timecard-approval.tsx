@@ -115,10 +115,19 @@ export function ProjectTimecardApproval({
   }
 
   const handleFieldEdit = (fieldId: string, newValue: any) => {
-    setFieldEdits(prev => ({
-      ...prev,
-      [fieldId]: newValue
-    }))
+    setFieldEdits(prev => {
+      if (newValue === undefined) {
+        // Remove the field from edits if value is undefined (matches original)
+        const { [fieldId]: removed, ...rest } = prev
+        return rest
+      } else {
+        // Add or update the field edit
+        return {
+          ...prev,
+          [fieldId]: newValue
+        }
+      }
+    })
   }
 
   const confirmRejection = () => {

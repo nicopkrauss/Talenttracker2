@@ -23,8 +23,24 @@ export function SimpleEditableField({
 }: SimpleEditableFieldProps) {
   const [isEditing, setIsEditing] = useState(false)
   
-  const isEdited = fieldEdits[fieldId] !== undefined
+  // Check if field has been edited AND the value is different from original
+  const hasFieldEdit = fieldEdits[fieldId] !== undefined
   const currentValue = fieldEdits[fieldId] || originalValue
+  
+  // Helper function to normalize time values for comparison
+  const normalizeTimeValue = (timeValue: string | null | undefined): string | null => {
+    if (!timeValue) return null
+    // Convert to ISO string for consistent comparison
+    try {
+      return new Date(timeValue).toISOString()
+    } catch {
+      return null
+    }
+  }
+  
+  // A field is considered "edited" only if it has been modified AND the value differs from original
+  const isEdited = hasFieldEdit && 
+    normalizeTimeValue(currentValue) !== normalizeTimeValue(originalValue)
 
   const formatTime = (timeString: string | null) => {
     if (!timeString) return "Not Recorded"
@@ -42,14 +58,26 @@ export function SimpleEditableField({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const timeValue = e.target.value
+    let newValue: string | null = null
+    
     if (timeValue) {
       // Convert HH:MM to full datetime string
       const today = new Date()
       const [hours, minutes] = timeValue.split(':')
       today.setHours(parseInt(hours), parseInt(minutes), 0, 0)
-      onFieldEdit(fieldId, today.toISOString())
+      newValue = today.toISOString()
+    }
+    
+    // Check if the new value matches the original value
+    const normalizedNew = normalizeTimeValue(newValue)
+    const normalizedOriginal = normalizeTimeValue(originalValue)
+    
+    if (normalizedNew === normalizedOriginal) {
+      // Value matches original, remove from fieldEdits to clear highlighting
+      onFieldEdit(fieldId, undefined)
     } else {
-      onFieldEdit(fieldId, null)
+      // Value is different from original, add/update in fieldEdits
+      onFieldEdit(fieldId, newValue)
     }
   }
 
