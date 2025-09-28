@@ -425,6 +425,15 @@ export type ProjectFormInput = z.infer<typeof projectFormSchema>
 export type ProjectRoleFormInput = z.infer<typeof projectRoleFormSchema>
 export type ProjectLocationFormInput = z.infer<typeof projectLocationFormSchema>
 
+// Audit Log System Types (imported from audit-log-service)
+export type {
+  AuditLogEntry,
+  AuditLogFilter,
+  GroupedAuditEntry,
+  FieldChange,
+  AuditLogResponse
+} from './audit-log-service'
+
 // Navigation System Types
 
 // Project-specific roles (stored in team_assignments table)

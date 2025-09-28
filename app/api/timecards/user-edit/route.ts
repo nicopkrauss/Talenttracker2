@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { TIMECARD_HEADERS_SELECT } from '@/lib/timecard-columns'
+import { withTimecardAuditLogging, type TimecardAuditContext } from '@/lib/timecard-audit-integration'
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,7 +40,7 @@ export async function POST(request: NextRequest) {
     // Get the timecard and verify ownership
     const { data: timecard, error: fetchError } = await supabase
       .from('timecard_headers')
-      .select('*')
+      .select(TIMECARD_HEADERS_SELECT)
       .eq('id', timecardId)
       .eq('user_id', user.id) // Users can only edit their own timecards
       .single()
@@ -75,17 +77,31 @@ export async function POST(request: NextRequest) {
       updateData.total_pay = newPayRate * newTotalHours
     }
 
-    const { error: updateError } = await supabase
-      .from('timecard_headers')
-      .update(updateData)
-      .eq('id', timecardId)
-
-    if (updateError) {
-      return NextResponse.json(
-        { error: 'Failed to update timecard', code: 'UPDATE_ERROR' },
-        { status: 500 }
-      )
+    // Create audit context for user edit
+    const auditContext: TimecardAuditContext = {
+      timecardId,
+      userId: user.id,
+      actionType: 'user_edit',
+      workDate: new Date(timecard.period_start_date)
     }
+
+    // Apply the updates with audit logging
+    await withTimecardAuditLogging(
+      supabase,
+      auditContext,
+      async () => {
+        const { error: updateError } = await supabase
+          .from('timecard_headers')
+          .update(updateData)
+          .eq('id', timecardId)
+
+        if (updateError) {
+          throw new Error('Failed to update timecard')
+        }
+
+        return true
+      }
+    )
 
     return NextResponse.json({
       success: true,

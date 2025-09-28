@@ -144,7 +144,7 @@ export function ProjectTimecardApproval({
       const rejectedFields = Object.keys(fieldEdits) // Fields that were edited are the rejected fields
 
       if (hasEdits) {
-        // Apply edits and return to draft
+        // Apply edits and reject the timecard
         const response = await fetch('/api/timecards/edit', {
           method: 'POST',
           headers: {
@@ -152,15 +152,19 @@ export function ProjectTimecardApproval({
           },
           body: JSON.stringify({
             timecardId: currentTimecard.id,
-            updates: fieldEdits,
+            updates: {
+              ...fieldEdits,
+              status: 'rejected' // Set status to rejected when editing during rejection
+            },
             editComment: rejectionReason.trim(),
-            returnToDraft: true,
+            // Don't automatically generate admin notes - rejection reason goes in rejection_reason field
+            returnToDraft: false, // Don't return to draft, we want to reject
           }),
         })
 
         if (!response.ok) {
           const errorData = await response.json()
-          throw new Error(errorData.error || 'Failed to edit and return timecard')
+          throw new Error(errorData.error || 'Failed to edit and reject timecard')
         }
       } else {
         // Standard rejection without edits

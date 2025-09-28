@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { getRejectedFields } from '@/lib/audit-log-service'
 
 /**
  * Normalized Timecards API (v2)
@@ -100,7 +101,6 @@ export async function GET(request: NextRequest) {
         approved_at,
         approved_by,
         rejection_reason,
-        rejected_fields,
         created_at,
         updated_at,
         daily_entries:timecard_daily_entries(
@@ -151,6 +151,16 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Get rejected fields for all timecards from audit logs
+    const timecardIds = timecards.map(tc => tc.id)
+    const rejectedFieldsMap = new Map<string, string[]>()
+    
+    // Batch fetch rejected fields for all timecards
+    for (const timecardId of timecardIds) {
+      const rejectedFields = await getRejectedFields(supabase, timecardId)
+      rejectedFieldsMap.set(timecardId, rejectedFields)
+    }
+
     // Transform normalized structure for multi-day timecard display
     // Keep timecards grouped but add first day's details to the main record
     const processedTimecards = timecards.map(timecard => {
@@ -174,7 +184,7 @@ export async function GET(request: NextRequest) {
           approved_at: timecard.approved_at,
           approved_by: timecard.approved_by,
           rejection_reason: timecard.rejection_reason,
-          rejected_fields: timecard.rejected_fields,
+          rejected_fields: rejectedFieldsMap.get(timecard.id) || [],
           created_at: timecard.created_at,
           updated_at: timecard.updated_at,
           pay_rate: timecard.pay_rate,
@@ -236,6 +246,8 @@ export async function GET(request: NextRequest) {
           total_break_duration: timecard.total_break_duration || 0,
           total_pay: timecard.total_pay || 0,
           pay_rate: timecard.pay_rate || 0,
+          rejection_reason: timecard.rejection_reason,
+          rejected_fields: rejectedFieldsMap.get(timecard.id) || [],
           manually_edited: false,
           admin_edited: false,
           created_at: timecard.created_at,

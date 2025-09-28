@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { resolveTimecardBreaks } from "@/lib/timecard-validation"
+import { withTimecardAuditLogging, type TimecardAuditContext } from "@/lib/timecard-audit-integration"
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
     // Generate break resolution updates
     const updates = resolveTimecardBreaks(timecards, resolutions)
 
-    // Apply updates to database
+    // Apply updates to database with audit logging
     const updatePromises = updates.map(async (update) => {
       const updateData: any = {
         break_duration: update.break_duration,
@@ -80,16 +81,36 @@ export async function POST(request: NextRequest) {
         updateData.break_end_time = update.break_end_time
       }
 
-      const { error } = await supabase
-        .from("timecard_headers")
-        .update(updateData)
-        .eq("id", update.id)
-        .eq("user_id", user.id) // Double-check ownership
-
-      if (error) {
-        console.error(`Error updating timecard ${update.id}:`, error)
-        throw error
+      // Find the corresponding timecard for work date
+      const timecard = timecards.find(tc => tc.id === update.id)
+      
+      // Create audit context for break resolution (user edit)
+      const auditContext: TimecardAuditContext = {
+        timecardId: update.id,
+        userId: user.id,
+        actionType: 'user_edit',
+        workDate: timecard ? new Date(timecard.period_start_date) : undefined
       }
+
+      // Apply the update with audit logging
+      await withTimecardAuditLogging(
+        supabase,
+        auditContext,
+        async () => {
+          const { error } = await supabase
+            .from("timecard_headers")
+            .update(updateData)
+            .eq("id", update.id)
+            .eq("user_id", user.id) // Double-check ownership
+
+          if (error) {
+            console.error(`Error updating timecard ${update.id}:`, error)
+            throw error
+          }
+
+          return true
+        }
+      )
 
       return update.id
     })

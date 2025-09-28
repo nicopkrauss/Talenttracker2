@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { canApproveTimecards } from '@/lib/role-utils'
+import { withTimecardAuditLogging, type TimecardAuditContext } from '@/lib/timecard-audit-integration'
 
 const approveTimecardSchema = z.object({
   timecardId: z.string().uuid(),
@@ -122,23 +123,40 @@ export async function POST(request: NextRequest) {
       // Check for manually edited timecards that might need special attention
       const manuallyEditedCount = timecards.filter(tc => tc.manually_edited).length
       
-      // Bulk approve all valid timecards
-      const { error: updateError } = await supabase
-        .from('timecard_headers')
-        .update({
-          status: 'approved',
-          approved_at: new Date().toISOString(),
-          approved_by: user.id,
-          edit_comments: comments || null,
-        })
-        .in('id', timecardIds)
+      // Bulk approve all valid timecards with audit logging
+      const updatePromises = timecards.map(async (timecard) => {
+        const auditContext: TimecardAuditContext = {
+          timecardId: timecard.id,
+          userId: user.id,
+          actionType: 'admin_edit', // Approval is considered admin edit
+          // We'll need to fetch the work date for each timecard
+        }
 
-      if (updateError) {
-        return NextResponse.json(
-          { error: 'Failed to approve timecards', code: 'UPDATE_ERROR' },
-          { status: 500 }
+        return withTimecardAuditLogging(
+          supabase,
+          auditContext,
+          async () => {
+            const { error } = await supabase
+              .from('timecard_headers')
+              .update({
+                status: 'approved',
+                approved_at: new Date().toISOString(),
+                approved_by: user.id,
+                edit_comments: comments || null,
+              })
+              .eq('id', timecard.id)
+
+            if (error) {
+              console.error(`Error approving timecard ${timecard.id}:`, error)
+              throw new Error(`Failed to approve timecard ${timecard.id}`)
+            }
+
+            return true
+          }
         )
-      }
+      })
+
+      await Promise.all(updatePromises)
 
       return NextResponse.json({
         success: true,
@@ -184,23 +202,36 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Approve the timecard
-      const { error: updateError } = await supabase
-        .from('timecard_headers')
-        .update({
-          status: 'approved',
-          approved_at: new Date().toISOString(),
-          approved_by: user.id,
-          edit_comments: comments || null,
-        })
-        .eq('id', timecardId)
-
-      if (updateError) {
-        return NextResponse.json(
-          { error: 'Failed to approve timecard', code: 'UPDATE_ERROR' },
-          { status: 500 }
-        )
+      // Create audit context for approval (admin edit)
+      const auditContext: TimecardAuditContext = {
+        timecardId,
+        userId: user.id,
+        actionType: 'admin_edit', // Approval is considered admin edit
+        // Work date will be extracted from timecard data in the audit helper
       }
+
+      // Approve the timecard with audit logging
+      await withTimecardAuditLogging(
+        supabase,
+        auditContext,
+        async () => {
+          const { error: updateError } = await supabase
+            .from('timecard_headers')
+            .update({
+              status: 'approved',
+              approved_at: new Date().toISOString(),
+              approved_by: user.id,
+              edit_comments: comments || null,
+            })
+            .eq('id', timecardId)
+
+          if (updateError) {
+            throw new Error('Failed to approve timecard')
+          }
+
+          return true
+        }
+      )
 
       return NextResponse.json({
         success: true,

@@ -409,6 +409,7 @@ model profiles {
   talent_project_assignments_talent_project_assignments_escort_idToprofiles   talent_project_assignments[] @relation("talent_project_assignments_escort_idToprofiles")
   talent_status                                                               talent_status[]
   team_assignments                                                            team_assignments[]
+  timecard_audit_log                                                          timecard_audit_log[]
   timecard_headers_approved_by                                                timecard_headers[]           @relation("timecard_headers_approved_by")
   timecard_headers_user                                                       timecard_headers[]           @relation("timecard_headers_user")
   user_favorites                                                              user_favorites[]
@@ -749,7 +750,7 @@ model timecard_headers {
   approved_at          DateTime?                @db.Timestamptz(6)
   approved_by          String?                  @db.Uuid
   rejection_reason     String?
-  rejected_fields      String[]
+  rejected_fields      String[]                 @default([])
   admin_notes          String?
   period_start_date    DateTime                 @db.Date
   period_end_date      DateTime                 @db.Date
@@ -764,6 +765,7 @@ model timecard_headers {
   edit_type            String?
   created_at           DateTime?                @default(now()) @db.Timestamptz(6)
   updated_at           DateTime?                @default(now()) @db.Timestamptz(6)
+  timecard_audit_log   timecard_audit_log[]
   daily_entries        timecard_daily_entries[]
   approved_by_profile  profiles?                @relation("timecard_headers_approved_by", fields: [approved_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   project              projects?                @relation("timecard_headers_project", fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -832,6 +834,30 @@ model oauth_clients {
   @@index([client_id])
   @@index([deleted_at])
   @@schema("auth")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model timecard_audit_log {
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  timecard_id      String           @db.Uuid
+  change_id        String           @db.Uuid
+  field_name       String           @db.VarChar(100)
+  old_value        String?
+  new_value        String?
+  changed_by       String           @db.Uuid
+  changed_at       DateTime         @default(now()) @db.Timestamptz(6)
+  action_type      audit_action_type
+  work_date        DateTime?        @db.Date
+  profiles         profiles         @relation(fields: [changed_by], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  timecard_headers timecard_headers @relation(fields: [timecard_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([change_id], map: "idx_timecard_audit_log_change_id")
+  @@index([changed_at(sort: Desc)], map: "idx_timecard_audit_log_changed_at")
+  @@index([changed_by], map: "idx_timecard_audit_log_changed_by")
+  @@index([timecard_id], map: "idx_timecard_audit_log_timecard_id")
+  @@index([work_date], map: "idx_timecard_audit_log_work_date")
+  @@schema("public")
 }
 
 enum aal_level {
@@ -923,6 +949,14 @@ enum user_status {
   pending
   active
   inactive
+
+  @@schema("public")
+}
+
+enum audit_action_type {
+  user_edit
+  admin_edit
+  rejection_edit
 
   @@schema("public")
 }

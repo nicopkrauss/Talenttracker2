@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { withTimecardAuditLogging, type TimecardAuditContext } from '@/lib/timecard-audit-integration'
+import { TIMECARD_HEADERS_SELECT } from '@/lib/timecard-columns'
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,23 +37,53 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Update timecard status to submitted for all provided IDs
-    const { error } = await supabase
+    // Get timecard data for audit context
+    const { data: timecards, error: fetchError } = await supabase
       .from('timecard_headers')
-      .update({
-        status: 'submitted',
-        submitted_at: new Date().toISOString(),
-      })
+      .select(TIMECARD_HEADERS_SELECT)
       .in('id', timecardIds)
-      .eq('user_id', user.id) // Ensure user can only submit their own timecards
+      .eq('user_id', user.id)
 
-    if (error) {
-      console.error('Error submitting timecards:', error)
+    if (fetchError || !timecards || timecards.length === 0) {
       return NextResponse.json(
-        { error: 'Failed to submit timecards' },
-        { status: 500 }
+        { error: 'Timecards not found or access denied' },
+        { status: 404 }
       )
     }
+
+    // Update each timecard with audit logging
+    const updatePromises = timecards.map(async (timecard) => {
+      const auditContext: TimecardAuditContext = {
+        timecardId: timecard.id,
+        userId: user.id,
+        actionType: 'user_edit',
+        workDate: new Date(timecard.period_start_date)
+      }
+
+      return withTimecardAuditLogging(
+        supabase,
+        auditContext,
+        async () => {
+          const { error } = await supabase
+            .from('timecard_headers')
+            .update({
+              status: 'submitted',
+              submitted_at: new Date().toISOString(),
+            })
+            .eq('id', timecard.id)
+            .eq('user_id', user.id)
+
+          if (error) {
+            console.error(`Error submitting timecard ${timecard.id}:`, error)
+            throw new Error(`Failed to submit timecard ${timecard.id}`)
+          }
+
+          return true
+        }
+      )
+    })
+
+    await Promise.all(updatePromises)
 
     return NextResponse.json({ success: true })
   } catch (error) {

@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { canApproveTimecards } from '@/lib/role-utils'
+import { AuditLogService } from '@/lib/audit-log-service'
 
 const rejectTimecardSchema = z.object({
   timecardId: z.string().uuid(),
@@ -107,7 +108,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Reject the timecard
+    // Get the current timecard data before updating for audit logging
+    const { data: currentTimecard, error: currentError } = await supabase
+      .from('timecard_headers')
+      .select('*')
+      .eq('id', timecardId)
+      .single()
+
+    if (currentError || !currentTimecard) {
+      return NextResponse.json(
+        { error: 'Failed to fetch current timecard data', code: 'FETCH_ERROR' },
+        { status: 500 }
+      )
+    }
+
+    // Update the timecard status to rejected
     const { error: updateError } = await supabase
       .from('timecard_headers')
       .update({
@@ -123,6 +138,47 @@ export async function POST(request: NextRequest) {
         { error: 'Failed to reject timecard', code: 'UPDATE_ERROR' },
         { status: 500 }
       )
+    }
+
+    // Log the rejection action in audit log
+    try {
+      const auditLogService = new AuditLogService(supabase)
+      
+      // Create audit log entry for the status change
+      const statusChange = {
+        fieldName: 'status',
+        oldValue: currentTimecard.status,
+        newValue: 'rejected'
+      }
+
+      // Add rejection reason change if comments were provided
+      const changes = [statusChange]
+      if (comments && comments !== currentTimecard.rejection_reason) {
+        changes.push({
+          fieldName: 'rejection_reason',
+          oldValue: currentTimecard.rejection_reason,
+          newValue: comments
+        })
+      }
+
+      // Add rejected fields change if provided
+      if (rejectedFields && rejectedFields.length > 0) {
+        changes.push({
+          fieldName: 'rejected_fields',
+          oldValue: currentTimecard.rejected_fields || [],
+          newValue: rejectedFields
+        })
+      }
+
+      await auditLogService.recordChanges(
+        timecardId,
+        changes,
+        user.id,
+        'rejection_edit' // Use rejection_edit to track rejection actions
+      )
+    } catch (auditError) {
+      console.error('Failed to create audit log for rejection:', auditError)
+      // Don't fail the rejection if audit logging fails, but log the error
     }
 
     // TODO: Send notification to user about rejection (requirement 5.6)

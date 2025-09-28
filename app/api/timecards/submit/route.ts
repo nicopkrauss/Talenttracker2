@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { withTimecardAuditLogging, type TimecardAuditContext } from '@/lib/timecard-audit-integration'
+import { TIMECARD_HEADERS_SELECT } from '@/lib/timecard-columns'
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,23 +37,51 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Update timecard status to submitted
-    const { error } = await supabase
+    // Get timecard data for audit context
+    const { data: timecard, error: fetchError } = await supabase
       .from('timecard_headers')
-      .update({
-        status: 'submitted',
-        submitted_at: new Date().toISOString(),
-      })
+      .select(TIMECARD_HEADERS_SELECT)
       .eq('id', timecardId)
-      .eq('user_id', user.id) // Ensure user can only submit their own timecards
+      .eq('user_id', user.id)
+      .single()
 
-    if (error) {
-      console.error('Error submitting timecard:', error)
+    if (fetchError || !timecard) {
       return NextResponse.json(
-        { error: 'Failed to submit timecard' },
-        { status: 500 }
+        { error: 'Timecard not found or access denied' },
+        { status: 404 }
       )
     }
+
+    // Create audit context for submission (user edit)
+    const auditContext: TimecardAuditContext = {
+      timecardId,
+      userId: user.id,
+      actionType: 'user_edit',
+      workDate: new Date(timecard.period_start_date)
+    }
+
+    // Update timecard status to submitted with audit logging
+    await withTimecardAuditLogging(
+      supabase,
+      auditContext,
+      async () => {
+        const { error } = await supabase
+          .from('timecard_headers')
+          .update({
+            status: 'submitted',
+            submitted_at: new Date().toISOString(),
+          })
+          .eq('id', timecardId)
+          .eq('user_id', user.id) // Ensure user can only submit their own timecards
+
+        if (error) {
+          console.error('Error submitting timecard:', error)
+          throw new Error('Failed to submit timecard')
+        }
+
+        return true
+      }
+    )
 
     return NextResponse.json({ success: true })
   } catch (error) {

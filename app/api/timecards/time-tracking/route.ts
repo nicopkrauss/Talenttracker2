@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { createTimecardCalculationEngine } from '@/lib/timecard-calculation-engine'
+import { withTimecardAuditLogging, type TimecardAuditContext } from '@/lib/timecard-audit-integration'
+import { TIMECARD_HEADERS_SELECT } from '@/lib/timecard-columns'
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,7 +43,7 @@ export async function GET(request: NextRequest) {
     // Get current timecard record for the date
     const { data: timecard, error: timecardError } = await supabase
       .from('timecard_headers')
-      .select('*')
+      .select(TIMECARD_HEADERS_SELECT)
       .eq('user_id', user.id)
       .eq('project_id', projectId)
       .eq('date', date)
@@ -138,7 +140,7 @@ export async function POST(request: NextRequest) {
     // Get existing timecard or create new one
     let { data: timecard, error: fetchError } = await supabase
       .from('timecard_headers')
-      .select('*')
+      .select(TIMECARD_HEADERS_SELECT)
       .eq('user_id', user.id)
       .eq('project_id', projectId)
       .eq('date', date)
@@ -183,24 +185,36 @@ export async function POST(request: NextRequest) {
 
     let result
     if (timecard) {
-      // Update existing timecard
-      const { data, error } = await supabase
-        .from('timecard_headers')
-        .update(updateData)
-        .eq('id', timecard.id)
-        .select()
-        .single()
-
-      if (error) {
-        console.error('Error updating timecard:', error)
-        return NextResponse.json(
-          { error: 'Failed to update timecard', code: 'DATABASE_ERROR' },
-          { status: 500 }
-        )
+      // Create audit context for time tracking update (user edit)
+      const auditContext: TimecardAuditContext = {
+        timecardId: timecard.id,
+        userId: user.id,
+        actionType: 'user_edit',
+        workDate: new Date(date)
       }
-      result = data
+
+      // Update existing timecard with audit logging
+      result = await withTimecardAuditLogging(
+        supabase,
+        auditContext,
+        async () => {
+          const { data, error } = await supabase
+            .from('timecard_headers')
+            .update(updateData)
+            .eq('id', timecard.id)
+            .select()
+            .single()
+
+          if (error) {
+            console.error('Error updating timecard:', error)
+            throw new Error('Failed to update timecard')
+          }
+          
+          return data
+        }
+      )
     } else {
-      // Create new timecard
+      // Create new timecard (no audit needed for creation)
       const { data, error } = await supabase
         .from('timecard_headers')
         .insert({
@@ -237,7 +251,7 @@ export async function POST(request: NextRequest) {
         // Fetch the updated timecard with calculations
         const { data: updatedTimecard, error: fetchUpdatedError } = await supabase
           .from('timecard_headers')
-          .select('*')
+          .select(TIMECARD_HEADERS_SELECT)
           .eq('id', result.id)
           .single()
 

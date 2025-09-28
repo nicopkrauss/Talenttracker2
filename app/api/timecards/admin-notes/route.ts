@@ -3,6 +3,8 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { canApproveTimecardsWithSettings } from '@/lib/role-utils'
+import { withTimecardAuditLogging, type TimecardAuditContext } from '@/lib/timecard-audit-integration'
+import { TIMECARD_HEADERS_SELECT } from '@/lib/timecard-columns'
 
 const adminNotesSchema = z.object({
   timecardId: z.string().uuid(),
@@ -79,10 +81,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate timecard exists
+    // Validate timecard exists and get full data for audit context
     const { data: timecard, error: fetchError } = await supabase
       .from('timecard_headers')
-      .select('id')
+      .select(TIMECARD_HEADERS_SELECT)
       .eq('id', timecardId)
       .single()
 
@@ -93,22 +95,35 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Update admin notes
-    const { error: updateError } = await supabase
-      .from('timecard_headers')
-      .update({
-        admin_notes: adminNotes,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', timecardId)
-
-    if (updateError) {
-      console.error('Update error:', updateError)
-      return NextResponse.json(
-        { error: 'Failed to update admin notes', code: 'UPDATE_ERROR' },
-        { status: 500 }
-      )
+    // Create audit context for admin notes update (admin edit)
+    const auditContext: TimecardAuditContext = {
+      timecardId,
+      userId: user.id,
+      actionType: 'admin_edit',
+      workDate: new Date(timecard.period_start_date)
     }
+
+    // Update admin notes with audit logging
+    await withTimecardAuditLogging(
+      supabase,
+      auditContext,
+      async () => {
+        const { error: updateError } = await supabase
+          .from('timecard_headers')
+          .update({
+            admin_notes: adminNotes,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', timecardId)
+
+        if (updateError) {
+          console.error('Update error:', updateError)
+          throw new Error('Failed to update admin notes')
+        }
+
+        return true
+      }
+    )
 
     return NextResponse.json({
       success: true,

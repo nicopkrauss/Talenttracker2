@@ -8,6 +8,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { createTimecardCalculationEngine, type TimecardData } from '@/lib/timecard-calculation-engine'
+import { TIMECARD_HEADERS_SELECT } from '@/lib/timecard-columns'
+import { withTimecardAuditLogging, type TimecardAuditContext } from '@/lib/timecard-audit-integration'
 import { z } from 'zod'
 
 // Validation schema for calculation requests
@@ -195,23 +197,48 @@ export async function PUT(request: NextRequest) {
 
     const { timecard_id } = validationResult.data
 
+    // Get timecard data for audit context
+    const { data: timecard, error: timecardError } = await supabase
+      .from('timecard_headers')
+      .select(TIMECARD_HEADERS_SELECT)
+      .eq('id', timecard_id)
+      .single()
+
+    if (timecardError || !timecard) {
+      return NextResponse.json(
+        { error: 'Timecard not found', code: 'TIMECARD_NOT_FOUND' },
+        { status: 404 }
+      )
+    }
+
+    // Create audit context for calculation update (admin edit since it's system-triggered)
+    const auditContext: TimecardAuditContext = {
+      timecardId: timecard_id,
+      userId: user.id,
+      actionType: 'admin_edit', // Calculation updates are considered admin edits
+      workDate: new Date(timecard.period_start_date)
+    }
+
     // Create calculation engine
     const calculationEngine = createTimecardCalculationEngine(supabase)
 
-    // Update timecard calculations
-    const success = await calculationEngine.updateTimecardCalculations(timecard_id)
-
-    if (!success) {
-      return NextResponse.json(
-        { error: 'Failed to update timecard calculations', code: 'UPDATE_FAILED' },
-        { status: 400 }
-      )
-    }
+    // Update timecard calculations with audit logging
+    const success = await withTimecardAuditLogging(
+      supabase,
+      auditContext,
+      async () => {
+        const result = await calculationEngine.updateTimecardCalculations(timecard_id)
+        if (!result) {
+          throw new Error('Failed to update timecard calculations')
+        }
+        return result
+      }
+    )
 
     // Fetch updated timecard
     const { data: updatedTimecard, error: fetchError } = await supabase
       .from('timecard_headers')
-      .select('*')
+      .select(TIMECARD_HEADERS_SELECT)
       .eq('id', timecard_id)
       .single()
 
