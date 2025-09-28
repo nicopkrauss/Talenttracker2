@@ -19,6 +19,7 @@ import { canApproveTimecardsWithSettings } from "@/lib/role-utils"
 import { createTimecardCalculationEngine } from "@/lib/timecard-calculation-engine"
 import { utcToDatetimeLocal, datetimeLocalToUtc } from "@/lib/timezone-utils"
 import { MultiDayTimecardDetail } from "@/components/timecards/multi-day-timecard-detail"
+import { AuditTrailSection } from "@/components/timecards/audit-trail-section"
 
 export default function TimecardDetailPage() {
   const params = useParams()
@@ -776,6 +777,12 @@ export default function TimecardDetailPage() {
               </>
             )
           }
+        />
+
+        {/* Audit Trail Section - Below daily time breakdown */}
+        <AuditTrailSection 
+          timecardId={timecard.id}
+          className="w-full"
         />
 
         {/* Approval Information */}

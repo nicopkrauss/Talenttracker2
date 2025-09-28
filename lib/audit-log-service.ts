@@ -96,11 +96,17 @@ export interface AuditLogResponse {
 
 // Field name mapping constants for consistent display
 export const TRACKABLE_FIELDS = {
-  // Time tracking fields
+  // Time tracking fields (full database field names)
   'check_in_time': 'Check In Time',
   'check_out_time': 'Check Out Time',
   'break_start_time': 'Break Start Time',
   'break_end_time': 'Break End Time',
+  
+  // Time tracking fields (simplified audit log field names)
+  'check_in': 'Check In',
+  'check_out': 'Check Out',
+  'break_start': 'Break Start',
+  'break_end': 'Break End',
   
   // Calculated fields
   'total_hours': 'Total Hours',
@@ -113,6 +119,7 @@ export const TRACKABLE_FIELDS = {
   'admin_notes': 'Admin Notes',
   'edit_comments': 'Edit Comments',
   'rejected_fields': 'Rejected Fields',
+  'rejection_reason': 'Rejection Reason',
   
   // Daily entry fields (for multi-day timecards)
   'daily_check_in': 'Daily Check In',
@@ -153,15 +160,32 @@ export class ValueFormatter {
   /**
    * Format timestamp for display
    */
-  static formatTimestamp(date: Date): string {
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    }).format(date)
+  static formatTimestamp(date: Date | string | null | undefined): string {
+    if (!date) {
+      return 'Unknown time'
+    }
+
+    try {
+      // Convert to Date object if it's a string
+      const dateObj = typeof date === 'string' ? new Date(date) : date
+      
+      // Check if the date is valid
+      if (isNaN(dateObj.getTime())) {
+        return 'Invalid date'
+      }
+
+      return new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      }).format(dateObj)
+    } catch (error) {
+      console.error('Error formatting timestamp:', error, 'for date:', date)
+      return 'Invalid date'
+    }
   }
 
   /**
@@ -183,6 +207,12 @@ export class ValueFormatter {
    * Format field name for display
    */
   static formatFieldName(fieldName: string): string {
+    // Handle null/undefined field names
+    if (!fieldName || typeof fieldName !== 'string') {
+      console.warn('Invalid field name:', fieldName)
+      return 'Unknown Field'
+    }
+
     // Check if it's a standard trackable field
     if (fieldName in TRACKABLE_FIELDS) {
       return TRACKABLE_FIELDS[fieldName as keyof typeof TRACKABLE_FIELDS]
@@ -197,8 +227,29 @@ export class ValueFormatter {
       return `${baseFieldName} (Day ${dayNumber})`
     }
     
-    // Fallback to the original field name
-    return fieldName
+    // Handle common field name variations
+    const fieldMappings: Record<string, string> = {
+      'checkin_time': 'Check In Time',
+      'checkout_time': 'Check Out Time',
+      'breakstart_time': 'Break Start Time',
+      'breakend_time': 'Break End Time',
+      'totalhours': 'Total Hours',
+      'breakduration': 'Break Duration',
+      'overtimehours': 'Overtime Hours'
+    }
+    
+    if (fieldName in fieldMappings) {
+      return fieldMappings[fieldName]
+    }
+    
+    // Convert snake_case to Title Case as fallback
+    const titleCase = fieldName
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ')
+    
+    console.log(`Unknown field name "${fieldName}" converted to "${titleCase}"`)
+    return titleCase
   }
 
   /**

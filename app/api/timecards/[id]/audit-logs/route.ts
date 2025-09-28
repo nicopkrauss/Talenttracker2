@@ -12,12 +12,16 @@ const auditLogQuerySchema = z.object({
   date_to: z.string().datetime().optional(),
   limit: z.coerce.number().min(1).max(100).default(50),
   offset: z.coerce.number().min(0).default(0),
-  grouped: z.coerce.boolean().default(false)
+  grouped: z.union([z.boolean(), z.string()]).optional().transform(val => {
+    if (typeof val === 'boolean') return val;
+    if (typeof val === 'string') return val.toLowerCase() === 'true';
+    return false;
+  }).default(false)
 });
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Initialize Supabase client
@@ -59,7 +63,8 @@ export async function GET(
     }
 
     // Validate timecard exists and user has access
-    const timecardId = params.id;
+    const resolvedParams = await params;
+    const timecardId = resolvedParams.id;
     const { data: timecard, error: timecardError } = await supabase
       .from('timecard_headers')
       .select('id, user_id')
@@ -161,6 +166,8 @@ export async function GET(
       
       total = count || 0;
     }
+
+
 
     // Calculate pagination info
     const hasMore = offset + limit < total;
