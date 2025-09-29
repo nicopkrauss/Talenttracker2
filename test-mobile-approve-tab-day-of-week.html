@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Approve Tab - Day of Week Added</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .comparison-container {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .before, .after {
+            flex: 1;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .before {
+            border: 2px solid #ef4444;
+        }
+        .after {
+            border: 2px solid #10b981;
+        }
+        .mobile-grid {
+            display: grid;
+            grid-template-columns: 70px repeat(4, 1fr);
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .grid-cell {
+            padding: 12px;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            text-align: center;
+            background: #f9f9f9;
+        }
+        .date-cell-before {
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+        }
+        .date-cell-after {
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+        }
+        .date-content-before {
+            text-align: center;
+            line-height: 1.2;
+        }
+        .date-content-after {
+            text-align: center;
+            line-height: 1.2;
+        }
+        .day-of-week {
+            font-size: 12px;
+            color: #666;
+            font-weight: 500;
+            line-height: 1;
+            margin-bottom: 2px;
+        }
+        .day-number {
+            font-size: 18px;
+            font-weight: bold;
+            line-height: 1;
+        }
+        .month {
+            font-size: 12px;
+            color: #666;
+            line-height: 1;
+            margin-top: 2px;
+        }
+        .time-value {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .header-grid {
+            display: grid;
+            grid-template-columns: 70px repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .header-cell {
+            padding: 8px;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            text-align: center;
+            background: #f3f4f6;
+            font-size: 12px;
+            font-weight: 500;
+            color: #6b7280;
+        }
+        .label {
+            font-weight: bold;
+            margin-bottom: 16px;
+            padding: 8px;
+            border-radius: 4px;
+            color: white;
+            text-align: center;
+        }
+        .before-label {
+            background: #ef4444;
+        }
+        .after-label {
+            background: #10b981;
+        }
+        .context-note {
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-weight: 500;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Mobile Approve Tab - Day of Week Added ✅</h1>
+    <p>Day of week abbreviations (MON, TUE, etc.) added specifically to the <strong>mobile approve tab only</strong>.</p>
+    
+    <div class="context-note">
+        📱 This change applies ONLY to the mobile approve tab in project-timecard-approval.tsx
+    </div>
+    
+    <div class="comparison-container">
+        <div class="before">
+            <div class="label before-label">BEFORE: Regular mobile timecard (no day of week)</div>
+            
+            <div class="header-grid">
+                <div class="header-cell"><!-- Empty corner --></div>
+                <div class="header-cell">Check In</div>
+                <div class="header-cell">Break Start</div>
+                <div class="header-cell">Break End</div>
+                <div class="header-cell">Check Out</div>
+            </div>
+            
+            <div class="mobile-grid">
+                <!-- Date cell WITHOUT day of week (regular context) -->
+                <div class="date-cell-before">
+                    <div class="date-content-before">
+                        <div class="day-number">16</div>
+                        <div class="month">Sep</div>
+                    </div>
+                </div>
+                <div class="grid-cell"><div class="time-value">8:00 AM</div></div>
+                <div class="grid-cell"><div class="time-value">12:00 PM</div></div>
+                <div class="grid-cell"><div class="time-value">12:30 PM</div></div>
+                <div class="grid-cell"><div class="time-value">4:30 PM</div></div>
+            </div>
+            
+            <div class="mobile-grid">
+                <div class="date-cell-before">
+                    <div class="date-content-before">
+                        <div class="day-number">17</div>
+                        <div class="month">Sep</div>
+                    </div>
+                </div>
+                <div class="grid-cell"><div class="time-value">8:00 AM</div></div>
+                <div class="grid-cell"><div class="time-value">12:00 PM</div></div>
+                <div class="grid-cell"><div class="time-value">12:30 PM</div></div>
+                <div class="grid-cell"><div class="time-value">4:30 PM</div></div>
+            </div>
+        </div>
+        
+        <div class="after">
+            <div class="label after-label">AFTER: Mobile approve tab (with day of week)</div>
+            
+            <div class="header-grid">
+                <div class="header-cell"><!-- Empty corner --></div>
+                <div class="header-cell">Check In</div>
+                <div class="header-cell">Break Start</div>
+                <div class="header-cell">Break End</div>
+                <div class="header-cell">Check Out</div>
+            </div>
+            
+            <div class="mobile-grid">
+                <!-- Date cell WITH day of week (approve context only) -->
+                <div class="date-cell-after">
+                    <div class="date-content-after">
+                        <div class="day-of-week">MON</div>
+                        <div class="day-number">16</div>
+                        <div class="month">Sep</div>
+                    </div>
+                </div>
+                <div class="grid-cell"><div class="time-value">8:00 AM</div></div>
+                <div class="grid-cell"><div class="time-value">12:00 PM</div></div>
+                <div class="grid-cell"><div class="time-value">12:30 PM</div></div>
+                <div class="grid-cell"><div class="time-value">4:30 PM</div></div>
+            </div>
+            
+            <div class="mobile-grid">
+                <div class="date-cell-after">
+                    <div class="date-content-after">
+                        <div class="day-of-week">TUE</div>
+                        <div class="day-number">17</div>
+                        <div class="month">Sep</div>
+                    </div>
+                </div>
+                <div class="grid-cell"><div class="time-value">8:00 AM</div></div>
+                <div class="grid-cell"><div class="time-value">12:00 PM</div></div>
+                <div class="grid-cell"><div class="time-value">12:30 PM</div></div>
+                <div class="grid-cell"><div class="time-value">4:30 PM</div></div>
+            </div>
+        </div>
+    </div>
+    
+    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h3>✅ Changes Made - Mobile Approve Tab Only</h3>
+        <ul style="margin: 16px 0; padding-left: 20px;">
+            <li><strong>Added isApproveContext prop:</strong> New prop to MobileTimecardGrid and MultiDayTimecardDisplay</li>
+            <li><strong>Conditional day of week:</strong> Only shows MON, TUE, etc. when isApproveContext={true}</li>
+            <li><strong>Updated project-timecard-approval.tsx:</strong> Passes isApproveContext={true} to MultiDayTimecardDisplay</li>
+            <li><strong>Preserved existing behavior:</strong> Regular mobile timecards remain unchanged</li>
+        </ul>
+        
+        <h4>Technical Implementation:</h4>
+        <ul style="margin: 16px 0; padding-left: 20px;">
+            <li><strong>MobileTimecardGridProps:</strong> Added isApproveContext?: boolean</li>
+            <li><strong>prepareDayRows function:</strong> Conditionally adds dayOfWeek property when isApproveContext is true</li>
+            <li><strong>Date column display:</strong> Shows day of week only when isApproveContext && day.dayOfWeek exists</li>
+            <li><strong>Chain of props:</strong> project-timecard-approval → MultiDayTimecardDisplay → MobileTimecardGrid</li>
+        </ul>
+        
+        <h4>Context-Specific Behavior:</h4>
+        <ul style="margin: 16px 0; padding-left: 20px;">
+            <li>✅ <strong>Mobile approve tab:</strong> Shows MON 16 Sep format</li>
+            <li>✅ <strong>Regular mobile timecards:</strong> Still shows 16 Sep format (unchanged)</li>
+            <li>✅ <strong>Desktop timecards:</strong> Unaffected by this change</li>
+            <li>✅ <strong>Other mobile contexts:</strong> Unaffected by this change</li>
+        </ul>
+    </div>
+</body>
+</html>

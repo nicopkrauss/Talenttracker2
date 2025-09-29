@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Date Container Width - Reduced</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .comparison-container {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .before, .after {
+            flex: 1;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .before {
+            border: 2px solid #ef4444;
+        }
+        .after {
+            border: 2px solid #10b981;
+        }
+        .mobile-grid-before {
+            display: grid;
+            grid-template-columns: 100px repeat(4, 1fr); /* Original width */
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .mobile-grid-after {
+            display: grid;
+            grid-template-columns: 70px repeat(4, 1fr); /* Reduced width */
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .grid-cell {
+            padding: 12px;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            text-align: center;
+            background: #f9f9f9;
+        }
+        .date-cell {
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+        }
+        .date-content {
+            text-align: center;
+            line-height: 1.2;
+        }
+        .day-number {
+            font-size: 18px;
+            font-weight: bold;
+            line-height: 1;
+        }
+        .month {
+            font-size: 12px;
+            color: #666;
+            line-height: 1;
+            margin: 2px 0;
+        }
+        .hours {
+            font-size: 12px;
+            color: #2563eb;
+            font-weight: 500;
+            line-height: 1;
+            margin: 2px 0;
+        }
+        .pay {
+            font-size: 12px;
+            color: #16a34a;
+            font-weight: 500;
+            line-height: 1;
+        }
+        .time-value {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .header-grid-before {
+            display: grid;
+            grid-template-columns: 100px repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .header-grid-after {
+            display: grid;
+            grid-template-columns: 70px repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .header-cell {
+            padding: 8px;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            text-align: center;
+            background: #f3f4f6;
+            font-size: 12px;
+            font-weight: 500;
+            color: #6b7280;
+        }
+        .label {
+            font-weight: bold;
+            margin-bottom: 16px;
+            padding: 8px;
+            border-radius: 4px;
+            color: white;
+            text-align: center;
+        }
+        .before-label {
+            background: #ef4444;
+        }
+        .after-label {
+            background: #10b981;
+        }
+        .width-indicator {
+            background: #fbbf24;
+            color: #92400e;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Date Container Width - Reduced ✅</h1>
+    <p>Comparison showing the reduced width of the date container column in the mobile timecard grid.</p>
+    
+    <div class="comparison-container">
+        <div class="before">
+            <div class="label before-label">BEFORE: 100px width</div>
+            <div class="width-indicator">Date column: 100px wide</div>
+            
+            <div class="header-grid-before">
+                <div class="header-cell"><!-- Empty corner --></div>
+                <div class="header-cell">Check In</div>
+                <div class="header-cell">Break Start</div>
+                <div class="header-cell">Break End</div>
+                <div class="header-cell">Check Out</div>
+            </div>
+            
+            <div class="mobile-grid-before">
+                <!-- Date cell with ORIGINAL width -->
+                <div class="date-cell">
+                    <div class="date-content">
+                        <div class="day-number">16</div>
+                        <div class="month">Sep</div>
+                        <div class="hours">8</div>
+                        <div class="pay">200</div>
+                    </div>
+                </div>
+                <!-- Time cells -->
+                <div class="grid-cell">
+                    <div class="time-value">8:00 AM</div>
+                </div>
+                <div class="grid-cell">
+                    <div class="time-value">12:00 PM</div>
+                </div>
+                <div class="grid-cell">
+                    <div class="time-value">12:30 PM</div>
+                </div>
+                <div class="grid-cell">
+                    <div class="time-value">4:30 PM</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="after">
+            <div class="label after-label">AFTER: 70px width</div>
+            <div class="width-indicator">Date column: 70px wide</div>
+            
+            <div class="header-grid-after">
+                <div class="header-cell"><!-- Empty corner --></div>
+                <div class="header-cell">Check In</div>
+                <div class="header-cell">Break Start</div>
+                <div class="header-cell">Break End</div>
+                <div class="header-cell">Check Out</div>
+            </div>
+            
+            <div class="mobile-grid-after">
+                <!-- Date cell with REDUCED width -->
+                <div class="date-cell">
+                    <div class="date-content">
+                        <div class="day-number">16</div>
+                        <div class="month">Sep</div>
+                        <div class="hours">8</div>
+                        <div class="pay">200</div>
+                    </div>
+                </div>
+                <!-- Time cells (now have more space) -->
+                <div class="grid-cell">
+                    <div class="time-value">8:00 AM</div>
+                </div>
+                <div class="grid-cell">
+                    <div class="time-value">12:00 PM</div>
+                </div>
+                <div class="grid-cell">
+                    <div class="time-value">12:30 PM</div>
+                </div>
+                <div class="grid-cell">
+                    <div class="time-value">4:30 PM</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h3>✅ Change Summary</h3>
+        <ul style="margin: 16px 0; padding-left: 20px;">
+            <li><strong>Before:</strong> Date column was <code>100px</code> wide</li>
+            <li><strong>After:</strong> Date column is now <code>70px</code> wide</li>
+            <li><strong>Reduction:</strong> 30% smaller (30px less width)</li>
+            <li><strong>Benefit:</strong> More space for time columns, better mobile experience</li>
+            <li><strong>Content:</strong> All date info (day, month, hours, pay) still fits comfortably</li>
+        </ul>
+        
+        <h4>Technical Details:</h4>
+        <ul style="margin: 16px 0; padding-left: 20px;">
+            <li>Changed grid template from <code>100px repeat(4, 1fr)</code></li>
+            <li>To <code>70px repeat(4, 1fr)</code></li>
+            <li>Applied to both header grid and data rows</li>
+            <li>Time columns now get more proportional space</li>
+            <li>Date container content remains readable and well-formatted</li>
+        </ul>
+        
+        <h4>Impact:</h4>
+        <ul style="margin: 16px 0; padding-left: 20px;">
+            <li>✅ Date container is more compact</li>
+            <li>✅ Time columns have more space</li>
+            <li>✅ Better overall layout balance</li>
+            <li>✅ Improved mobile screen utilization</li>
+        </ul>
+    </div>
+</body>
+</html>

@@ -11,7 +11,10 @@ import type { Timecard } from "@/lib/types"
 import { format } from "date-fns"
 import { getRoleColor, getRoleDisplayName } from "@/lib/role-utils"
 import { DesktopTimecardGrid } from "./desktop-timecard-grid"
+import { useIsDesktop } from "@/hooks/use-media-query"
+import { MobileTimecardGrid } from "./mobile-timecard-grid"
 import { parseDate, formatDateSafe } from "@/lib/timezone-utils"
+import { calculateAdjustedHours } from "@/lib/adjusted-hours-calculation"
 
 interface MultiDayTimecardDisplayProps {
   timecard: Timecard
@@ -28,6 +31,7 @@ interface MultiDayTimecardDisplayProps {
   isRejectionMode?: boolean
   fieldEdits?: Record<string, any>
   onFieldEdit?: (fieldId: string, newValue: any) => void
+  isApproveContext?: boolean
 }
 
 export function MultiDayTimecardDisplay({ 
@@ -43,9 +47,14 @@ export function MultiDayTimecardDisplay({
   showBreakdownToggle = false,
   isRejectionMode = false,
   fieldEdits = {},
-  onFieldEdit
+  onFieldEdit,
+  isApproveContext = false
 }: MultiDayTimecardDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded)
+  const [currentWeekIndex, setCurrentWeekIndex] = useState(0)
+
+  // Responsive rendering
+  const isDesktop = useIsDesktop()
 
   // Update expanded state when defaultExpanded changes (for expand/collapse all)
   useEffect(() => {
@@ -68,6 +77,94 @@ export function MultiDayTimecardDisplay({
   const dailyEntries = timecard.daily_entries || []
   const isMultiDay = dailyEntries.length > 1
   const workingDays = timecard.working_days || dailyEntries.length || 1
+
+  // Calendar week logic for timecards with more than 7 days
+  const needsPagination = dailyEntries.length > 7
+  
+  // Group daily entries by calendar weeks (Sunday = 0, Saturday = 6)
+  const getCalendarWeeks = () => {
+    if (dailyEntries.length === 0) return [[]]
+    
+    const weeks: any[][] = []
+    const weekMap = new Map<string, any[]>()
+    
+    // Find the date range using proper date parsing
+    const dates = dailyEntries
+      .map(entry => parseDate(entry.work_date))
+      .filter(date => date !== null)
+      .sort((a, b) => a!.getTime() - b!.getTime())
+    if (dates.length === 0) return [[]]
+    
+    const startDate = dates[0]!
+    const endDate = dates[dates.length - 1]!
+    
+    // Find the Sunday of the week containing the start date
+    const firstSunday = new Date(startDate)
+    firstSunday.setDate(startDate.getDate() - startDate.getDay())
+    
+    // Find the Saturday of the week containing the end date
+    const lastSaturday = new Date(endDate)
+    lastSaturday.setDate(endDate.getDate() + (6 - endDate.getDay()))
+    
+    // Create week buckets from first Sunday to last Saturday
+    let currentWeekStart = new Date(firstSunday)
+    while (currentWeekStart <= lastSaturday) {
+      const weekKey = currentWeekStart.toISOString().split('T')[0]
+      weekMap.set(weekKey, [])
+      
+      // Move to next Sunday
+      currentWeekStart.setDate(currentWeekStart.getDate() + 7)
+    }
+    
+    // Place each daily entry in the correct week bucket
+    dailyEntries.forEach(entry => {
+      const entryDate = parseDate(entry.work_date)
+      if (!entryDate) return
+      
+      const entrySunday = new Date(entryDate)
+      entrySunday.setDate(entryDate.getDate() - entryDate.getDay())
+      const weekKey = entrySunday.toISOString().split('T')[0]
+      
+      if (weekMap.has(weekKey)) {
+        weekMap.get(weekKey)!.push(entry)
+      }
+    })
+    
+    // Convert map to array of weeks, ensuring each week has 7 slots (some may be empty)
+    currentWeekStart = new Date(firstSunday)
+    while (currentWeekStart <= lastSaturday) {
+      const weekKey = currentWeekStart.toISOString().split('T')[0]
+      const weekEntries = weekMap.get(weekKey) || []
+      
+      // Create full week with 7 slots
+      const fullWeek = []
+      for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+        const dayDate = new Date(currentWeekStart)
+        dayDate.setDate(currentWeekStart.getDate() + dayOffset)
+        const dayKey = dayDate.toISOString().split('T')[0]
+        
+        // Find entry for this specific date
+        const dayEntry = weekEntries.find(entry => entry.work_date === dayKey)
+        fullWeek.push(dayEntry || null) // null for empty days
+      }
+      
+      weeks.push(fullWeek)
+      
+      // Move to next Sunday
+      currentWeekStart.setDate(currentWeekStart.getDate() + 7)
+    }
+    
+    return weeks
+  }
+  
+  const calendarWeeks = getCalendarWeeks()
+  const totalWeeks = calendarWeeks.length
+  const currentWeekEntries = needsPagination ? (calendarWeeks[currentWeekIndex] || []) : dailyEntries
+  
+  // Reset to first week if current index is out of bounds
+  if (currentWeekIndex >= totalWeeks && totalWeeks > 0) {
+    setCurrentWeekIndex(0)
+  }
 
   // Helper function to check if a field is rejected
   const isFieldRejected = (fieldId: string) => {
@@ -148,8 +245,33 @@ export function MultiDayTimecardDisplay({
   }
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      {(showUserName || showHeaderStats) && (
+    <div>
+      {/* Mobile: Time breakdown grid - moved outside Card to be in same container as name/role badge */}
+      {(timecard.check_in_time || timecard.daily_entries?.length > 0) && (!showBreakdownToggle || isExpanded) && (
+        <MobileTimecardGrid
+          timecard={timecard}
+          isRejectionMode={isRejectionMode}
+          selectedFields={[]}
+          onFieldToggle={() => { }}
+          showRejectedFields={showRejectedFields}
+          fieldEdits={fieldEdits}
+          onFieldEdit={onFieldEdit}
+          currentWeekEntries={currentWeekEntries.filter(entry => entry !== null)} // Remove null entries
+          currentWeekIndex={currentWeekIndex}
+          totalWeeks={totalWeeks}
+          onWeekChange={setCurrentWeekIndex}
+          isCalendarWeekMode={false} // Mobile doesn't need calendar week mode
+          showBreakdownToggle={showBreakdownToggle}
+          isApproveContext={isApproveContext}
+        />
+      )}
+
+      {/* Only render Card if there's content to show */}
+      {((showUserName || showHeaderStats) || 
+        (isDesktop && (timecard.check_in_time || timecard.daily_entries?.length > 0) && (!showBreakdownToggle || isExpanded)) ||
+        (timecard.status === 'rejected' && timecard.rejection_reason)) && (
+        <Card className="hover:shadow-md transition-shadow">
+        {(showUserName || showHeaderStats) && (
         <CardHeader className="pb-0 gap-0">
           <div className="space-y-3 sm:space-y-0">
             {/* Name and badges row - on desktop this includes stats */}
@@ -260,7 +382,7 @@ export function MultiDayTimecardDisplay({
                     </div>
                     <div className="flex items-baseline gap-1 text-right">
                       <p className="text-lg font-bold text-foreground">
-                        10
+                        {calculateAdjustedHours(timecard).toFixed(1)}
                       </p>
                       <p className="text-xs text-muted-foreground whitespace-nowrap">Adjusted Hours</p>
                     </div>
@@ -305,7 +427,7 @@ export function MultiDayTimecardDisplay({
                 <div className="text-center p-3 bg-card rounded-lg border">
                   <p className="text-sm text-muted-foreground whitespace-nowrap">Adjusted Hours</p>
                   <p className="text-lg font-bold text-foreground">
-                    10
+                    {calculateAdjustedHours(timecard).toFixed(1)}
                   </p>
                 </div>
 
@@ -348,6 +470,48 @@ export function MultiDayTimecardDisplay({
           </div>
         )}
 
+        {/* Calendar Week Info for Multi-Week Timecards - Navigation handled by desktop grid arrows */}
+        {needsPagination && (!showBreakdownToggle || isExpanded) && (
+          <div className="mb-4 flex items-center justify-center p-3 bg-muted/50 rounded-lg border lg:hidden">
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-sm font-medium text-muted-foreground">
+                Week {currentWeekIndex + 1} of {totalWeeks}
+              </span>
+              {/* Show date range for current calendar week */}
+              {(() => {
+                const currentWeek = calendarWeeks[currentWeekIndex] || []
+                const workingDaysInWeek = currentWeek.filter(entry => entry !== null)
+                if (workingDaysInWeek.length > 0) {
+                  const firstWorkingDay = workingDaysInWeek[0]
+                  const lastWorkingDay = workingDaysInWeek[workingDaysInWeek.length - 1]
+                  const startDate = safeFormat(firstWorkingDay.work_date, "MMM d", "")
+                  const endDate = safeFormat(lastWorkingDay.work_date, "MMM d", "")
+                  return (
+                    <span className="text-xs text-muted-foreground">
+                      {startDate === endDate ? startDate : `${startDate} - ${endDate}`}
+                    </span>
+                  )
+                }
+                return null
+              })()}
+              <div className="flex gap-1">
+                {Array.from({ length: totalWeeks }, (_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentWeekIndex(i)}
+                    className={`w-2 h-2 rounded-full transition-colors ${
+                      i === currentWeekIndex 
+                        ? 'bg-primary' 
+                        : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
+                    }`}
+                    aria-label={`Go to week ${i + 1}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Mobile Breakdown Toggle Button - Hide for multi-day timecards since we always show all days */}
         {showBreakdownToggle && !timecard.is_multi_day && (
           <div className="flex justify-center mb-4 sm:hidden">
@@ -376,190 +540,31 @@ export function MultiDayTimecardDisplay({
           </div>
         )}
 
-        {/* Time Details Section - Desktop uses grid, mobile uses existing format */}
+        {/* Time Details Section - Desktop uses desktop grid, mobile uses mobile grid */}
         {(timecard.check_in_time || timecard.daily_entries?.length > 0) && (!showBreakdownToggle || isExpanded) && (
-          <div className={showBreakdownToggle ? "pt-4" : ""}>
+          <>
             {/* Desktop: Use DesktopTimecardGrid (same as approve tab) */}
-            <div className="hidden lg:block">
-              <DesktopTimecardGrid
-                timecard={timecard}
-                isRejectionMode={isRejectionMode}
-                selectedFields={[]}
-                onFieldToggle={() => { }}
-                showHeader={false}
-                showRejectedFields={showRejectedFields}
-                fieldEdits={fieldEdits}
-                onFieldEdit={onFieldEdit}
-              />
-            </div>
-
-            {/* Mobile: Keep existing format */}
-            <div className="lg:hidden space-y-4">
-              {/* First Day (always shown) */}
-              <div className="space-y-1">
-                <div className={`${isFirstDayRejected()
-                  ? 'p-2 -m-2 rounded-lg border-2 border-red-500 bg-red-50 dark:bg-red-950/20'
-                  : ''
-                  }`}>
-                  <h3 className="text-lg font-semibold text-foreground">
-                    {safeFormat(timecard.date, "MMM d, yyyy")}
-                  </h3>
-                </div>
-
-                {/* Time Events Grid - using EditableTimeField components */}
-                <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-                  <SimpleEditableField
-                    fieldId={isMultiDay ? getFieldId('check_in_time', 0) : "check_in_time"}
-                    originalValue={isMultiDay ? (dailyEntries[0]?.check_in_time || null) : (timecard.check_in_time || null)}
-                    label="Check In"
-                    isRejectionMode={isRejectionMode}
-                    fieldEdits={fieldEdits}
-                    onFieldEdit={onFieldEdit || (() => {})}
-                    allFieldValues={{
-                      check_in_time: isMultiDay ? dailyEntries[0]?.check_in_time : timecard.check_in_time,
-                      break_start_time: isMultiDay ? dailyEntries[0]?.break_start_time : timecard.break_start_time,
-                      break_end_time: isMultiDay ? dailyEntries[0]?.break_end_time : timecard.break_end_time,
-                      check_out_time: isMultiDay ? dailyEntries[0]?.check_out_time : timecard.check_out_time
-                    }}
-                    isRejected={isFieldRejected(isMultiDay ? getFieldId('check_in_time', 0) : "check_in_time")}
-                  />
-                  <SimpleEditableField
-                    fieldId={isMultiDay ? getFieldId('break_start_time', 0) : "break_start_time"}
-                    originalValue={isMultiDay ? (dailyEntries[0]?.break_start_time || null) : (timecard.break_start_time || null)}
-                    label="Break Start"
-                    isRejectionMode={isRejectionMode}
-                    fieldEdits={fieldEdits}
-                    onFieldEdit={onFieldEdit || (() => {})}
-                    allFieldValues={{
-                      check_in_time: isMultiDay ? dailyEntries[0]?.check_in_time : timecard.check_in_time,
-                      break_start_time: isMultiDay ? dailyEntries[0]?.break_start_time : timecard.break_start_time,
-                      break_end_time: isMultiDay ? dailyEntries[0]?.break_end_time : timecard.break_end_time,
-                      check_out_time: isMultiDay ? dailyEntries[0]?.check_out_time : timecard.check_out_time
-                    }}
-                    isRejected={isFieldRejected(isMultiDay ? getFieldId('break_start_time', 0) : "break_start_time")}
-                  />
-                  <SimpleEditableField
-                    fieldId={isMultiDay ? getFieldId('break_end_time', 0) : "break_end_time"}
-                    originalValue={isMultiDay ? (dailyEntries[0]?.break_end_time || null) : (timecard.break_end_time || null)}
-                    label="Break End"
-                    isRejectionMode={isRejectionMode}
-                    fieldEdits={fieldEdits}
-                    onFieldEdit={onFieldEdit || (() => {})}
-                    allFieldValues={{
-                      check_in_time: isMultiDay ? dailyEntries[0]?.check_in_time : timecard.check_in_time,
-                      break_start_time: isMultiDay ? dailyEntries[0]?.break_start_time : timecard.break_start_time,
-                      break_end_time: isMultiDay ? dailyEntries[0]?.break_end_time : timecard.break_end_time,
-                      check_out_time: isMultiDay ? dailyEntries[0]?.check_out_time : timecard.check_out_time
-                    }}
-                    isRejected={isFieldRejected(isMultiDay ? getFieldId('break_end_time', 0) : "break_end_time")}
-                  />
-                  <SimpleEditableField
-                    fieldId={isMultiDay ? getFieldId('check_out_time', 0) : "check_out_time"}
-                    originalValue={isMultiDay ? (dailyEntries[0]?.check_out_time || null) : (timecard.check_out_time || null)}
-                    label="Check Out"
-                    isRejectionMode={isRejectionMode}
-                    fieldEdits={fieldEdits}
-                    onFieldEdit={onFieldEdit || (() => {})}
-                    allFieldValues={{
-                      check_in_time: isMultiDay ? dailyEntries[0]?.check_in_time : timecard.check_in_time,
-                      break_start_time: isMultiDay ? dailyEntries[0]?.break_start_time : timecard.break_start_time,
-                      break_end_time: isMultiDay ? dailyEntries[0]?.break_end_time : timecard.break_end_time,
-                      check_out_time: isMultiDay ? dailyEntries[0]?.check_out_time : timecard.check_out_time
-                    }}
-                    isRejected={isFieldRejected(isMultiDay ? getFieldId('check_out_time', 0) : "check_out_time")}
-                  />
-                </div>
+            {isDesktop && (
+              <div className={showBreakdownToggle ? "pt-4" : ""}>
+                <DesktopTimecardGrid
+                  timecard={timecard}
+                  isRejectionMode={isRejectionMode}
+                  selectedFields={[]}
+                  onFieldToggle={() => { }}
+                  showHeader={false}
+                  showRejectedFields={showRejectedFields}
+                  fieldEdits={fieldEdits}
+                  onFieldEdit={onFieldEdit}
+                  currentWeekEntries={currentWeekEntries.filter(entry => entry !== null)} // Remove null entries for desktop grid
+                  currentWeekIndex={currentWeekIndex}
+                  totalWeeks={totalWeeks}
+                  onWeekChange={setCurrentWeekIndex}
+                  isCalendarWeekMode={true} // Enable calendar week mode for breakdown view
+                />
               </div>
+            )}
 
-              {/* Additional Days (when expanded) */}
-              {isMultiDay && isExpanded && dailyEntries.length > 1 && (
-                <div className="space-y-0">
-                  {dailyEntries.slice(1).map((entry, index) => {
-                    const dayNumber = index + 2
 
-                    return (
-                      <div key={`day-${dayNumber}`} className="space-y-1">
-                        {/* Dividing line between days */}
-                        <div className="border-t border-border my-4"></div>
-
-                        <div className={`${isDayRejected(index + 1)
-                          ? 'p-2 -m-2 rounded-lg border-2 border-red-500 bg-red-50 dark:bg-red-950/20'
-                          : ''
-                          }`}>
-                          <h3 className="text-lg font-semibold text-foreground">
-                            {safeFormat(entry.work_date, "MMM d, yyyy")}
-                          </h3>
-                        </div>
-
-                        {/* Time grid for this specific day - using EditableTimeField components */}
-                        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-                          <SimpleEditableField
-                            fieldId={getFieldId('check_in_time', index + 1)}
-                            originalValue={entry.check_in_time || null}
-                            label="Check In"
-                            isRejectionMode={isRejectionMode}
-                            fieldEdits={fieldEdits}
-                            onFieldEdit={onFieldEdit || (() => {})}
-                            allFieldValues={{
-                              check_in_time: entry.check_in_time,
-                              break_start_time: entry.break_start_time,
-                              break_end_time: entry.break_end_time,
-                              check_out_time: entry.check_out_time
-                            }}
-                            isRejected={isFieldRejected(getFieldId('check_in_time', index + 1))}
-                          />
-                          <SimpleEditableField
-                            fieldId={getFieldId('break_start_time', index + 1)}
-                            originalValue={entry.break_start_time || null}
-                            label="Break Start"
-                            isRejectionMode={isRejectionMode}
-                            fieldEdits={fieldEdits}
-                            onFieldEdit={onFieldEdit || (() => {})}
-                            allFieldValues={{
-                              check_in_time: entry.check_in_time,
-                              break_start_time: entry.break_start_time,
-                              break_end_time: entry.break_end_time,
-                              check_out_time: entry.check_out_time
-                            }}
-                            isRejected={isFieldRejected(getFieldId('break_start_time', index + 1))}
-                          />
-                          <SimpleEditableField
-                            fieldId={getFieldId('break_end_time', index + 1)}
-                            originalValue={entry.break_end_time || null}
-                            label="Break End"
-                            isRejectionMode={isRejectionMode}
-                            fieldEdits={fieldEdits}
-                            onFieldEdit={onFieldEdit || (() => {})}
-                            allFieldValues={{
-                              check_in_time: entry.check_in_time,
-                              break_start_time: entry.break_start_time,
-                              break_end_time: entry.break_end_time,
-                              check_out_time: entry.check_out_time
-                            }}
-                            isRejected={isFieldRejected(getFieldId('break_end_time', index + 1))}
-                          />
-                          <SimpleEditableField
-                            fieldId={getFieldId('check_out_time', index + 1)}
-                            originalValue={entry.check_out_time || null}
-                            label="Check Out"
-                            isRejectionMode={isRejectionMode}
-                            fieldEdits={fieldEdits}
-                            onFieldEdit={onFieldEdit || (() => {})}
-                            allFieldValues={{
-                              check_in_time: entry.check_in_time,
-                              break_start_time: entry.break_start_time,
-                              break_end_time: entry.break_end_time,
-                              check_out_time: entry.check_out_time
-                            }}
-                            isRejected={isFieldRejected(getFieldId('check_out_time', index + 1))}
-                          />
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
 
             {/* Rejection Comments - Only show for rejected timecards when details are expanded */}
             {timecard.status === 'rejected' && timecard.rejection_reason && (
@@ -575,10 +580,12 @@ export function MultiDayTimecardDisplay({
                 </p>
               </div>
             )}
-          </div>
+          </>
         )}
 
       </CardContent>
-    </Card>
+        </Card>
+      )}
+    </div>
   )
 }

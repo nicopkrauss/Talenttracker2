@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useIsDesktop } from "@/hooks/use-media-query"
 import { createBrowserClient } from "@supabase/ssr"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -53,6 +54,12 @@ export function ProjectTimecardApproval({
   const [rejectionReason, setRejectionReason] = useState("")
   const [loadingRejection, setLoadingRejection] = useState(false)
 
+  // Calendar week navigation state
+  const [currentWeekIndex, setCurrentWeekIndex] = useState(0)
+
+  // Responsive rendering
+  const isDesktop = useIsDesktop()
+
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -61,9 +68,9 @@ export function ProjectTimecardApproval({
   const fetchSubmittedTimecards = async () => {
     try {
       setError(null) // Clear any previous errors
-      
+
       const response = await fetch(`/api/timecards/submitted?project_id=${projectId}`)
-      
+
       if (!response.ok) {
         // Try to get error details from response
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`
@@ -74,7 +81,7 @@ export function ProjectTimecardApproval({
         } catch (parseError) {
           console.error("Could not parse error response:", parseError)
         }
-        
+
         console.error("Error fetching submitted timecards for approval:", errorMessage)
         setError(`Failed to fetch timecards: ${errorMessage}`)
         setSubmittedTimecards([])
@@ -159,7 +166,7 @@ export function ProjectTimecardApproval({
   // Handle both simple time strings and ISO format for backward compatibility
   const normalizeTimeValue = (timeValue: string | null | undefined): string | null => {
     if (!timeValue) return null
-    
+
     try {
       // If it's already a simple time string (HH:MM:SS), return as-is
       if (timeValue.includes(':') && !timeValue.includes('T')) {
@@ -172,11 +179,11 @@ export function ProjectTimecardApproval({
           return `${hours}:${minutes}:${seconds}`
         }
       }
-      
+
       // If it's an ISO string, parse and extract time
       const date = new Date(timeValue)
       if (isNaN(date.getTime())) return timeValue.trim()
-      
+
       // Extract only the time portion for comparison
       const hours = date.getHours().toString().padStart(2, '0')
       const minutes = date.getMinutes().toString().padStart(2, '0')
@@ -194,7 +201,7 @@ export function ProjectTimecardApproval({
       newValueType: typeof newValue,
       currentFieldEdits: fieldEdits
     })
-    
+
     setFieldEdits(prev => {
       let newFieldEdits
       if (newValue === undefined) {
@@ -209,11 +216,11 @@ export function ProjectTimecardApproval({
       } else {
         // Get the original value for comparison
         const originalValue = getOriginalValue(fieldId)
-        
+
         // Compare normalized values to determine if they match
         const normalizedNew = normalizeTimeValue(newValue)
         const normalizedOriginal = normalizeTimeValue(originalValue as string)
-        
+
         console.log(`🔍 Comparing values:`, {
           fieldId,
           originalValue,
@@ -224,7 +231,7 @@ export function ProjectTimecardApproval({
           normalizedNew,
           valuesMatch: normalizedNew === normalizedOriginal
         })
-        
+
         if (normalizedNew === normalizedOriginal) {
           // Values match - remove the field from edits
           const { [fieldId]: removed, ...rest } = prev
@@ -487,187 +494,319 @@ export function ProjectTimecardApproval({
   const userAssignment = teamAssignments.find(assignment => assignment.user_id === currentTimecard.user_id)
   const userProjectRole = userAssignment?.role || null
 
+  // Calendar week logic for multi-day timecards
+  const dailyEntries = currentTimecard.daily_entries || []
+  const needsPagination = dailyEntries.length > 7
+
+  // Group daily entries by calendar weeks (Sunday = 0, Saturday = 6)
+  const getCalendarWeeks = () => {
+    if (dailyEntries.length === 0) return [[]]
+
+    const weeks: any[][] = []
+    const weekMap = new Map<string, any[]>()
+
+    // Find the date range using proper date parsing
+    const dates = dailyEntries
+      .map(entry => parseDate(entry.work_date))
+      .filter(date => date !== null)
+      .sort((a, b) => a!.getTime() - b!.getTime())
+    if (dates.length === 0) return [[]]
+
+    const startDate = dates[0]!
+    const endDate = dates[dates.length - 1]!
+
+    // Find the Sunday of the week containing the start date
+    const firstSunday = new Date(startDate)
+    firstSunday.setDate(startDate.getDate() - startDate.getDay())
+
+    // Find the Saturday of the week containing the end date
+    const lastSaturday = new Date(endDate)
+    lastSaturday.setDate(endDate.getDate() + (6 - endDate.getDay()))
+
+    // Create week buckets from first Sunday to last Saturday
+    let currentWeekStart = new Date(firstSunday)
+    while (currentWeekStart <= lastSaturday) {
+      const weekKey = currentWeekStart.toISOString().split('T')[0]
+      weekMap.set(weekKey, [])
+
+      // Move to next Sunday
+      currentWeekStart.setDate(currentWeekStart.getDate() + 7)
+    }
+
+    // Place each daily entry in the correct week bucket
+    dailyEntries.forEach(entry => {
+      const entryDate = parseDate(entry.work_date)
+      if (!entryDate) return
+
+      const entrySunday = new Date(entryDate)
+      entrySunday.setDate(entryDate.getDate() - entryDate.getDay())
+      const weekKey = entrySunday.toISOString().split('T')[0]
+
+      if (weekMap.has(weekKey)) {
+        weekMap.get(weekKey)!.push(entry)
+      }
+    })
+
+    // Convert map to array of weeks, ensuring each week has 7 slots (some may be empty)
+    currentWeekStart = new Date(firstSunday)
+    while (currentWeekStart <= lastSaturday) {
+      const weekKey = currentWeekStart.toISOString().split('T')[0]
+      const weekEntries = weekMap.get(weekKey) || []
+
+      // Create full week with 7 slots
+      const fullWeek = []
+      for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+        const dayDate = new Date(currentWeekStart)
+        dayDate.setDate(currentWeekStart.getDate() + dayOffset)
+        const dayKey = dayDate.toISOString().split('T')[0]
+
+        // Find entry for this specific date
+        const dayEntry = weekEntries.find(entry => entry.work_date === dayKey)
+        fullWeek.push(dayEntry || null) // null for empty days
+      }
+
+      weeks.push(fullWeek)
+
+      // Move to next Sunday
+      currentWeekStart.setDate(currentWeekStart.getDate() + 7)
+    }
+
+    return weeks
+  }
+
+  const calendarWeeks = getCalendarWeeks()
+  const totalWeeks = calendarWeeks.length
+  const currentWeekEntries = needsPagination ? (calendarWeeks[currentWeekIndex] || []) : dailyEntries
+
+  // Reset to first week if current index is out of bounds
+  if (currentWeekIndex >= totalWeeks && totalWeeks > 0) {
+    setCurrentWeekIndex(0)
+  }
+
   // Simplified button logic
   const hasEdits = Object.keys(fieldEdits).length > 0
   const buttonText = hasEdits ? "Apply Changes & Return" : "Reject Without Changes"
 
   return (
     <div className="space-y-4">
-      {/* Approval Header */}
-      <Card>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="text-lg text-white font-medium">
-                {Array.isArray(currentTimecard.profiles)
-                  ? currentTimecard.profiles[0]?.full_name || 'Unknown User'
-                  : currentTimecard.profiles?.full_name || 'Unknown User'}
-              </div>
-              {userProjectRole ? (
-                <Badge variant="outline" className={`text-sm ${getRoleColor(userProjectRole)}`}>
-                  {getRoleDisplayName(userProjectRole as any)}
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="text-sm bg-muted text-muted-foreground border-border">
-                  Team Member
-                </Badge>
-              )}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {currentApprovalIndex + 1} of {submittedTimecards.length}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+
 
       {/* Responsive Timecard Display */}
       {/* Desktop Layout - Days as columns, categories as rows */}
-      <div className="hidden lg:block">
-        <DesktopTimecardGrid
-          timecard={currentTimecard}
-          isRejectionMode={isRejectionMode}
-          selectedFields={Object.keys(fieldEdits)}
-          fieldEdits={fieldEdits}
-          onFieldEdit={handleFieldEdit}
-          showSummaryInHeader={true}
-          actionButtons={
-            isRejectionMode ? (
+      {isDesktop && (
+        <div className="relative">
+          {/* Previous Arrow - Larger and more rounded */}
+          <button
+            onClick={goToPreviousTimecard}
+            disabled={currentApprovalIndex === 0}
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 z-20 p-2.5 rounded-lg bg-background border border-border hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Previous timecard"
+          >
+            <ChevronLeft className="w-5 h-5 text-muted-foreground" />
+          </button>
+
+          {/* Next Arrow - Larger and more rounded */}
+          <button
+            onClick={goToNextTimecard}
+            disabled={currentApprovalIndex === submittedTimecards.length - 1}
+            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 z-20 p-2.5 rounded-lg bg-background border border-border hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Next timecard"
+          >
+            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          </button>
+
+          <DesktopTimecardGrid
+            timecard={currentTimecard}
+            isRejectionMode={isRejectionMode}
+            selectedFields={Object.keys(fieldEdits)}
+            fieldEdits={fieldEdits}
+            onFieldEdit={handleFieldEdit}
+            showSummaryInHeader={true}
+            showRejectedFields={currentTimecard.status === 'rejected'}
+            currentWeekEntries={currentWeekEntries.filter(entry => entry !== null)} // Remove null entries for desktop grid
+            currentWeekIndex={currentWeekIndex}
+            totalWeeks={totalWeeks}
+            onWeekChange={setCurrentWeekIndex}
+            isCalendarWeekMode={true} // Always use calendar week mode for approval tab
+            personName={Array.isArray(currentTimecard.profiles)
+              ? currentTimecard.profiles[0]?.full_name || 'Unknown User'
+              : currentTimecard.profiles?.full_name || 'Unknown User'}
+            personRoleBadge={
+              <Badge variant="outline" className={`text-sm ${getRoleColor(userProjectRole || 'team_member')}`}>
+                {userProjectRole ? getRoleDisplayName(userProjectRole as any) : 'Team Member'}
+              </Badge>
+            }
+            timecardCount={`${currentApprovalIndex + 1} of ${submittedTimecards.length}`}
+            actionButtons={
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={exitRejectionMode}
-                >
-                  <X className="w-4 h-4 mr-1" />
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={confirmRejection}
-                  className="bg-red-600 dark:bg-red-800 hover:bg-red-700 dark:hover:bg-red-900 text-white"
-                >
-                  {buttonText}
-                </Button>
+                {isRejectionMode ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={exitRejectionMode}
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={confirmRejection}
+                      className="bg-red-600 dark:bg-red-800 hover:bg-red-700 dark:hover:bg-red-900 text-white"
+                    >
+                      {buttonText}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    {/* Reject Button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={enterRejectionMode}
+                      disabled={loadingApproval}
+                      className="bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-white dark:border-red-700 hover:bg-red-100 dark:hover:bg-red-950/50 hover:border-red-100 dark:hover:border-red-800 flex items-center gap-1"
+                    >
+                      <X className="w-4 h-4" />
+                      <span className="hidden sm:inline">Reject</span>
+                    </Button>
+
+                    {/* Approve Button */}
+                    <Button
+                      size="sm"
+                      onClick={approveCurrentTimecard}
+                      disabled={loadingApproval}
+                      className="bg-green-600/20 border border-green-600 text-green-400 hover:bg-green-600/30 hover:border-green-700 flex items-center gap-1"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span className="hidden sm:inline">{loadingApproval ? 'Approving...' : 'Approve'}</span>
+                    </Button>
+                  </>
+                )}
               </div>
-            ) : undefined
-          }
-        />
-      </div>
+            }
+          />
+        </div>
+      )}
 
       {/* Mobile Layout - Simplified */}
-      <div className="lg:hidden">
+      <div className="lg:hidden relative">
+        {/* Previous Arrow - Larger and more rounded */}
+        <button
+          onClick={goToPreviousTimecard}
+          disabled={currentApprovalIndex === 0}
+          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 z-20 p-2.5 rounded-lg bg-background border border-border hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-label="Previous timecard"
+        >
+          <ChevronLeft className="w-5 h-5 text-muted-foreground" />
+        </button>
+
+        {/* Next Arrow - Larger and more rounded */}
+        <button
+          onClick={goToNextTimecard}
+          disabled={currentApprovalIndex === submittedTimecards.length - 1}
+          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 z-20 p-2.5 rounded-lg bg-background border border-border hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-label="Next timecard"
+        >
+          <ChevronRight className="w-5 h-5 text-muted-foreground" />
+        </button>
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
+              {/* Title and info */}
               <div className="flex items-center">
                 <Clock className="w-5 h-5 mr-2" />
-                {currentTimecard.is_multi_day ? 'Daily Time Breakdown' : 'Time Details'}
-                <span className={`ml-2 text-sm font-normal transition-opacity ${isRejectionMode
-                  ? 'text-red-600 dark:text-red-400 opacity-100'
-                  : 'opacity-0'
-                  }`}>
-                  (Click fields to edit)
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-semibold">
+                    {Array.isArray(currentTimecard.profiles)
+                      ? currentTimecard.profiles[0]?.full_name || 'Unknown User'
+                      : currentTimecard.profiles?.full_name || 'Unknown User'}
+                  </span>
+                  <Badge variant="outline" className={`text-sm ${getRoleColor(userProjectRole || 'team_member')}`}>
+                    {userProjectRole ? getRoleDisplayName(userProjectRole as any) : 'Team Member'}
+                  </Badge>
+                </div>
               </div>
+
+              {/* Count indicator */}
+              <span className="text-sm text-muted-foreground">
+                {currentApprovalIndex + 1} of {submittedTimecards.length}
+              </span>
             </CardTitle>
 
-            <div className={`mt-3 flex items-center justify-end gap-2 transition-opacity ${isRejectionMode ? 'opacity-100' : 'opacity-0 pointer-events-none'
-              }`}>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={exitRejectionMode}
-                disabled={!isRejectionMode}
-              >
-                <X className="w-4 h-4 mr-1" />
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={confirmRejection}
-                disabled={!isRejectionMode}
-                className="bg-red-600 dark:bg-red-800 hover:bg-red-700 dark:hover:bg-red-900 text-white"
-              >
-                {buttonText}
-              </Button>
-            </div>
+            {/* Rejection mode indicator */}
+            {isRejectionMode && (
+              <div className="text-sm text-red-600 dark:text-red-400 mt-2">
+                Click fields to edit them
+              </div>
+            )}
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-0">
             <MultiDayTimecardDisplay
               timecard={currentTimecard}
               isRejectionMode={isRejectionMode}
               fieldEdits={fieldEdits}
               onFieldEdit={handleFieldEdit}
+              showHeaderStats={false}
+              showUserName={false}
+              isApproveContext={true}
             />
           </CardContent>
-        </Card>
-      </div>
 
-      {/* Navigation and Action Buttons */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between gap-4">
-            {/* Previous Button - Arrow only on mobile */}
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={goToPreviousTimecard}
-              disabled={currentApprovalIndex === 0}
-              className="flex items-center gap-2"
-            >
-              <ChevronLeft className="w-5 h-5" />
-              <span className="hidden sm:inline">Previous</span>
-            </Button>
-
-            {/* Reject Button - Icon + text on all sizes */}
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={isRejectionMode ? exitRejectionMode : enterRejectionMode}
-              disabled={loadingApproval}
-              className={`flex items-center gap-2 ${isRejectionMode
-                ? 'bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700 hover:bg-red-200 dark:hover:bg-red-950/40'
-                : 'bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-white dark:border-red-700 hover:bg-red-100 dark:hover:bg-red-950/50 hover:border-red-100 dark:hover:border-red-800'
-                }`}
-            >
+          {/* Bottom Action Buttons - Inside Card */}
+          <div className="border-t border-border p-6">
+            <div className="flex gap-2">
               {isRejectionMode ? (
                 <>
-                  <X className="w-5 h-5" />
-                  <span className="hidden sm:inline">Cancel</span>
+                  {/* Cancel Button - 50% width */}
+                  <Button
+                    variant="outline"
+                    onClick={exitRejectionMode}
+                    className="flex-1 h-12 text-base"
+                  >
+                    <X className="w-5 h-5 mr-2" />
+                    Cancel
+                  </Button>
+
+                  {/* Confirm Rejection Button - 50% width */}
+                  <Button
+                    onClick={confirmRejection}
+                    className="flex-1 h-12 text-base bg-red-600 dark:bg-red-800 hover:bg-red-700 dark:hover:bg-red-900 text-white"
+                  >
+                    {buttonText}
+                  </Button>
                 </>
               ) : (
                 <>
-                  <X className="w-5 h-5" />
-                  <span className="hidden sm:inline">Reject</span>
+                  {/* Reject Button - 50% width */}
+                  <Button
+                    variant="outline"
+                    onClick={enterRejectionMode}
+                    disabled={loadingApproval}
+                    className="flex-1 h-12 text-base bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-700 hover:bg-red-100 dark:hover:bg-red-950/50"
+                  >
+                    <X className="w-5 h-5 mr-2" />
+                    Reject
+                  </Button>
+
+                  {/* Approve Button - 50% width */}
+                  <Button
+                    onClick={approveCurrentTimecard}
+                    disabled={loadingApproval}
+                    className="flex-1 h-12 text-base bg-green-600/20 border border-green-600 text-green-400 hover:bg-green-600/30 hover:border-green-700"
+                  >
+                    <Check className="w-5 h-5 mr-2" />
+                    {loadingApproval ? 'Approving...' : 'Approve'}
+                  </Button>
                 </>
               )}
-            </Button>
-
-            {/* Approve Button - Icon + text on all sizes */}
-            <Button
-              size="lg"
-              onClick={approveCurrentTimecard}
-              disabled={loadingApproval}
-              className="bg-green-600/20 border border-green-600 text-green-400 hover:bg-green-600/30 hover:border-green-700 flex items-center gap-2"
-            >
-              <Check className="w-5 h-5" />
-              <span className="hidden sm:inline">{loadingApproval ? 'Approving...' : 'Approve'}</span>
-            </Button>
-
-            {/* Next Button - Arrow only on mobile */}
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={goToNextTimecard}
-              disabled={currentApprovalIndex === submittedTimecards.length - 1}
-              className="flex items-center gap-2"
-            >
-              <span className="hidden sm:inline">Next</span>
-              <ChevronRight className="w-5 h-5" />
-            </Button>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </Card>
+      </div>
+
+
 
       {/* Enhanced Rejection Reason Dialog */}
       <Dialog open={showReasonDialog} onOpenChange={setShowReasonDialog}>
@@ -708,11 +847,11 @@ export function ProjectTimecardApproval({
 
                       const formatTime = (timeString: string | null) => {
                         if (!timeString) return "Not Recorded"
-                        
+
                         try {
                           // Handle both full datetime and simple time formats
                           let date: Date;
-                          
+
                           if (timeString.includes('T')) {
                             // Full datetime string
                             date = new Date(timeString)
@@ -723,9 +862,9 @@ export function ProjectTimecardApproval({
                           } else {
                             return "Not Recorded"
                           }
-                          
+
                           if (isNaN(date.getTime())) return "Not Recorded"
-                          
+
                           return date.toLocaleTimeString('en-US', {
                             hour: 'numeric',
                             minute: '2-digit'

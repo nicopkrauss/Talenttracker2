@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timecard Pagination Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8fafc;
+        }
+        .test-card {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .pagination-demo {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: #f1f5f9;
+            border-radius: 8px;
+            margin: 16px 0;
+        }
+        .nav-button {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .nav-button:hover:not(:disabled) {
+            background: #f8fafc;
+        }
+        .nav-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .week-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #64748b;
+        }
+        .dots {
+            display: flex;
+            gap: 4px;
+        }
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #cbd5e1;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .dot.active {
+            background: #3b82f6;
+        }
+        .dot:hover {
+            background: #64748b;
+        }
+        .day-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 12px;
+            margin: 16px 0;
+        }
+        .day-card {
+            padding: 12px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .day-name {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 4px;
+        }
+        .day-number {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+        }
+        .feature {
+            padding: 16px;
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 6px;
+        }
+        .feature h4 {
+            margin: 0 0 8px 0;
+            color: #0c4a6e;
+        }
+        .feature p {
+            margin: 0;
+            font-size: 14px;
+            color: #0369a1;
+        }
+    </style>
+</head>
+<body>
+    <h1>🗓️ Timecard Pagination Implementation</h1>
+    
+    <div class="test-card">
+        <h2>Week-based Pagination Demo</h2>
+        <p>For timecards with more than 7 days, we split them into weekly chunks with seamless navigation.</p>
+        
+        <!-- Pagination Controls -->
+        <div class="pagination-demo">
+            <button class="nav-button" id="prevBtn">
+                <span>←</span>
+                Previous Week
+            </button>
+            
+            <div class="week-indicator">
+                <span id="weekText">Week 1 of 2</span>
+                <div class="dots" id="weekDots">
+                    <div class="dot active" data-week="0"></div>
+                    <div class="dot" data-week="1"></div>
+                </div>
+            </div>
+            
+            <button class="nav-button" id="nextBtn">
+                Next Week
+                <span>→</span>
+            </button>
+        </div>
+        
+        <!-- Day Grid (7 days max) -->
+        <div class="day-grid" id="dayGrid">
+            <!-- Days will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <div class="test-card">
+        <h2>Implementation Features</h2>
+        <div class="features">
+            <div class="feature">
+                <h4>📅 7-Day Limit</h4>
+                <p>Maximum 7 days displayed at once to maintain readability and prevent horizontal scrolling.</p>
+            </div>
+            <div class="feature">
+                <h4>🔄 Week Navigation</h4>
+                <p>Simple Previous/Next buttons with visual week indicators. No traditional pagination dots.</p>
+            </div>
+            <div class="feature">
+                <h4>📱 Mobile Friendly</h4>
+                <p>Responsive design that works seamlessly on both desktop and mobile devices.</p>
+            </div>
+            <div class="feature">
+                <h4>🎯 Context Preservation</h4>
+                <p>Field IDs and validation maintain proper indexing across paginated weeks.</p>
+            </div>
+            <div class="feature">
+                <h4>⚡ Performance</h4>
+                <p>Only renders current week's data, reducing DOM complexity for large timecards.</p>
+            </div>
+            <div class="feature">
+                <h4>🔍 Visual Feedback</h4>
+                <p>Clear week indicators and disabled states provide intuitive navigation cues.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-card">
+        <h2>Test Scenarios</h2>
+        <ul>
+            <li><strong>5-day timecard:</strong> No pagination, shows all days normally</li>
+            <li><strong>7-day timecard:</strong> No pagination, shows all days normally</li>
+            <li><strong>8-12 day timecard:</strong> 2 weeks of pagination</li>
+            <li><strong>12+ day timecard:</strong> Multiple weeks with smooth navigation</li>
+        </ul>
+        
+        <p><strong>Current Test Data:</strong> First timecard has 12 working days (2 weeks) to test pagination functionality.</p>
+    </div>
+
+    <script>
+        // Demo data - 12 working days split into 2 weeks
+        const allDays = [
+            // Week 1 (7 days)
+            { date: '2024-09-16', day: 'Mon', number: '16' },
+            { date: '2024-09-17', day: 'Tue', number: '17' },
+            { date: '2024-09-18', day: 'Wed', number: '18' },
+            { date: '2024-09-19', day: 'Thu', number: '19' },
+            { date: '2024-09-20', day: 'Fri', number: '20' },
+            { date: '2024-09-23', day: 'Mon', number: '23' },
+            { date: '2024-09-24', day: 'Tue', number: '24' },
+            // Week 2 (5 days)
+            { date: '2024-09-25', day: 'Wed', number: '25' },
+            { date: '2024-09-26', day: 'Thu', number: '26' },
+            { date: '2024-09-27', day: 'Fri', number: '27' },
+            { date: '2024-09-30', day: 'Mon', number: '30' },
+            { date: '2024-10-01', day: 'Tue', number: '1' }
+        ];
+
+        const DAYS_PER_WEEK = 7;
+        const weeks = [];
+        for (let i = 0; i < allDays.length; i += DAYS_PER_WEEK) {
+            weeks.push(allDays.slice(i, i + DAYS_PER_WEEK));
+        }
+
+        let currentWeek = 0;
+
+        function updateDisplay() {
+            const dayGrid = document.getElementById('dayGrid');
+            const weekText = document.getElementById('weekText');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const dots = document.querySelectorAll('.dot');
+
+            // Update week text
+            weekText.textContent = `Week ${currentWeek + 1} of ${weeks.length}`;
+
+            // Update buttons
+            prevBtn.disabled = currentWeek === 0;
+            nextBtn.disabled = currentWeek === weeks.length - 1;
+
+            // Update dots
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentWeek);
+            });
+
+            // Update day grid
+            dayGrid.innerHTML = '';
+            const currentDays = weeks[currentWeek];
+            currentDays.forEach(day => {
+                const dayCard = document.createElement('div');
+                dayCard.className = 'day-card';
+                dayCard.innerHTML = `
+                    <div class="day-name">${day.day}</div>
+                    <div class="day-number">${day.number}</div>
+                `;
+                dayGrid.appendChild(dayCard);
+            });
+        }
+
+        // Event listeners
+        document.getElementById('prevBtn').addEventListener('click', () => {
+            if (currentWeek > 0) {
+                currentWeek--;
+                updateDisplay();
+            }
+        });
+
+        document.getElementById('nextBtn').addEventListener('click', () => {
+            if (currentWeek < weeks.length - 1) {
+                currentWeek++;
+                updateDisplay();
+            }
+        });
+
+        document.querySelectorAll('.dot').forEach((dot, index) => {
+            dot.addEventListener('click', () => {
+                currentWeek = index;
+                updateDisplay();
+            });
+        });
+
+        // Initial display
+        updateDisplay();
+    </script>
+</body>
+</html>

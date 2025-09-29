@@ -103,7 +103,6 @@ export async function GET(request: NextRequest) {
             total_hours,
             total_pay,
             submitted_at,
-            approved_at,
             created_at,
             updated_at
           )
@@ -130,7 +129,6 @@ export async function GET(request: NextRequest) {
             total_hours,
             total_pay,
             submitted_at,
-            approved_at,
             created_at,
             updated_at
           )

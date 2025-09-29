@@ -944,21 +944,6 @@ export default function TimecardDetailPage() {
                 {timecard.status === "submitted" && canApprove && (
                   <>
                     <Button 
-                      onClick={() => {
-                        setIsEditAndReturn(true)
-                        startEditing()
-                      }}
-                      disabled={actionLoading !== null}
-                      size="sm"
-                      variant="outline"
-                      className="gap-2"
-                    >
-                      <Edit className="w-4 h-4" />
-                      <span className="hidden sm:inline">Edit & Return</span>
-                      <span className="sm:hidden">Edit</span>
-                    </Button>
-                    
-                    <Button 
                       onClick={enterRejectionMode}
                       disabled={actionLoading !== null}
                       size="sm"
@@ -987,16 +972,35 @@ export default function TimecardDetailPage() {
 
                 {/* Edit Controls for Draft */}
                 {(timecard.status === "draft" && (userProfile?.id === timecard.user_id || canApprove)) && (
-                  <Button 
-                    onClick={startEditing}
-                    size="sm"
-                    variant="outline"
-                    className="gap-2"
-                  >
-                    <Edit className="w-4 h-4" />
-                    <span className="hidden sm:inline">Edit Times</span>
-                    <span className="sm:hidden">Edit</span>
-                  </Button>
+                  <>
+                    <Button 
+                      onClick={startEditing}
+                      size="sm"
+                      variant="outline"
+                      className="gap-2"
+                    >
+                      <Edit className="w-4 h-4" />
+                      <span className="hidden sm:inline">Edit Times</span>
+                      <span className="sm:hidden">Edit</span>
+                    </Button>
+                    
+                    {canApprove && (
+                      <Button 
+                        onClick={() => {
+                          setIsEditAndReturn(true)
+                          startEditing()
+                        }}
+                        disabled={actionLoading !== null}
+                        size="sm"
+                        variant="outline"
+                        className="gap-2"
+                      >
+                        <Edit className="w-4 h-4" />
+                        <span className="hidden sm:inline">Edit & Return</span>
+                        <span className="sm:hidden">Edit & Return</span>
+                      </Button>
+                    )}
+                  </>
                 )}
               </>
             )

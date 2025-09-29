@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hours & Pay Placement Options</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .option {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .mobile-grid {
+            display: grid;
+            grid-template-columns: 70px repeat(4, 1fr);
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .grid-cell {
+            padding: 12px;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            text-align: center;
+            background: #f9f9f9;
+        }
+
+        .date-cell {
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+        }
+
+        .date-content {
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .day-number {
+            font-size: 18px;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        .month {
+            font-size: 12px;
+            color: #666;
+            line-height: 1;
+            margin: 2px 0;
+        }
+
+        .time-value {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .header-grid {
+            display: grid;
+            grid-template-columns: 70px repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .header-cell {
+            padding: 8px;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            text-align: center;
+            background: #f3f4f6;
+            font-size: 12px;
+            font-weight: 500;
+            color: #6b7280;
+        }
+
+        .header-with-totals {
+            position: relative;
+        }
+
+        .daily-totals {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #3b82f6;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .time-cell-with-totals {
+            position: relative;
+        }
+
+        .cell-totals {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            font-size: 10px;
+            color: #666;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 1px 4px;
+            border-radius: 4px;
+        }
+
+        .summary-row {
+            background: #e5e7eb;
+            font-weight: bold;
+            color: #374151;
+        }
+
+        .floating-summary {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #1f2937;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .label {
+            font-weight: bold;
+            margin-bottom: 16px;
+            padding: 8px;
+            border-radius: 4px;
+            color: white;
+            text-align: center;
+            background: #3b82f6;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Hours & Pay Placement Options</h1>
+    <p>Here are several better placement options for the daily hours (8) and pay (200) information:</p>
+
+    <!-- Option 1: Header Badges -->
+    <div class="option">
+        <div class="label">OPTION 1: Header Badges (Recommended)</div>
+        <p><strong>Pros:</strong> Clean, doesn't clutter date column, visible at top<br>
+            <strong>Cons:</strong> Might be small on mobile
+        </p>
+
+        <div class="header-grid">
+            <div class="header-cell"><!-- Empty corner --></div>
+            <div class="header-cell header-with-totals">
+                Check In
+                <div class="daily-totals">8h</div>
+            </div>
+            <div class="header-cell">Break Start</div>
+            <div class="header-cell">Break End</div>
+            <div class="header-cell header-with-totals">
+                Check Out
+                <div class="daily-totals">$200</div>
+            </div>
+        </div>
+
+        <div class="mobile-grid">
+            <div class="date-cell">
+                <div class="date-content">
+                    <div class="day-number">16</div>
+                    <div class="month">Sep</div>
+                </div>
+            </div>
+            <div class="grid-cell">
+                <div class="time-value">8:00 AM</div>
+            </div>
+            <div class="grid-cell">
+                <div class="time-value">12:00 PM</div>
+            </div>
+            <div class="grid-cell">
+                <div class="time-value">12:30 PM</div>
+            </div>
+            <div class="grid-cell">
+                <div class="time-value">4:30 PM</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Option 2: Corner Cell -->
+    <div class="option">
+        <div class="label">OPTION 2: Corner Cell Summary</div>
+        <p><strong>Pros:</strong> Utilizes empty space, always visible<br>
+            <strong>Cons:</strong> Might look cramped
+        </p>
+
+        <div class="header-grid">
+            <div class="header-cell"
+                style="background: #dbeafe; color: #1e40af; font-weight: bold; font-size: 10px; line-height: 1.2;">
+                8h<br>$200
+            </div>
+            <div class="header-cell">Check In</div>
+            <div class="header-cell">Break Start</div>
+            <div class="header-cell">Break End</div>
+            <div class="header-cell">Check Out</div>
+        </div>
+
+        <div class="mobile-grid">
+            <div class="date-cell">
+                <div class="date-content">
+                    <div class="day-number">16</div>
+                    <div class="month">Sep</div>
+                </div>
+            </div>
+            <div class="grid-cell">
+                <div class="time-value">8:00 AM</div>
+            </div>
+            <div class="grid-cell">
+                <div class="time-value">12:00 PM</div>
+            </div>
+            <div class="grid-cell">
+                <div class="time-value">12:30 PM</div>
+            </div>
+            <div class="grid-cell">
+                <div class="time-value">4:30 PM</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Option 3: Summary Row -->
+    <div class="option">
+        <div class="label">OPTION 3: Summary Row at Bottom</div>
+        <p><strong>Pros:</strong> Clear separation, easy to scan totals<br>
+            <strong>Cons:</strong> Takes up additional vertical space
+        </p>
+
+        <div class="header-grid">
+            <div class="header-cell"><!-- Empty corner --></div>
+            <div class="header-cell">Check In</div>
+            <div class="header-cell">Break Start</div>
+            <div class="header-cell">Break End</div>
+            <div class="header-cell">Check Out</div>
+        </div>
+
+        <div class="mobile-grid">
+            <div class="date-cell">
+                <div class="date-content">
+                    <div class="day-number">16</div>
+                    <div class="month">Sep</div>
+                </div>
+            </div>
+            <div class="grid-cell">
+                <div class="time-value">8:00 AM</div>
+            </div>
+            <div class="grid-cell">
+                <div class="time-value">12:00 PM</div>
+            </div>
+            <div class="grid-cell">
+                <div class="time-value">12:30 PM</div>
+            </div>
+            <div class="grid-cell">
+                <div class="time-value">4:30 PM</div>
+            </div>
+        </div>
+
+        <!-- Summary row -->
+        <div class="mobile-grid" style="margin-top: 4px;">
+            <div class="grid-cell summary-row" style="font-size: 12px;">TOTAL</div>
+            <div class="grid-cell summary-row" style="font-size: 12px;">8h</div>
+            <div class="grid-cell summary-row" style="font-size: 12px;">—</div>
+            <div class="grid-cell summary-row" style="font-size: 12px;">—</div>
+            <div class="grid-cell summary-row" style="font-size: 12px;">$200</div>
+        </div>
+    </div>
+
+    <!-- Option 4: Remove Completely -->
+    <div class="option">
+        <div class="label">OPTION 4: Remove from Grid (Show in Header Stats)</div>
+        <p><strong>Pros:</strong> Cleanest grid layout, info available in header<br>
+            <strong>Cons:</strong> Less immediate visibility per day
+        </p>
+
+        <div
+            style="background: #f0fdf4; padding: 12px; border-radius: 6px; margin-bottom: 16px; border: 1px solid #16a34a;">
+            <div style="text-align: center; color: #166534;">
+                <strong>Daily Totals:</strong> 8 hours • $200 pay
+            </div>
+        </div>
+
+        <div class="header-grid">
+            <div class="header-cell"><!-- Empty corner --></div>
+            <div class="header-cell">Check In</div>
+            <div class="header-cell">Break Start</div>
+            <div class="header-cell">Break End</div>
+            <div class="header-cell">Check Out</div>
+        </div>
+
+        <div class="mobile-grid">
+            <div class="date-cell">
+                <div class="date-content">
+                    <div class="day-number">16</div>
+                    <div class="month">Sep</div>
+                </div>
+            </div>
+            <div class="grid-cell">
+                <div class="time-value">8:00 AM</div>
+            </div>
+            <div class="grid-cell">
+                <div class="time-value">12:00 PM</div>
+            </div>
+            <div class="grid-cell">
+                <div class="time-value">12:30 PM</div>
+            </div>
+            <div class="grid-cell">
+                <div class="time-value">4:30 PM</div>
+            </div>
+        </div>
+    </div>
+
+    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h3>🎯 Recommendation</h3>
+        <p><strong>Option 4 (Remove from Grid)</strong> is probably the best choice because:</p>
+        <ul>
+            <li>✅ Keeps the grid clean and focused on time data</li>
+            <li>✅ Daily totals are already shown in the header stats section</li>
+            <li>✅ Reduces visual clutter in the tight mobile layout</li>
+            <li>✅ Makes the date column even more compact</li>
+            <li>✅ Users can still see totals, just not repeated for each day</li>
+        </ul>
+
+        <p><strong>Alternative:</strong> If you need per-day visibility, <strong>Option 1 (Header Badges)</strong> is
+            the next best choice.</p>
+    </div>
+</body>
+
+</html>

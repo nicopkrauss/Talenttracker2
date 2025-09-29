@@ -82,8 +82,6 @@ export async function GET(request: NextRequest) {
         pay_rate,
         admin_notes,
         submitted_at,
-        approved_at,
-        approved_by,
         rejection_reason,
         created_at,
         updated_at,

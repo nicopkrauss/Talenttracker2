@@ -2,10 +2,11 @@
 
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Clock, Coffee, AlertTriangle } from "lucide-react"
+import { Clock, Coffee, AlertTriangle, ChevronDown } from "lucide-react"
 import type { Timecard } from "@/lib/types"
 import { parseDate } from "@/lib/timezone-utils"
 import { CustomTimePicker } from "./custom-time-picker"
+import { useIsDesktop } from "@/hooks/use-media-query"
 
 interface DesktopTimecardGridProps {
   timecard: Timecard
@@ -19,6 +20,17 @@ interface DesktopTimecardGridProps {
   // New props for direct editing
   fieldEdits?: Record<string, any>
   onFieldEdit?: (fieldId: string, newValue: any) => void
+  // Week pagination props
+  currentWeekEntries?: any[]
+  currentWeekIndex?: number
+  totalWeeks?: number
+  onWeekChange?: (weekIndex: number) => void
+  isCalendarWeekMode?: boolean
+  // Person info props
+  personName?: string
+  personRole?: string
+  personRoleBadge?: React.ReactNode
+  timecardCount?: string
 }
 
 interface DayColumn {
@@ -38,11 +50,26 @@ export function DesktopTimecardGrid({
   showSummaryInHeader = false,
   showRejectedFields = false,
   fieldEdits = {},
-  onFieldEdit
+  onFieldEdit,
+  currentWeekEntries,
+  currentWeekIndex = 0,
+  totalWeeks = 1,
+  onWeekChange,
+  isCalendarWeekMode = false,
+  personName,
+  personRole,
+  personRoleBadge,
+  timecardCount
 }: DesktopTimecardGridProps) {
+  const isDesktop = useIsDesktop()
 
   const [editingField, setEditingField] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+
+  // Don't render anything on mobile - this component is desktop-only
+  if (!isDesktop) {
+    return null
+  }
 
   // Helper function to get field ID for rejection mode
   const getFieldId = (fieldType: string, dayIndex?: number) => {
@@ -521,11 +548,48 @@ export function DesktopTimecardGrid({
     return showRejectedFields && timecard.rejected_fields && timecard.rejected_fields.includes(fieldId)
   }
 
-  // Prepare day columns
+  // Prepare day columns - use currentWeekEntries if provided for pagination
   const prepareDayColumns = (): DayColumn[] => {
-    if (timecard.daily_entries && timecard.daily_entries.length > 0) {
-      // Multi-day timecard - use daily entries
-      return timecard.daily_entries
+    if (isCalendarWeekMode) {
+      // Calendar week mode - always create 7 columns (Sun-Sat) with some potentially empty
+      const weekStart = new Date()
+      if (timecard.daily_entries && timecard.daily_entries.length > 0) {
+        // Find the first date in current week entries
+        const firstEntry = currentWeekEntries?.find(entry => entry !== null)
+        if (firstEntry) {
+          const firstDate = parseDate(firstEntry.work_date)
+          if (firstDate) {
+            weekStart.setTime(firstDate.getTime())
+            weekStart.setDate(firstDate.getDate() - firstDate.getDay()) // Go to Sunday
+          }
+        }
+      }
+      
+      const columns: DayColumn[] = []
+      for (let i = 0; i < 7; i++) {
+        const dayDate = new Date(weekStart)
+        dayDate.setDate(weekStart.getDate() + i)
+        const dayKey = dayDate.toISOString().split('T')[0]
+        
+        // Find entry for this specific date
+        const dayEntry = currentWeekEntries?.find(entry => entry && entry.work_date === dayKey)
+        
+        columns.push({
+          date: dayKey,
+          dayName: dayDate.toLocaleDateString('en-US', { weekday: 'short' }),
+          dayNumber: dayDate.toLocaleDateString('en-US', { day: 'numeric' }),
+          entry: dayEntry || null
+        })
+      }
+      
+      return columns
+    }
+    
+    const entriesToUse = currentWeekEntries || timecard.daily_entries || []
+    
+    if (entriesToUse.length > 0) {
+      // Multi-day timecard - use provided entries (could be paginated week)
+      return entriesToUse
         .sort((a, b) => {
           const dateA = parseDate(a.work_date)
           const dateB = parseDate(b.work_date)
@@ -545,8 +609,8 @@ export function DesktopTimecardGrid({
       const date = timecard.date || timecard.period_start_date || new Date().toISOString()
       return [{
         date,
-        dayName: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
-        dayNumber: new Date(date).toLocaleDateString('en-US', { day: 'numeric' }),
+        dayName: parseDate(date)?.toLocaleDateString('en-US', { weekday: 'short' }) || 'Invalid',
+        dayNumber: parseDate(date)?.toLocaleDateString('en-US', { day: 'numeric' }) || 'Invalid',
         entry: {
           work_date: date,
           check_in_time: timecard.check_in_time,
@@ -561,17 +625,29 @@ export function DesktopTimecardGrid({
     }
   }
 
+  const isMultiDay = (timecard.daily_entries?.length || 0) > 1
+  const needsPagination = totalWeeks > 1
   const dayColumns = prepareDayColumns()
-  const isMultiDay = dayColumns.length > 1
 
   return (
     <Card>
       {showHeader && (
         <CardHeader>
-          <CardTitle className="flex items-center justify-between min-h-[2rem]">
-            <div className="flex items-center">
+          <CardTitle className="flex items-center justify-center min-h-[2rem] relative">
+            {/* Title on the left */}
+            <div className="absolute left-0 flex items-center">
               <Clock className="w-5 h-5 mr-2" />
-              {isMultiDay ? 'Daily Time Breakdown' : 'Time Details'}
+              {personName ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-semibold">{personName}</span>
+                  {personRoleBadge}
+                  {timecardCount && (
+                    <span className="text-sm text-muted-foreground">({timecardCount})</span>
+                  )}
+                </div>
+              ) : (
+                <span>{isMultiDay ? 'Daily Time Breakdown' : 'Time Details'}</span>
+              )}
               <span className={`ml-2 text-sm text-red-600 dark:text-red-400 font-normal transition-opacity ${
                 isRejectionMode ? 'opacity-100' : 'opacity-0'
               }`}>
@@ -579,53 +655,88 @@ export function DesktopTimecardGrid({
               </span>
             </div>
             
-            <div className="flex items-center gap-4">
-              {/* Summary Stats in Header */}
-              {showSummaryInHeader && (
-                <div className="hidden lg:flex lg:items-center lg:gap-4">
-                  <div className="flex items-baseline gap-1 text-right">
-                    <p className="text-lg font-semibold text-foreground">
-                      ${(timecard.pay_rate || 0).toFixed(0)}/h
-                    </p>
-                    <p className="text-xs text-muted-foreground">Rate</p>
-                  </div>
-                  <div className="flex items-baseline gap-1 text-right">
-                    <p className="text-lg font-bold text-foreground">
-                      {Math.round((timecard.total_break_duration || timecard.break_duration || 0) * 60)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Break (min)</p>
-                  </div>
-                  <div className="flex items-baseline gap-1 text-right">
-                    <p className="text-lg font-bold text-foreground">
-                      {(timecard.total_hours || 0).toFixed(1)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Hours</p>
-                  </div>
-                  <div className="flex items-baseline gap-1 text-right">
-                    <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                      ${(timecard.total_pay || 0).toFixed(0)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Total</p>
-                  </div>
-                </div>
-              )}
-              
+            {/* Centered action buttons */}
+            <div className="flex items-center gap-2">
               {actionButtons}
             </div>
+
+            {/* Summary Stats on the right */}
+            {showSummaryInHeader && (
+              <div className="absolute right-0 hidden lg:flex lg:items-center lg:gap-4">
+                <div className="flex items-baseline gap-1 text-right">
+                  <p className="text-lg font-semibold text-foreground">
+                    ${(timecard.pay_rate || 0).toFixed(0)}/h
+                  </p>
+                  <p className="text-xs text-muted-foreground">Rate</p>
+                </div>
+                <div className="flex items-baseline gap-1 text-right">
+                  <p className="text-lg font-bold text-foreground">
+                    {Math.round((timecard.total_break_duration || timecard.break_duration || 0) * 60)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Break (min)</p>
+                </div>
+                <div className="flex items-baseline gap-1 text-right">
+                  <p className="text-lg font-bold text-foreground">
+                    {(timecard.total_hours || 0).toFixed(1)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Hours</p>
+                </div>
+                <div className="flex items-baseline gap-1 text-right">
+                  <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                    ${(timecard.total_pay || 0).toFixed(0)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Total</p>
+                </div>
+              </div>
+            )}
           </CardTitle>
         </CardHeader>
       )}
       <CardContent>
         {/* Day Headers */}
         <div className="grid gap-4 mb-6" style={{ gridTemplateColumns: `120px repeat(${dayColumns.length}, 1fr)` }}>
-          {/* Empty space for row labels */}
-          <div></div>
+          {/* Week Info in Left Column with Navigation */}
+          <div className="flex flex-col items-center justify-center gap-2 p-3 max-w-[120px]">
+            {needsPagination && (
+              <>
+                <span className="text-sm font-medium text-muted-foreground text-center">
+                  Week {currentWeekIndex + 1} of {totalWeeks}
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      onWeekChange && onWeekChange(Math.max(0, currentWeekIndex - 1))
+                    }}
+                    disabled={currentWeekIndex === 0}
+                    className="p-1.5 rounded-md bg-background border border-border hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Previous week"
+                  >
+                    <ChevronDown className="w-4 h-4 rotate-90 text-muted-foreground" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      onWeekChange && onWeekChange(Math.min(totalWeeks - 1, currentWeekIndex + 1))
+                    }}
+                    disabled={currentWeekIndex >= totalWeeks - 1}
+                    className="p-1.5 rounded-md bg-background border border-border hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Next week"
+                  >
+                    <ChevronDown className="w-4 h-4 -rotate-90 text-muted-foreground" />
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
 
           {/* Day column headers */}
           {dayColumns.map((day, index) => {
             return (
               <div key={index} className="text-center">
-                <div className="flex flex-col items-center gap-2 p-3 border rounded-lg border-border">
+                <div className="flex flex-col items-center gap-3 p-3 border rounded-lg border-border">
                   {/* Day name with small labels */}
                   <div className="relative w-full text-xs">
                     <div className="flex items-center justify-between w-full">
@@ -637,16 +748,23 @@ export function DesktopTimecardGrid({
                     </div>
                   </div>
                   {/* Date number with hours and pay */}
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-1 text-xs">
+                  <div className="relative w-full flex items-center justify-between text-xs min-h-[2rem]">
+                    {/* Hours (left side) */}
+                    <div className="flex items-center gap-1 z-10">
                       <span className="font-medium text-blue-600 dark:text-blue-500">
-                        {(day.entry?.hours_worked || 0).toFixed(1)}
+                        {day.entry?.hours_worked ? (day.entry.hours_worked).toFixed(1) : '—'}
                       </span>
                     </div>
-                    <span className="text-2xl font-bold text-foreground">{day.dayNumber}</span>
-                    <div className="flex items-center gap-1 text-xs">
+                    
+                    {/* Date number (absolutely centered) */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-2xl font-bold text-foreground">{day.dayNumber}</span>
+                    </div>
+                    
+                    {/* Pay (right side) */}
+                    <div className="flex items-center gap-1 z-10">
                       <span className="text-green-600 dark:text-green-400 font-medium">
-                        ${(day.entry?.daily_pay || 0).toFixed(0)}
+                        {day.entry?.daily_pay ? `$${(day.entry.daily_pay).toFixed(0)}` : '—'}
                       </span>
                     </div>
                   </div>
@@ -665,7 +783,18 @@ export function DesktopTimecardGrid({
               <span className="text-sm font-medium text-muted-foreground">Check In</span>
             </div>
             {dayColumns.map((day, index) => {
-              const fieldId = getFieldId('check_in_time', index)
+              // Calculate actual day index accounting for pagination
+              let actualDayIndex = index
+              if (isCalendarWeekMode && timecard.daily_entries) {
+                // In calendar week mode, find the actual index in the original daily_entries array
+                const originalIndex = timecard.daily_entries.findIndex(entry => 
+                  entry.work_date === day.entry?.work_date
+                )
+                actualDayIndex = originalIndex >= 0 ? originalIndex : index
+              } else if (needsPagination) {
+                actualDayIndex = (currentWeekIndex * 7) + index
+              }
+              const fieldId = getFieldId('check_in_time', actualDayIndex)
               const originalValue = day.entry?.check_in_time
               const isSelected = isFieldSelected(fieldId)
               const isEdited = isFieldEdited(fieldId, originalValue)
@@ -694,7 +823,10 @@ export function DesktopTimecardGrid({
                   onClick={() => !isEditing && handleFieldClick(fieldId)}
 
                 >
-                  {renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, true, index)}
+                  {day.entry ? 
+                    renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, true, actualDayIndex) :
+                    <div className="flex items-center justify-center h-7 text-muted-foreground text-sm">—</div>
+                  }
                 </div>
               )
             })}
@@ -707,13 +839,24 @@ export function DesktopTimecardGrid({
               <span className="text-sm font-medium text-muted-foreground">Break Start</span>
             </div>
             {dayColumns.map((day, index) => {
-              const fieldId = getFieldId('break_start_time', index)
+              // Calculate actual day index accounting for pagination
+              let actualDayIndex = index
+              if (isCalendarWeekMode && timecard.daily_entries) {
+                // In calendar week mode, find the actual index in the original daily_entries array
+                const originalIndex = timecard.daily_entries.findIndex(entry => 
+                  entry.work_date === day.entry?.work_date
+                )
+                actualDayIndex = originalIndex >= 0 ? originalIndex : index
+              } else if (needsPagination) {
+                actualDayIndex = (currentWeekIndex * 7) + index
+              }
+              const fieldId = getFieldId('break_start_time', actualDayIndex)
               const originalValue = day.entry?.break_start_time
               const isSelected = isFieldSelected(fieldId)
               const isEdited = isFieldEdited(fieldId, originalValue)
               const isEditing = isFieldEditing(fieldId)
               const currentValue = getFieldValue(fieldId, originalValue)
-              const hasBreak = currentValue || originalValue
+              const hasBreak = true // Always use normal background for break fields
               const hasValidationError = validationErrors[fieldId]
               
               return (
@@ -741,7 +884,10 @@ export function DesktopTimecardGrid({
                   onClick={() => !isEditing && handleFieldClick(fieldId)}
 
                 >
-                  {renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, hasBreak, index)}
+                  {day.entry && originalValue ? 
+                    renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, hasBreak, actualDayIndex) :
+                    <div className="flex items-center justify-center h-7 text-muted-foreground text-sm">—</div>
+                  }
                 </div>
               )
             })}
@@ -754,13 +900,24 @@ export function DesktopTimecardGrid({
               <span className="text-sm font-medium text-muted-foreground">Break End</span>
             </div>
             {dayColumns.map((day, index) => {
-              const fieldId = getFieldId('break_end_time', index)
+              // Calculate actual day index accounting for pagination
+              let actualDayIndex = index
+              if (isCalendarWeekMode && timecard.daily_entries) {
+                // In calendar week mode, find the actual index in the original daily_entries array
+                const originalIndex = timecard.daily_entries.findIndex(entry => 
+                  entry.work_date === day.entry?.work_date
+                )
+                actualDayIndex = originalIndex >= 0 ? originalIndex : index
+              } else if (needsPagination) {
+                actualDayIndex = (currentWeekIndex * 7) + index
+              }
+              const fieldId = getFieldId('break_end_time', actualDayIndex)
               const originalValue = day.entry?.break_end_time
               const isSelected = isFieldSelected(fieldId)
               const isEdited = isFieldEdited(fieldId, originalValue)
               const isEditing = isFieldEditing(fieldId)
               const currentValue = getFieldValue(fieldId, originalValue)
-              const hasBreak = currentValue || originalValue
+              const hasBreak = true // Always use normal background for break fields
               const hasValidationError = validationErrors[fieldId]
               
               return (
@@ -788,7 +945,10 @@ export function DesktopTimecardGrid({
                   onClick={() => !isEditing && handleFieldClick(fieldId)}
 
                 >
-                  {renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, hasBreak, index)}
+                  {day.entry && originalValue ? 
+                    renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, hasBreak, actualDayIndex) :
+                    <div className="flex items-center justify-center h-7 text-muted-foreground text-sm">—</div>
+                  }
                 </div>
               )
             })}
@@ -801,7 +961,18 @@ export function DesktopTimecardGrid({
               <span className="text-sm font-medium text-muted-foreground">Check Out</span>
             </div>
             {dayColumns.map((day, index) => {
-              const fieldId = getFieldId('check_out_time', index)
+              // Calculate actual day index accounting for pagination
+              let actualDayIndex = index
+              if (isCalendarWeekMode && timecard.daily_entries) {
+                // In calendar week mode, find the actual index in the original daily_entries array
+                const originalIndex = timecard.daily_entries.findIndex(entry => 
+                  entry.work_date === day.entry?.work_date
+                )
+                actualDayIndex = originalIndex >= 0 ? originalIndex : index
+              } else if (needsPagination) {
+                actualDayIndex = (currentWeekIndex * 7) + index
+              }
+              const fieldId = getFieldId('check_out_time', actualDayIndex)
               const originalValue = day.entry?.check_out_time
               const isSelected = isFieldSelected(fieldId)
               const isEdited = isFieldEdited(fieldId, originalValue)
@@ -830,7 +1001,10 @@ export function DesktopTimecardGrid({
                   onClick={() => !isEditing && handleFieldClick(fieldId)}
 
                 >
-                  {renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, true, index)}
+                  {day.entry ? 
+                    renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, true, actualDayIndex) :
+                    <div className="flex items-center justify-center h-7 text-muted-foreground text-sm">—</div>
+                  }
                 </div>
               )
             })}

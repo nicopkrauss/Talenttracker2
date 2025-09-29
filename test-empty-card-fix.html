@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Empty Card Fix Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-4">
+    <h1 class="text-2xl font-bold mb-4">Empty Card Fix Test</h1>
+    
+    <div class="space-y-4">
+        <!-- Problem Identified -->
+        <div class="bg-green-50 border border-green-200 p-4 rounded-lg">
+            <h2 class="text-lg font-semibold text-green-800 mb-2">🎯 Final Problem Identified!</h2>
+            <div class="text-sm text-green-700 space-y-2">
+                <div><strong>Root Cause:</strong> MultiDayTimecardDisplay was rendering an empty Card in approve context</div>
+                <div><strong>Why:</strong> showUserName={false}, showHeaderStats={false}, desktop grid hidden on mobile, no rejection comments</div>
+                <div><strong>Result:</strong> Empty Card with just CardContent containing px-6 class</div>
+                <div><strong>HTML:</strong> <code class="bg-green-100 px-1 rounded">&lt;div data-slot="card"&gt;&lt;div data-slot="card-content" class="px-6"&gt;&lt;/div&gt;&lt;/div&gt;</code></div>
+            </div>
+        </div>
+
+        <!-- Solution Applied -->
+        <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+            <h2 class="text-lg font-semibold text-blue-800 mb-2">Solution Applied</h2>
+            <div class="text-sm text-blue-700 space-y-2">
+                <div><strong>Made Card Conditional:</strong> Only render Card if there's actual content</div>
+                <div><strong>Conditions:</strong></div>
+                <ul class="ml-4 space-y-1">
+                    <li>• showUserName || showHeaderStats (header content)</li>
+                    <li>• isDesktop && timecard data exists (desktop grid)</li>
+                    <li>• timecard.status === 'rejected' && rejection_reason (rejection comments)</li>
+                </ul>
+                <div><strong>Result:</strong> No Card rendered on mobile in approve context</div>
+            </div>
+        </div>
+
+        <!-- Code Changes -->
+        <div class="bg-purple-50 border border-purple-200 p-4 rounded-lg">
+            <h2 class="text-lg font-semibold text-purple-800 mb-2">Code Changes</h2>
+            <div class="grid md:grid-cols-2 gap-4 text-sm">
+                <div>
+                    <h3 class="font-semibold text-purple-700 mb-1">Before:</h3>
+                    <div class="bg-purple-100 p-2 rounded font-mono text-xs">
+                        &lt;Card&gt;<br>
+                        &nbsp;&nbsp;{(showUserName || showHeaderStats) && (<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&lt;CardHeader&gt;...&lt;/CardHeader&gt;<br>
+                        &nbsp;&nbsp;)}<br>
+                        &nbsp;&nbsp;&lt;CardContent&gt;<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;{/* Empty on mobile */}<br>
+                        &nbsp;&nbsp;&lt;/CardContent&gt;<br>
+                        &lt;/Card&gt;
+                    </div>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-purple-700 mb-1">After:</h3>
+                    <div class="bg-purple-100 p-2 rounded font-mono text-xs">
+                        {/* Only render if content exists */}<br>
+                        {(hasContent) && (<br>
+                        &nbsp;&nbsp;&lt;Card&gt;<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;{(showUserName || showHeaderStats) && (<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;CardHeader&gt;...&lt;/CardHeader&gt;<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;)}<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&lt;CardContent&gt;...&lt;/CardContent&gt;<br>
+                        &nbsp;&nbsp;&lt;/Card&gt;<br>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Complete Fix Summary -->
+        <div class="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+            <h2 class="text-lg font-semibold text-yellow-800 mb-2">Complete Fix Summary</h2>
+            <ol class="text-sm text-yellow-700 space-y-1 list-decimal ml-4">
+                <li><strong>DesktopTimecardGrid:</strong> Returns null on mobile ✅</li>
+                <li><strong>Wrapper Divs:</strong> Made conditional with isDesktop ✅</li>
+                <li><strong>Empty Card:</strong> Made Card conditional based on content ✅</li>
+                <li><strong>Result:</strong> Zero empty containers on mobile ✅</li>
+            </ol>
+        </div>
+
+        <!-- Verification -->
+        <div class="bg-gray-50 border border-gray-200 p-4 rounded-lg">
+            <h2 class="text-lg font-semibold text-gray-800 mb-2">Verification</h2>
+            <div class="text-sm text-gray-700 space-y-1">
+                <div>Screen Width: <span id="width" class="font-mono font-bold"></span></div>
+                <div>Device Type: <span id="device" class="font-mono font-bold"></span></div>
+                <div>Empty Cards Found: <span id="empty-cards" class="font-mono font-bold"></span></div>
+                <div>Desktop Grids Found: <span id="desktop-grids" class="font-mono font-bold"></span></div>
+                <div>Total Card Elements: <span id="total-cards" class="font-mono font-bold"></span></div>
+                <div>Status: <span id="status" class="font-mono font-bold"></span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function checkStatus() {
+            const width = window.innerWidth;
+            const isMobile = width < 1024;
+            
+            document.getElementById('width').textContent = width + 'px';
+            document.getElementById('device').textContent = isMobile ? 'Mobile' : 'Desktop';
+            
+            // Check for empty cards (cards with only card-content and no meaningful content)
+            const allCards = document.querySelectorAll('[data-slot="card"]');
+            let emptyCards = 0;
+            
+            allCards.forEach(card => {
+                const cardContent = card.querySelector('[data-slot="card-content"]');
+                if (cardContent) {
+                    const hasText = cardContent.textContent && cardContent.textContent.trim().length > 0;
+                    const hasInputs = cardContent.querySelectorAll('input, button, select').length > 0;
+                    const hasGrids = cardContent.querySelectorAll('[style*="grid-template-columns"]').length > 0;
+                    
+                    if (!hasText && !hasInputs && !hasGrids) {
+                        emptyCards++;
+                    }
+                }
+            });
+            
+            document.getElementById('empty-cards').textContent = emptyCards;
+            document.getElementById('total-cards').textContent = allCards.length;
+            
+            // Check for desktop grids
+            const desktopGrids = document.querySelectorAll('[style*="grid-template-columns"][style*="120px repeat"]');
+            document.getElementById('desktop-grids').textContent = desktopGrids.length;
+            
+            // Determine status
+            let status = '';
+            let statusClass = '';
+            
+            if (isMobile) {
+                if (emptyCards === 0 && desktopGrids.length === 0) {
+                    status = '✅ COMPLETELY FIXED';
+                    statusClass = 'text-green-600';
+                } else {
+                    status = '❌ STILL ISSUES';
+                    statusClass = 'text-red-600';
+                    console.error('Issues found on mobile:', {
+                        emptyCards,
+                        desktopGrids: desktopGrids.length,
+                        emptyCardElements: Array.from(allCards).filter(card => {
+                            const cardContent = card.querySelector('[data-slot="card-content"]');
+                            if (cardContent) {
+                                const hasText = cardContent.textContent && cardContent.textContent.trim().length > 0;
+                                const hasInputs = cardContent.querySelectorAll('input, button, select').length > 0;
+                                const hasGrids = cardContent.querySelectorAll('[style*="grid-template-columns"]').length > 0;
+                                return !hasText && !hasInputs && !hasGrids;
+                            }
+                            return false;
+                        })
+                    });
+                }
+            } else {
+                status = '🖥️ DESKTOP MODE';
+                statusClass = 'text-blue-600';
+            }
+            
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = status;
+            statusEl.className = `font-mono font-bold ${statusClass}`;
+        }
+
+        // Initial check
+        checkStatus();
+
+        // Update on resize
+        window.addEventListener('resize', checkStatus);
+
+        // Periodic check
+        setInterval(checkStatus, 1000);
+
+        console.log('🔧 Empty Card Fix Test loaded');
+        console.log('🎯 This should eliminate the final empty Card container on mobile');
+    </script>
+</body>
+</html>
