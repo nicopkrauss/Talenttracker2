@@ -74,16 +74,16 @@ export function ProjectTimecardStatistics({ projectId }: ProjectTimecardStatisti
       setLoading(true)
 
       // Fetch all timecards for the project
-      const response = await fetch(`/api/timecards-v2?project_id=${projectId}`)
+      const response = await fetch(`/api/timecards?project_id=${projectId}`)
       const result = await response.json()
 
       if (!response.ok) {
         console.error("Error fetching timecard statistics:", result.error)
-        setError("Failed to load timecard statistics")
+        setError(`Failed to load timecard statistics: ${result.error || 'Unknown error'}`)
         return
       }
 
-      const timecards = result.data || []
+      const timecards = result.timecards || []
 
       // Fetch team assignments to get role information
       const teamResponse = await fetch(`/api/projects/${projectId}/team-assignments`)
@@ -146,7 +146,7 @@ export function ProjectTimecardStatistics({ projectId }: ProjectTimecardStatisti
       setError(null)
     } catch (error) {
       console.error("Error processing timecard statistics:", error)
-      setError("Failed to process timecard statistics")
+      setError(`Failed to process timecard statistics: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setLoading(false)
     }

@@ -2,8 +2,10 @@
 
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Clock, Coffee } from "lucide-react"
+import { Clock, Coffee, AlertTriangle } from "lucide-react"
 import type { Timecard } from "@/lib/types"
+import { parseDate } from "@/lib/timezone-utils"
+import { CustomTimePicker } from "./custom-time-picker"
 
 interface DesktopTimecardGridProps {
   timecard: Timecard
@@ -40,57 +42,7 @@ export function DesktopTimecardGrid({
 }: DesktopTimecardGridProps) {
 
   const [editingField, setEditingField] = useState<string | null>(null)
-  const [activeSegment, setActiveSegment] = useState<'hours' | 'minutes' | 'ampm' | null>(null)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
-
-  // CSS to hide time picker completely and style segment highlighting
-  const timeInputStyles = `
-    input[type="time"]::-webkit-calendar-picker-indicator {
-      display: none;
-      -webkit-appearance: none;
-    }
-    input[type="time"]::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-    }
-    input[type="time"]::-webkit-clear-button {
-      -webkit-appearance: none;
-    }
-    .time-input-overlay input[type="time"] {
-      opacity: 0;
-    }
-    .time-segment {
-      padding: 2px 4px;
-      border-radius: 3px;
-      transition: all 0.2s ease;
-      display: inline-block;
-    }
-    .time-segment.active {
-      background: rgba(59, 130, 246, 0.25);
-      color: rgb(29, 78, 216);
-      font-weight: 600;
-    }
-    .dark .time-segment.active {
-      background: rgba(59, 130, 246, 0.35);
-      color: rgb(147, 197, 253);
-    }
-    .time-segment-compact {
-      border-radius: 3px;
-      transition: all 0.2s ease;
-      display: inline;
-    }
-    .time-segment-compact.active {
-      background: rgba(59, 130, 246, 0.25);
-      color: rgb(29, 78, 216);
-      font-weight: 600;
-    }
-    .dark .time-segment-compact.active {
-      background: rgba(59, 130, 246, 0.35);
-      color: rgb(147, 197, 253);
-    }
-    .time-separator {
-      color: inherit;
-    }
-  `
 
   // Helper function to get field ID for rejection mode
   const getFieldId = (fieldType: string, dayIndex?: number) => {
@@ -109,12 +61,41 @@ export function DesktopTimecardGrid({
   const isFieldEdited = (fieldId: string, originalValue: any) => {
     if (fieldEdits[fieldId] === undefined) return false
     
-    // Compare the actual values to see if they're different
-    const editedValue = fieldEdits[fieldId]
-    const originalFormatted = formatTimeForInput(originalValue)
-    const editedFormatted = formatTimeForInput(editedValue)
+    // Use the same normalization logic as handleInputChange for consistency
+    const normalizeTimeForComparison = (timeValue: string | null | undefined): string | null => {
+      if (!timeValue) return null
+      try {
+        // Handle both ISO and simple time formats
+        let date: Date;
+        
+        if (timeValue.includes('T')) {
+          // Full datetime string
+          date = new Date(timeValue)
+        } else if (timeValue.includes(':')) {
+          // Simple time format - combine with today's date
+          const today = new Date().toISOString().split('T')[0]
+          date = new Date(`${today}T${timeValue}`)
+        } else {
+          return null
+        }
+        
+        if (isNaN(date.getTime())) return null
+        
+        // Extract only the time portion for comparison
+        const hours = date.getHours().toString().padStart(2, '0')
+        const minutes = date.getMinutes().toString().padStart(2, '0')
+        const seconds = date.getSeconds().toString().padStart(2, '0')
+        return `${hours}:${minutes}:${seconds}`
+      } catch {
+        return null
+      }
+    }
     
-    return originalFormatted !== editedFormatted
+    const editedValue = fieldEdits[fieldId]
+    const normalizedOriginal = normalizeTimeForComparison(originalValue)
+    const normalizedEdited = normalizeTimeForComparison(editedValue)
+    
+    return normalizedOriginal !== normalizedEdited
   }
 
   const getFieldValue = (fieldId: string, originalValue: any) => {
@@ -128,276 +109,36 @@ export function DesktopTimecardGrid({
   const formatTimeForInput = (timeString: string | null) => {
     if (!timeString) return ""
     try {
-      const date = new Date(timeString)
-      return date.toTimeString().slice(0, 5) // HH:MM format
+      // Use the same logic as formatTime to ensure consistency
+      let date: Date;
+      
+      if (timeString.includes('T')) {
+        // Full datetime - use as-is
+        date = new Date(timeString)
+      } else {
+        // Time-only format (HH:MM:SS) - combine with today's date
+        const today = new Date().toISOString().split('T')[0]
+        date = new Date(`${today}T${timeString}`)
+      }
+      
+      if (isNaN(date.getTime())) return ""
+      
+      // Convert to HH:MM format (24-hour)
+      const hours = date.getHours().toString().padStart(2, '0')
+      const minutes = date.getMinutes().toString().padStart(2, '0')
+      return `${hours}:${minutes}`
     } catch {
       return ""
     }
   }
 
-  // Helper function to validate time order
-  const validateTimeOrder = (fieldId: string, newTimeValue: string, dayIndex: number) => {
-    const fieldType = fieldId.split('_')[0] + '_' + fieldId.split('_')[1] + '_' + fieldId.split('_')[2] // e.g., "check_in_time"
-    const dayEntry = dayColumns[dayIndex]?.entry
-    
-    if (!dayEntry) return true
-    
-    // Convert time string to minutes for comparison
-    const timeToMinutes = (timeStr: string) => {
-      if (!timeStr) return null
-      const [hours, minutes] = timeStr.split(':').map(Number)
-      return hours * 60 + minutes
-    }
-    
-    const newMinutes = timeToMinutes(newTimeValue)
-    if (newMinutes === null) return true
-    
-    // Get current times (use edited values if they exist)
-    const getFieldValue = (field: string) => {
-      const editedFieldId = `${field}_day_${dayIndex}`
-      const editedValue = fieldEdits[editedFieldId]
-      if (editedValue) return formatTimeForInput(editedValue)
-      return formatTimeForInput(dayEntry[field])
-    }
-    
-    const checkInTime = fieldType === 'check_in_time' ? newTimeValue : getFieldValue('check_in_time')
-    const breakStartTime = fieldType === 'break_start_time' ? newTimeValue : getFieldValue('break_start_time')
-    const breakEndTime = fieldType === 'break_end_time' ? newTimeValue : getFieldValue('break_end_time')
-    const checkOutTime = fieldType === 'check_out_time' ? newTimeValue : getFieldValue('check_out_time')
-    
-    const checkInMinutes = timeToMinutes(checkInTime)
-    const breakStartMinutes = timeToMinutes(breakStartTime)
-    const breakEndMinutes = timeToMinutes(breakEndTime)
-    const checkOutMinutes = timeToMinutes(checkOutTime)
-    
-    // Validation rules - return error message instead of showing alert
-    if (checkInMinutes && breakStartMinutes && checkInMinutes >= breakStartMinutes) {
-      return 'Check-in time must be before break start time'
-    }
-    
-    if (breakStartMinutes && breakEndMinutes && breakStartMinutes >= breakEndMinutes) {
-      return 'Break start time must be before break end time'
-    }
-    
-    if (breakEndMinutes && checkOutMinutes && breakEndMinutes >= checkOutMinutes) {
-      return 'Break end time must be before check-out time'
-    }
-    
-    if (checkInMinutes && checkOutMinutes && checkInMinutes >= checkOutMinutes) {
-      return 'Check-in time must be before check-out time'
-    }
-    
-    return null // No error
-  }
 
-  const handleInputChange = (fieldId: string, timeValue: string, originalValue: any) => {
-    if (onFieldEdit && timeValue) {
-      // Extract day index from field ID
-      const dayIndex = parseInt(fieldId.split('_').pop() || '0')
-      
-      // Validate time order
-      const validationError = validateTimeOrder(fieldId, timeValue, dayIndex)
-      if (validationError) {
-        // Show inline error and don't save
-        setValidationErrors(prev => ({ ...prev, [fieldId]: validationError }))
-        return
-      } else {
-        // Clear any existing error for this field
-        setValidationErrors(prev => {
-          const newErrors = { ...prev }
-          delete newErrors[fieldId]
-          return newErrors
-        })
-      }
-      
-      // Convert HH:MM to full datetime string
-      const today = new Date()
-      const [hours, minutes] = timeValue.split(':')
-      const newValue = today.setHours(parseInt(hours), parseInt(minutes), 0, 0)
-      const newISOString = new Date(newValue).toISOString()
-      
-      // Check if the new value is different from the original
-      const originalFormatted = formatTimeForInput(originalValue)
-      const newFormatted = formatTimeForInput(newISOString)
-      
-      if (originalFormatted === newFormatted) {
-        // If it's the same as original, remove from edits
-        onFieldEdit(fieldId, undefined)
-      } else {
-        // If it's different, add to edits
-        onFieldEdit(fieldId, newISOString)
-      }
-    }
-  }
 
-  const handleInputBlur = () => {
-    setEditingField(null)
-    setActiveSegment(null)
-    // Clear validation errors when field stops being edited
-    setValidationErrors({})
-  }
 
-  // Helper function to create segmented time display that matches normal text exactly
-  const createSegmentedTimeDisplay = (timeString: string, isEdited: boolean, hasValue: boolean = true) => {
-    const formatted = formatTime(timeString)
-    if (formatted === "Not Recorded") {
-      return formatted
-    }
 
-    // Parse the formatted time (e.g., "8:30 AM")
-    const timeMatch = formatted.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
-    if (!timeMatch) {
-      return formatted
-    }
 
-    const [, hours, minutes, ampm] = timeMatch
 
-    return (
-      <>
-        <span className={`time-segment-compact ${activeSegment === 'hours' ? 'active' : ''}`}>
-          {hours}
-        </span>
-        <span>:</span>
-        <span className={`time-segment-compact ${activeSegment === 'minutes' ? 'active' : ''}`}>
-          {minutes}
-        </span>
-        <span> </span>
-        <span className={`time-segment-compact ${activeSegment === 'ampm' ? 'active' : ''}`}>
-          {ampm}
-        </span>
-      </>
-    )
-  }
 
-  // Handle input events to detect active segment
-  const handleTimeInputEvent = (e: React.SyntheticEvent<HTMLInputElement>) => {
-    const input = e.target as HTMLInputElement
-    
-    // Use a small delay to let the browser update selection
-    setTimeout(() => {
-      const selectionStart = input.selectionStart || 0
-      const selectionEnd = input.selectionEnd || 0
-      const value = input.value // HH:MM format
-      
-      // More robust segment detection
-      if (selectionStart <= 2 && selectionEnd <= 2) {
-        setActiveSegment('hours')
-      } else if (selectionStart >= 3 && selectionEnd <= 5) {
-        setActiveSegment('minutes')
-      } else {
-        // For AM/PM, we need to detect it differently since native time picker
-        // doesn't always expose AM/PM selection properly
-        setActiveSegment('ampm')
-      }
-    }, 50) // Increased delay for better detection
-  }
-
-  // Handle click events with position-based detection
-  const handleTimeInputClick = (e: React.MouseEvent<HTMLInputElement>) => {
-    const input = e.target as HTMLInputElement
-    const rect = input.getBoundingClientRect()
-    const clickX = e.clientX - rect.left
-    const inputWidth = rect.width
-    
-    // Position-based segment detection for clicks
-    setTimeout(() => {
-      if (clickX < inputWidth * 0.35) {
-        setActiveSegment('hours')
-      } else if (clickX < inputWidth * 0.65) {
-        setActiveSegment('minutes')
-      } else {
-        setActiveSegment('ampm')
-      }
-    }, 10)
-  }
-
-  // Handle keyboard navigation - use logical state tracking since selectionStart doesn't work
-  const handleTimeInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Handle Enter key to confirm edit
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleInputBlur() // This will exit editing mode
-      return
-    }
-    
-    // Don't prevent default - let native time picker handle navigation
-    
-    // Since selectionStart doesn't work with native time pickers,
-    // use logical state tracking based on current segment and key pressed
-    if (e.key === 'ArrowRight') {
-      const currentSegment = activeSegment || 'hours' // Default to hours if no segment
-      
-      console.log('ArrowRight pressed, current segment:', currentSegment)
-      
-      // Move to next segment logically
-      if (currentSegment === 'hours') {
-        setActiveSegment('minutes')
-        console.log('Moving from hours to minutes')
-      } else if (currentSegment === 'minutes') {
-        setActiveSegment('ampm')
-        console.log('Moving from minutes to ampm')
-      }
-      // Stay on ampm if already there
-    }
-    
-    if (e.key === 'ArrowLeft') {
-      const currentSegment = activeSegment || 'hours'
-      
-      console.log('ArrowLeft pressed, current segment:', currentSegment)
-      
-      // Move to previous segment logically
-      if (currentSegment === 'ampm') {
-        setActiveSegment('minutes')
-        console.log('Moving from ampm to minutes')
-      } else if (currentSegment === 'minutes') {
-        setActiveSegment('hours')
-        console.log('Moving from minutes to hours')
-      }
-      // Stay on hours if already there
-    }
-    
-    // Tab navigation - move forward
-    if (e.key === 'Tab' && !e.shiftKey) {
-      const currentSegment = activeSegment || 'hours'
-      
-      if (currentSegment === 'hours') {
-        setActiveSegment('minutes')
-      } else if (currentSegment === 'minutes') {
-        setActiveSegment('ampm')
-      }
-    }
-    
-    // Shift+Tab navigation - move backward
-    if (e.key === 'Tab' && e.shiftKey) {
-      const currentSegment = activeSegment || 'hours'
-      
-      if (currentSegment === 'ampm') {
-        setActiveSegment('minutes')
-      } else if (currentSegment === 'minutes') {
-        setActiveSegment('hours')
-      }
-    }
-    
-    // Detect direct AM/PM navigation
-    if (e.key === 'a' || e.key === 'A' || e.key === 'p' || e.key === 'P') {
-      setActiveSegment('ampm')
-      console.log('AM/PM key pressed, moving to ampm segment')
-    }
-    
-    // Number keys - stay on current segment or default to hours
-    if (e.key >= '0' && e.key <= '9') {
-      if (!activeSegment) {
-        setActiveSegment('hours')
-        console.log('Number key pressed, defaulting to hours segment')
-      }
-    }
-  }
-
-  // Handle initial focus - always start with hours
-  const handleTimeInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    setActiveSegment('hours')
-    console.log('Time input focused, setting segment to hours')
-  }
 
   // Format time for display (matching existing format)
   const formatTime = (timeStr?: string) => {
@@ -411,7 +152,6 @@ export function DesktopTimecardGrid({
           minute: '2-digit'
         })
       }
-
       // Already in time format (HH:MM:SS)
       const today = new Date().toISOString().split('T')[0]
       const date = new Date(`${today}T${timeStr}`)
@@ -424,62 +164,352 @@ export function DesktopTimecardGrid({
     }
   }
 
-  // Helper component to render editable time field
-  const renderTimeField = (fieldId: string, originalValue: any, currentValue: any, isEdited: boolean, isEditing: boolean, hasValue: boolean = true) => (
-    <div className="flex flex-col items-center justify-center h-full">
-      {isEdited && !isEditing && (
-        <div className="text-xs text-muted-foreground line-through leading-none mb-0">
-          {formatTime(originalValue)}
-        </div>
-      )}
+  // Helper function to get all field values for validation
+  const getAllFieldValuesForDay = (dayIndex?: number) => {
+    if (dayIndex !== undefined && timecard.daily_entries && timecard.daily_entries[dayIndex]) {
+      const entry = timecard.daily_entries[dayIndex]
+      return {
+        check_in_time: entry.check_in_time,
+        break_start_time: entry.break_start_time,
+        break_end_time: entry.break_end_time,
+        check_out_time: entry.check_out_time
+      }
+    } else {
+      return {
+        check_in_time: timecard.check_in_time,
+        break_start_time: timecard.break_start_time,
+        break_end_time: timecard.break_end_time,
+        check_out_time: timecard.check_out_time
+      }
+    }
+  }
+
+  // Helper function to validate time sequence (same logic as SimpleEditableField)
+  const validateTimeSequence = (fieldId: string, newValue: string, dayIndex?: number): string | null => {
+    const allFieldValues = getAllFieldValuesForDay(dayIndex)
+    
+    console.log('🔍 Desktop validation debug:', {
+      fieldId,
+      newValue,
+      dayIndex,
+      allFieldValues,
+      fieldEdits
+    })
+    
+    try {
+      // Parse the new value (could be simple time string or ISO)
+      let newTime: Date;
+      if (newValue.includes('T')) {
+        console.log('🔍 Desktop: Parsing as ISO datetime')
+        // Full datetime string
+        newTime = new Date(newValue)
+      } else if (newValue.includes(':')) {
+        console.log('🔍 Desktop: Parsing as simple time format')
+        // Simple time format (HH:MM:SS) - combine with today's date
+        const today = new Date().toISOString().split('T')[0]
+        const combinedDateTime = `${today}T${newValue}`
+        console.log('🔍 Desktop: Combined datetime:', combinedDateTime)
+        newTime = new Date(combinedDateTime)
+      } else {
+        console.log('🔍 Desktop: Validation failed - no T or colon found')
+        return "Invalid time format"
+      }
+      
+      console.log('🔍 Desktop: Parsed date:', {
+        newTime: newTime.toString(),
+        isValid: !isNaN(newTime.getTime()),
+        timeValue: newTime.getTime()
+      })
+      
+      if (isNaN(newTime.getTime())) {
+        console.log('🔍 Desktop: Validation failed - parsed date is NaN')
+        return "Invalid time format"
+      }
+      
+      // Get current values (including any edits) for the same day
+      const getCurrentValue = (baseField: string): Date | null => {
+        const relatedFieldId = dayIndex !== undefined ? `${baseField}_day_${dayIndex}` : baseField
+        
+        console.log('🔍 Getting current value:', { baseField, relatedFieldId })
+        
+        // First check if there's an edit for this field
+        if (fieldEdits[relatedFieldId] !== undefined) {
+          const value = fieldEdits[relatedFieldId]
+          console.log('🔍 Found edit value:', { relatedFieldId, value })
+          if (!value) return null
+          
+          // Parse the edit value (could be simple time string or ISO)
+          if (value.includes('T')) {
+            return new Date(value)
+          } else if (value.includes(':')) {
+            const today = new Date().toISOString().split('T')[0]
+            return new Date(`${today}T${value}`)
+          }
+          return null
+        }
+        
+        // Then check the original values
+        const value = allFieldValues[baseField as keyof typeof allFieldValues]
+        console.log('🔍 Using original value:', { baseField, value })
+        
+        if (!value) return null
+        
+        // Handle different time formats
+        try {
+          let date: Date
+          
+          if (value.includes('T')) {
+            // Full datetime string (ISO format)
+            date = new Date(value)
+          } else if (value.includes(':')) {
+            // Time-only format (HH:MM:SS or HH:MM) - combine with today's date for consistent comparison
+            const today = new Date().toISOString().split('T')[0]
+            date = new Date(`${today}T${value}`)
+            console.log('🔍 Time-only parsing:', { value, referenceDate: today, fullDateTime: `${today}T${value}` })
+          } else {
+            return null
+          }
+          
+          if (isNaN(date.getTime())) {
+            console.log('🔍 Failed to parse time:', { value })
+            return null
+          }
+          
+          console.log('🔍 Parsed time successfully:', { value, parsedTime: date.toLocaleTimeString(), fullDate: date.toISOString() })
+          return date
+        } catch (error) {
+          console.log('🔍 Error parsing time:', { value, error })
+          return null
+        }
+      }
+      
+      // Determine which field we're updating
+      const baseFieldName = fieldId.replace(/_day_\d+$/, '')
+      console.log('🔍 Base field name:', { fieldId, baseFieldName })
+      
+      // Apply the new value to the appropriate field
+      const checkIn = baseFieldName === 'check_in_time' ? newTime : getCurrentValue('check_in_time')
+      const breakStart = baseFieldName === 'break_start_time' ? newTime : getCurrentValue('break_start_time')
+      const breakEnd = baseFieldName === 'break_end_time' ? newTime : getCurrentValue('break_end_time')
+      const checkOut = baseFieldName === 'check_out_time' ? newTime : getCurrentValue('check_out_time')
+      
+      console.log('🔍 Time values for validation:', {
+        checkIn: checkIn?.toLocaleTimeString(),
+        breakStart: breakStart?.toLocaleTimeString(),
+        breakEnd: breakEnd?.toLocaleTimeString(),
+        checkOut: checkOut?.toLocaleTimeString(),
+        newValueField: baseFieldName,
+        newValueTime: newTime.toLocaleTimeString()
+      })
+      
+      // Validate time sequence
+      console.log('🔍 Validation checks:', {
+        'checkIn && breakStart': !!(checkIn && breakStart),
+        'breakStart <= checkIn': breakStart && checkIn ? breakStart <= checkIn : 'N/A',
+        'breakStart && breakEnd': !!(breakStart && breakEnd),
+        'breakEnd <= breakStart': breakStart && breakEnd ? breakEnd <= breakStart : 'N/A',
+        'breakEnd && checkOut': !!(breakEnd && checkOut),
+        'checkOut <= breakEnd': breakEnd && checkOut ? checkOut <= breakEnd : 'N/A',
+        'checkIn && checkOut': !!(checkIn && checkOut),
+        'checkOut <= checkIn': checkIn && checkOut ? checkOut <= checkIn : 'N/A'
+      })
+      
+      // Detailed debugging for the first condition
+      if (checkIn && breakStart) {
+        console.log('🔍 Detailed check-in vs break start comparison:', {
+          checkInTime: checkIn.getTime(),
+          breakStartTime: breakStart.getTime(),
+          checkInString: checkIn.toISOString(),
+          breakStartString: breakStart.toISOString(),
+          'breakStart <= checkIn': breakStart <= checkIn,
+          'breakStart.getTime() <= checkIn.getTime()': breakStart.getTime() <= checkIn.getTime()
+        })
+      }
+      
+      if (checkIn && breakStart && breakStart <= checkIn) {
+        console.log('🔍 Validation error: break start <= check in')
+        return "Break start must be after check-in time"
+      }
+      
+      if (breakStart && breakEnd && breakEnd <= breakStart) {
+        console.log('🔍 Validation error: break end <= break start')
+        return "Break end must be after break start"
+      }
+      
+      if (breakEnd && checkOut && checkOut <= breakEnd) {
+        console.log('🔍 Validation error: check out <= break end')
+        return "Check-out must be after break end"
+      }
+      
+      if (checkIn && checkOut && checkOut <= checkIn) {
+        console.log('🔍 Validation error: check out <= check in')
+        return "Check-out must be after check-in time"
+      }
+      
+      // Additional validations can be added here if needed
+      
+      console.log('🔍 Validation passed: no errors found')
+      return null // No validation errors
+    } catch (error) {
+      console.log('🔍 Validation error (exception):', error)
+      return "Invalid time format"
+    }
+  }
+
+  // Helper function to handle time change from CustomTimePicker
+  const handleTimeChange = (fieldId: string, originalValue: any, newValue: string, dayIndex?: number) => {
+    if (!onFieldEdit) return
+    
+    console.log('🖥️ Desktop validation check:', { fieldId, newValue, dayIndex })
+    
+    // Validate the new time value
+    const validationError = validateTimeSequence(fieldId, newValue, dayIndex)
+    console.log('🖥️ Desktop validation result:', { validationError })
+    
+    if (validationError) {
+      // Store error for inline display and prevent change
+      setValidationErrors(prev => ({
+        ...prev,
+        [fieldId]: validationError
+      }))
+      console.log('🖥️ Desktop: Validation failed - preventing change:', validationError)
+      return // Prevent the change
+    }
+    
+    // Clear any existing validation error for this field
+    setValidationErrors(prev => {
+      const newErrors = { ...prev }
+      delete newErrors[fieldId]
+      return newErrors
+    })
+    
+    // Use same normalization logic as SimpleEditableField
+    // Extract only the time portion (HH:MM:SS) to avoid date-based comparison issues
+    const normalizeTimeValue = (timeValue: string | null | undefined): string | null => {
+      if (!timeValue) return null
+      try {
+        // Handle both ISO and simple time formats
+        let date: Date;
+        
+        if (timeValue.includes('T')) {
+          // Full datetime string
+          date = new Date(timeValue)
+        } else if (timeValue.includes(':')) {
+          // Simple time format - combine with today's date
+          const today = new Date().toISOString().split('T')[0]
+          date = new Date(`${today}T${timeValue}`)
+        } else {
+          return null
+        }
+        
+        if (isNaN(date.getTime())) return null
+        
+        // Extract only the time portion for comparison
+        const hours = date.getHours().toString().padStart(2, '0')
+        const minutes = date.getMinutes().toString().padStart(2, '0')
+        const seconds = date.getSeconds().toString().padStart(2, '0')
+        return `${hours}:${minutes}:${seconds}`
+      } catch {
+        return null
+      }
+    }
+    
+    const normalizedNew = normalizeTimeValue(newValue)
+    const normalizedOriginal = normalizeTimeValue(originalValue)
+    
+    if (normalizedNew === normalizedOriginal) {
+      onFieldEdit(fieldId, undefined) // Remove edit if same as original
+    } else {
+      onFieldEdit(fieldId, newValue)
+    }
+  }
+
+  // Helper function to handle time picker blur
+  const handleTimePickerBlur = () => {
+    // Clear validation error for the field that was being edited
+    if (editingField) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[editingField]
+        return newErrors
+      })
+    }
+    setEditingField(null)
+  }
+
+  // Helper component to render editable time field with validation
+  const renderTimeField = (fieldId: string, originalValue: any, currentValue: any, isEdited: boolean, isEditing: boolean, hasValue: boolean = true, dayIndex?: number) => {
+    const validationError = validationErrors[fieldId]
+    
+    return (
       <div className="relative">
-        {isEditing ? (
-          <p className="text-lg font-semibold leading-tight m-0">
-            {createSegmentedTimeDisplay(currentValue, isEdited, hasValue)}
-          </p>
-        ) : (
-          <p className={`text-lg font-semibold leading-tight m-0 ${
-            isEdited 
-              ? 'text-red-600 dark:text-red-400' 
-              : hasValue 
-                ? 'text-foreground' 
-                : 'text-muted-foreground'
-          }`}>
-            {formatTime(currentValue)}
-          </p>
+        <div className="flex items-center justify-center relative" style={{ height: '28px' }}>
+          {isEdited && !isEditing && (
+            <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 text-xs text-muted-foreground line-through leading-none whitespace-nowrap">
+              {formatTime(originalValue)}
+            </div>
+          )}
+          <div className="relative w-full flex items-center justify-center" style={{ height: '28px' }}>
+            {isEditing && isRejectionMode ? (
+              <CustomTimePicker
+                value={currentValue}
+                onChange={(newValue) => handleTimeChange(fieldId, originalValue, newValue, dayIndex)}
+                onBlur={handleTimePickerBlur}
+                className="text-lg font-semibold"
+                autoFocus
+              />
+            ) : (
+              <p 
+                className={`text-lg font-semibold m-0 text-center ${
+                  isRejectionMode ? 'cursor-pointer' : ''
+                } ${
+                  validationError
+                    ? 'text-red-600 dark:text-red-400'
+                    : isEdited 
+                      ? 'text-red-600 dark:text-red-400' 
+                      : hasValue 
+                        ? 'text-foreground' 
+                        : 'text-muted-foreground'
+                }`}
+                style={{ height: '28px', lineHeight: '28px' }}
+                onClick={() => handleFieldClick(fieldId)}
+              >
+                {formatTime(currentValue)}
+              </p>
+            )}
+          </div>
+        </div>
+        {validationError && (
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 z-50 px-3 py-2 bg-background text-white rounded-md shadow-lg border border-border min-w-max">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+              <span className="text-sm font-medium">{validationError}</span>
+            </div>
+            {/* Arrow pointing up */}
+            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-l-transparent border-r-transparent border-b-border"></div>
+          </div>
         )}
-        {isEditing && (
-          <input
-            type="time"
-            step="300"
-            value={formatTimeForInput(currentValue)}
-            onChange={(e) => handleInputChange(fieldId, e.target.value, originalValue)}
-            onFocus={handleTimeInputFocus}
-            onClick={handleTimeInputClick}
-            onKeyDown={handleTimeInputKeyDown}
-            onBlur={handleInputBlur}
-            className="absolute inset-0 opacity-0"
-
-            autoFocus
-          />
-        )}
-
       </div>
-    </div>
-  )
+    )
+  }
 
-  // Helper function to handle field click in rejection mode
+  // Helper function to handle field click
   const handleFieldClick = (fieldId: string) => {
     if (isRejectionMode) {
-      // If we have onFieldEdit, use direct editing approach
+      // In rejection mode, allow field editing for rejection workflow
       if (onFieldEdit) {
+        // Clear validation errors when starting to edit a field
+        setValidationErrors(prev => {
+          const newErrors = { ...prev }
+          delete newErrors[fieldId]
+          return newErrors
+        })
         setEditingField(fieldId)
-      }
-      // Otherwise fall back to selection approach
-      else if (onFieldToggle) {
+      } else if (onFieldToggle) {
         onFieldToggle(fieldId)
       }
     }
+    // In approval mode (not rejection mode), fields are read-only - no editing allowed
   }
 
   // Helper function to check if field is rejected
@@ -487,32 +517,25 @@ export function DesktopTimecardGrid({
     return showRejectedFields && timecard.rejected_fields && timecard.rejected_fields.includes(fieldId)
   }
 
-  // Helper function to check if all fields for a day are rejected
-  const isDayRejected = (dayIndex: number) => {
-    if (!showRejectedFields || !timecard.rejected_fields) return false
-    
-    const dayFieldIds = [
-      `check_in_time_day_${dayIndex}`,
-      `break_start_time_day_${dayIndex}`,
-      `break_end_time_day_${dayIndex}`,
-      `check_out_time_day_${dayIndex}`
-    ]
-    
-    return dayFieldIds.every(fieldId => timecard.rejected_fields!.includes(fieldId))
-  }
-
   // Prepare day columns
   const prepareDayColumns = (): DayColumn[] => {
     if (timecard.daily_entries && timecard.daily_entries.length > 0) {
       // Multi-day timecard - use daily entries
       return timecard.daily_entries
-        .sort((a, b) => new Date(a.work_date).getTime() - new Date(b.work_date).getTime())
-        .map(entry => ({
-          date: entry.work_date,
-          dayName: new Date(entry.work_date).toLocaleDateString('en-US', { weekday: 'short' }),
-          dayNumber: new Date(entry.work_date).toLocaleDateString('en-US', { day: 'numeric' }),
-          entry
-        }))
+        .sort((a, b) => {
+          const dateA = parseDate(a.work_date)
+          const dateB = parseDate(b.work_date)
+          return (dateA?.getTime() || 0) - (dateB?.getTime() || 0)
+        })
+        .map(entry => {
+          const date = parseDate(entry.work_date)
+          return {
+            date: entry.work_date,
+            dayName: date ? date.toLocaleDateString('en-US', { weekday: 'short' }) : 'Invalid',
+            dayNumber: date ? date.toLocaleDateString('en-US', { day: 'numeric' }) : 'Invalid',
+            entry
+          }
+        })
     } else {
       // Single day timecard
       const date = timecard.date || timecard.period_start_date || new Date().toISOString()
@@ -538,9 +561,7 @@ export function DesktopTimecardGrid({
   const isMultiDay = dayColumns.length > 1
 
   return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: timeInputStyles }} />
-      <Card>
+    <Card>
       {showHeader && (
         <CardHeader>
           <CardTitle className="flex items-center justify-between min-h-[2rem]">
@@ -598,44 +619,37 @@ export function DesktopTimecardGrid({
 
           {/* Day column headers */}
           {dayColumns.map((day, index) => {
-
-            
-
-
             return (
               <div key={index} className="text-center">
-                <div 
-                  className="flex flex-col items-center gap-2 p-3 border rounded-lg border-border"
-
-                >
-                {/* Day name with small labels */}
-                <div className="relative w-full text-xs">
+                <div className="flex flex-col items-center gap-2 p-3 border rounded-lg border-border">
+                  {/* Day name with small labels */}
+                  <div className="relative w-full text-xs">
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-xs font-medium text-muted-foreground">Hours</span>
+                      <span className="text-xs font-medium text-muted-foreground">Pay</span>
+                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{day.dayName}</span>
+                    </div>
+                  </div>
+                  {/* Date number with hours and pay */}
                   <div className="flex items-center justify-between w-full">
-                    <span className="text-xs font-medium text-muted-foreground">Hours</span>
-                    <span className="text-xs font-medium text-muted-foreground">Pay</span>
-                  </div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{day.dayName}</span>
-                  </div>
-                </div>
-                {/* Date number with hours and pay */}
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-1 text-xs">
-                    <Clock className="w-3 h-3 text-blue-600" />
-                    <span className="font-medium text-foreground">
-                      {(day.entry?.hours_worked || 0).toFixed(1)}
-                    </span>
-                  </div>
-                  <span className="text-2xl font-bold text-foreground">{day.dayNumber}</span>
-                  <div className="flex items-center gap-1 text-xs">
-                    <span className="text-green-600 dark:text-green-400 font-medium">
-                      ${(day.entry?.daily_pay || 0).toFixed(0)}
-                    </span>
+                    <div className="flex items-center gap-1 text-xs">
+                      <Clock className="w-3 h-3 text-blue-600" />
+                      <span className="font-medium text-foreground">
+                        {(day.entry?.hours_worked || 0).toFixed(1)}
+                      </span>
+                    </div>
+                    <span className="text-2xl font-bold text-foreground">{day.dayNumber}</span>
+                    <div className="flex items-center gap-1 text-xs">
+                      <span className="text-green-600 dark:text-green-400 font-medium">
+                        ${(day.entry?.daily_pay || 0).toFixed(0)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )
+            )
           })}
         </div>
 
@@ -654,34 +668,30 @@ export function DesktopTimecardGrid({
               const isEdited = isFieldEdited(fieldId, originalValue)
               const isEditing = isFieldEditing(fieldId)
               const currentValue = getFieldValue(fieldId, originalValue)
+              const hasValidationError = validationErrors[fieldId]
               
               return (
                 <div
                   key={index}
-                  className={`${isEdited ? 'py-1 px-3' : 'p-3'} rounded-lg border transition-all relative ${
-                    isEditing
-                      ? 'border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
-                      : isEdited
-                        ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
-                        : isSelected
+                  className={`p-3 rounded-lg border transition-all relative ${
+                    hasValidationError
+                      ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                      : isEditing
+                        ? 'border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
+                        : isEdited
                           ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
-                          : isFieldRejected(fieldId)
-                            ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
-                            : isRejectionMode
-                              ? 'border-border bg-card hover:border-white cursor-pointer'
-                              : 'border-border bg-card'
+                          : isSelected
+                            ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
+                            : isFieldRejected(fieldId)
+                              ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                              : isRejectionMode
+                                ? 'border-border bg-card hover:border-white cursor-pointer'
+                                : 'border-border bg-card'
                   }`}
                   onClick={() => !isEditing && handleFieldClick(fieldId)}
+
                 >
-                  {renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, true)}
-                  {validationErrors[fieldId] && (
-                    <div className="absolute top-full left-0 right-0 mt-1 p-2 bg-background border border-white rounded-lg text-xs text-white z-10 flex items-center gap-2">
-                      <svg className="w-3 h-3 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                      <span>{validationErrors[fieldId]}</span>
-                    </div>
-                  )}
+                  {renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, true, index)}
                 </div>
               )
             })}
@@ -701,38 +711,34 @@ export function DesktopTimecardGrid({
               const isEditing = isFieldEditing(fieldId)
               const currentValue = getFieldValue(fieldId, originalValue)
               const hasBreak = currentValue || originalValue
+              const hasValidationError = validationErrors[fieldId]
               
               return (
                 <div
                   key={index}
-                  className={`${isEdited ? 'py-1 px-3' : 'p-3'} rounded-lg border transition-all relative ${
-                    isEditing
-                      ? 'border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
-                      : isEdited
-                        ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
-                        : isSelected
+                  className={`p-3 rounded-lg border transition-all relative ${
+                    hasValidationError
+                      ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                      : isEditing
+                        ? 'border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
+                        : isEdited
                           ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
-                          : isFieldRejected(fieldId)
-                            ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
-                            : isRejectionMode
-                              ? hasBreak
-                                ? 'border-border bg-card hover:border-white cursor-pointer'
-                                : 'border-dashed border-muted-foreground/30 bg-muted/30 hover:border-white cursor-pointer'
-                              : hasBreak
-                                ? 'border-border bg-card'
-                                : 'border-dashed border-muted-foreground/30 bg-muted/30'
+                          : isSelected
+                            ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
+                            : isFieldRejected(fieldId)
+                              ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                              : isRejectionMode
+                                ? hasBreak
+                                  ? 'border-border bg-card hover:border-white cursor-pointer'
+                                  : 'border-dashed border-muted-foreground/30 bg-muted/30 hover:border-white cursor-pointer'
+                                : hasBreak
+                                  ? 'border-border bg-card'
+                                  : 'border-dashed border-muted-foreground/30 bg-muted/30'
                   }`}
                   onClick={() => !isEditing && handleFieldClick(fieldId)}
+
                 >
-                  {renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, hasBreak)}
-                  {validationErrors[fieldId] && (
-                    <div className="absolute top-full left-0 right-0 mt-1 p-2 bg-background border border-white rounded-lg text-xs text-white z-10 flex items-center gap-2">
-                      <svg className="w-3 h-3 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                      <span>{validationErrors[fieldId]}</span>
-                    </div>
-                  )}
+                  {renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, hasBreak, index)}
                 </div>
               )
             })}
@@ -752,38 +758,34 @@ export function DesktopTimecardGrid({
               const isEditing = isFieldEditing(fieldId)
               const currentValue = getFieldValue(fieldId, originalValue)
               const hasBreak = currentValue || originalValue
+              const hasValidationError = validationErrors[fieldId]
               
               return (
                 <div
                   key={index}
-                  className={`${isEdited ? 'py-1 px-3' : 'p-3'} rounded-lg border transition-all relative ${
-                    isEditing
-                      ? 'border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
-                      : isEdited
-                        ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
-                        : isSelected
+                  className={`p-3 rounded-lg border transition-all relative ${
+                    hasValidationError
+                      ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                      : isEditing
+                        ? 'border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
+                        : isEdited
                           ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
-                          : isFieldRejected(fieldId)
-                            ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
-                            : isRejectionMode
-                              ? hasBreak
-                                ? 'border-border bg-card hover:border-white cursor-pointer'
-                                : 'border-dashed border-muted-foreground/30 bg-muted/30 hover:border-white cursor-pointer'
-                              : hasBreak
-                                ? 'border-border bg-card'
-                                : 'border-dashed border-muted-foreground/30 bg-muted/30'
+                          : isSelected
+                            ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
+                            : isFieldRejected(fieldId)
+                              ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                              : isRejectionMode
+                                ? hasBreak
+                                  ? 'border-border bg-card hover:border-white cursor-pointer'
+                                  : 'border-dashed border-muted-foreground/30 bg-muted/30 hover:border-white cursor-pointer'
+                                : hasBreak
+                                  ? 'border-border bg-card'
+                                  : 'border-dashed border-muted-foreground/30 bg-muted/30'
                   }`}
                   onClick={() => !isEditing && handleFieldClick(fieldId)}
+
                 >
-                  {renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, hasBreak)}
-                  {validationErrors[fieldId] && (
-                    <div className="absolute top-full left-0 right-0 mt-1 p-2 bg-background border border-white rounded-lg text-xs text-white z-10 flex items-center gap-2">
-                      <svg className="w-3 h-3 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                      <span>{validationErrors[fieldId]}</span>
-                    </div>
-                  )}
+                  {renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, hasBreak, index)}
                 </div>
               )
             })}
@@ -802,34 +804,30 @@ export function DesktopTimecardGrid({
               const isEdited = isFieldEdited(fieldId, originalValue)
               const isEditing = isFieldEditing(fieldId)
               const currentValue = getFieldValue(fieldId, originalValue)
+              const hasValidationError = validationErrors[fieldId]
               
               return (
                 <div
                   key={index}
-                  className={`${isEdited ? 'py-1 px-3' : 'p-3'} rounded-lg border transition-all relative ${
-                    isEditing
-                      ? 'border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
-                      : isEdited
-                        ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
-                        : isSelected
+                  className={`p-3 rounded-lg border transition-all relative ${
+                    hasValidationError
+                      ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                      : isEditing
+                        ? 'border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
+                        : isEdited
                           ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
-                          : isFieldRejected(fieldId)
-                            ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
-                            : isRejectionMode
-                              ? 'border-border bg-card hover:border-white cursor-pointer'
-                              : 'border-border bg-card'
+                          : isSelected
+                            ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
+                            : isFieldRejected(fieldId)
+                              ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                              : isRejectionMode
+                                ? 'border-border bg-card hover:border-white cursor-pointer'
+                                : 'border-border bg-card'
                   }`}
                   onClick={() => !isEditing && handleFieldClick(fieldId)}
+
                 >
-                  {renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, true)}
-                  {validationErrors[fieldId] && (
-                    <div className="absolute top-full left-0 right-0 mt-1 p-2 bg-background border border-white rounded-lg text-xs text-white z-10 flex items-center gap-2">
-                      <svg className="w-3 h-3 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                      <span>{validationErrors[fieldId]}</span>
-                    </div>
-                  )}
+                  {renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, true, index)}
                 </div>
               )
             })}
@@ -837,6 +835,5 @@ export function DesktopTimecardGrid({
         </div>
       </CardContent>
     </Card>
-    </>
   )
 }

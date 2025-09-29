@@ -66,7 +66,7 @@ export function ProjectTimecardList({
         params.append('status', statusFilter)
       }
       
-      const response = await fetch(`/api/timecards-v2?${params.toString()}`)
+      const response = await fetch(`/api/timecards?${params.toString()}`)
       const result = await response.json()
       
       if (!response.ok) {
@@ -77,7 +77,7 @@ export function ProjectTimecardList({
         return
       }
       
-      const data = result.data || []
+      const data = result.timecards || []
       setTimecards(data)
       setHasData(data.length > 0)
       

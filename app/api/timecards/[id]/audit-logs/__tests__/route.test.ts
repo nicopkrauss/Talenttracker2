@@ -281,6 +281,49 @@ describe('/api/timecards/[id]/audit-logs', () => {
         })
       );
     });
+
+    it('should accept status_change action_type', async () => {
+      const request = createMockRequest({
+        action_type: 'status_change'
+      });
+
+      const response = await GET(request, { params: { id: mockTimecardId } });
+
+      expect(response.status).toBe(200);
+      expect(mockAuditLogService.getAuditLogs).toHaveBeenCalledWith(
+        mockTimecardId,
+        expect.objectContaining({
+          action_type: ['status_change']
+        })
+      );
+    });
+
+    it('should accept mixed action types including status_change', async () => {
+      const request = createMockRequest({
+        action_type: 'user_edit,status_change,admin_edit'
+      });
+
+      const response = await GET(request, { params: { id: mockTimecardId } });
+
+      expect(response.status).toBe(200);
+      expect(mockAuditLogService.getAuditLogs).toHaveBeenCalledWith(
+        mockTimecardId,
+        expect.objectContaining({
+          action_type: ['user_edit', 'status_change', 'admin_edit']
+        })
+      );
+    });
+
+    it('should return 400 for invalid action_type', async () => {
+      const request = createMockRequest({ action_type: 'invalid_action' });
+      const response = await GET(request, { params: { id: mockTimecardId } });
+      const data = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(data.error).toBe('Invalid query parameters');
+      expect(data.code).toBe('VALIDATION_ERROR');
+      expect(data.details.action_type).toBeDefined();
+    });
   });
 
   describe('Data Fetching', () => {
@@ -301,7 +344,7 @@ describe('/api/timecards/[id]/audit-logs', () => {
           old_value: '09:00',
           new_value: '09:15',
           action_type: 'user_edit',
-          changed_at: new Date('2024-01-15T10:00:00Z'),
+          changed_at: '2024-01-15T10:00:00.000Z',
           changed_by: mockUserId
         }
       ];
@@ -336,7 +379,9 @@ describe('/api/timecards/[id]/audit-logs', () => {
             select: vi.fn(() => ({
               eq: vi.fn(() => ({
                 head: vi.fn().mockResolvedValue({
-                  count: 1
+                  count: 1,
+                  data: null,
+                  error: null
                 })
               }))
             }))
@@ -391,7 +436,9 @@ describe('/api/timecards/[id]/audit-logs', () => {
             select: vi.fn(() => ({
               eq: vi.fn(() => ({
                 head: vi.fn().mockResolvedValue({
-                  count: 100
+                  count: 100,
+                  data: null,
+                  error: null
                 })
               }))
             }))
@@ -412,6 +459,100 @@ describe('/api/timecards/[id]/audit-logs', () => {
         offset: 50,
         has_more: true
       });
+    });
+
+    it('should return mixed audit logs with proper chronological ordering', async () => {
+      const mockMixedAuditLogs = [
+        {
+          id: 'audit-3',
+          timecard_id: mockTimecardId,
+          field_name: null,
+          old_value: 'submitted',
+          new_value: 'approved',
+          action_type: 'status_change',
+          changed_at: '2024-01-15T12:00:00.000Z',
+          changed_by: 'admin-123',
+          changed_by_profile: { full_name: 'Admin User' }
+        },
+        {
+          id: 'audit-2',
+          timecard_id: mockTimecardId,
+          field_name: 'check_in_time',
+          old_value: '09:00',
+          new_value: '09:15',
+          action_type: 'admin_edit',
+          changed_at: '2024-01-15T11:00:00.000Z',
+          changed_by: 'admin-123',
+          changed_by_profile: { full_name: 'Admin User' }
+        },
+        {
+          id: 'audit-1',
+          timecard_id: mockTimecardId,
+          field_name: null,
+          old_value: 'draft',
+          new_value: 'submitted',
+          action_type: 'status_change',
+          changed_at: '2024-01-15T10:00:00.000Z',
+          changed_by: mockUserId,
+          changed_by_profile: { full_name: 'Test User' }
+        }
+      ];
+
+      let callCount = 0;
+      mockSupabaseClient.from.mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                single: vi.fn().mockResolvedValue({
+                  data: { id: mockUserId, role: 'admin' },
+                  error: null
+                })
+              }))
+            }))
+          };
+        } else if (callCount === 2) {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                single: vi.fn().mockResolvedValue({
+                  data: { id: mockTimecardId, user_id: mockUserId },
+                  error: null
+                })
+              }))
+            }))
+          };
+        } else {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                head: vi.fn().mockResolvedValue({
+                  count: 3,
+                  data: null,
+                  error: null
+                })
+              }))
+            }))
+          };
+        }
+      });
+
+      mockAuditLogService.getAuditLogs.mockResolvedValue(mockMixedAuditLogs);
+
+      const request = createMockRequest();
+      const response = await GET(request, { params: { id: mockTimecardId } });
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.data).toEqual(mockMixedAuditLogs);
+      
+      // Verify chronological ordering (most recent first)
+      expect(data.data[0].action_type).toBe('status_change');
+      expect(data.data[0].new_value).toBe('approved');
+      expect(data.data[1].action_type).toBe('admin_edit');
+      expect(data.data[2].action_type).toBe('status_change');
+      expect(data.data[2].new_value).toBe('submitted');
     });
   });
 

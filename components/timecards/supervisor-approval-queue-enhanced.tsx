@@ -13,6 +13,7 @@ import { Clock, Calendar, DollarSign, AlertTriangle, Check, X, Edit, Shield } fr
 import type { Timecard } from "@/lib/types"
 import { format } from "date-fns"
 import { canApproveTimecardsWithSettings } from "@/lib/role-utils"
+import { parseDate } from "@/lib/timezone-utils"
 
 interface SupervisorApprovalQueueEnhancedProps {
   timecards: Timecard[]
@@ -326,7 +327,7 @@ export function SupervisorApprovalQueueEnhanced({
                 />
                 <Calendar className="w-5 h-5 text-muted-foreground" />
                 <div>
-                  <CardTitle className="text-lg">{format(new Date(timecard.date), "EEEE, MMMM d, yyyy")}</CardTitle>
+                  <CardTitle className="text-lg">{parseDate(timecard.date) ? format(parseDate(timecard.date)!, "EEEE, MMMM d, yyyy") : "Invalid Date"}</CardTitle>
                   {timecard.profiles && (
                     <p className="text-sm text-muted-foreground">
                       {timecard.profiles.full_name}

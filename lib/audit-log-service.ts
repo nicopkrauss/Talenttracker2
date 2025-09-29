@@ -6,20 +6,21 @@
  * with payroll auditing requirements.
  */
 
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { type SupabaseClient } from '@supabase/supabase-js'
 import { v4 as uuidv4 } from 'uuid'
+import { parseDate } from './timezone-utils'
 
 // Core interfaces for audit log system
 export interface AuditLogEntry {
   id: string
   timecard_id: string
   change_id: string
-  field_name: string
+  field_name: string | null
   old_value: string | null
   new_value: string | null
   changed_by: string
   changed_at: Date
-  action_type: 'user_edit' | 'admin_edit' | 'rejection_edit'
+  action_type: 'user_edit' | 'admin_edit' | 'rejection_edit' | 'status_change'
   work_date: Date | null
   changed_by_profile?: {
     full_name: string
@@ -27,7 +28,7 @@ export interface AuditLogEntry {
 }
 
 export interface AuditLogFilter {
-  action_type?: ('user_edit' | 'admin_edit' | 'rejection_edit')[]
+  action_type?: ('user_edit' | 'admin_edit' | 'rejection_edit' | 'status_change')[]
   field_name?: string[]
   date_from?: Date
   date_to?: Date
@@ -40,7 +41,7 @@ export interface GroupedAuditEntry {
   change_id: string
   changed_at: Date
   changed_by: string
-  action_type: 'user_edit' | 'admin_edit' | 'rejection_edit'
+  action_type: 'user_edit' | 'admin_edit' | 'rejection_edit' | 'status_change'
   changes: AuditLogEntry[]
   changed_by_profile?: {
     full_name: string
@@ -85,7 +86,7 @@ export interface FieldChange {
 }
 
 export interface AuditLogResponse {
-  data: AuditLogEntry[] | GroupedAuditEntry[]
+  auditLogs: AuditLogEntry[] | GroupedAuditEntry[]
   pagination: {
     total: number
     limit: number
@@ -204,10 +205,39 @@ export class ValueFormatter {
   }
 
   /**
+   * Format status value for display, handling 'edited_draft' as 'draft (edited)'
+   */
+  static formatStatusValue(value: any): string {
+    if (!value) return '(empty)'
+    
+    const statusMap: Record<string, string> = {
+      'draft': 'Draft',
+      'edited_draft': 'Draft (edited)',
+      'submitted': 'Submitted',
+      'approved': 'Approved',
+      'rejected': 'Rejected'
+    }
+    return statusMap[value] || value
+  }
+
+  /**
+   * Format status change entry for display
+   */
+  static formatStatusChange(entry: AuditLogEntry): string {
+    const statusValue = this.formatStatusValue(entry.new_value)
+    return `Status changed to ${statusValue}`
+  }
+
+  /**
    * Format field name for display
    */
-  static formatFieldName(fieldName: string): string {
-    // Handle null/undefined field names
+  static formatFieldName(fieldName: string | null): string {
+    // Handle null field names (for status changes)
+    if (fieldName === null) {
+      return 'Status'
+    }
+    
+    // Handle undefined/empty field names
     if (!fieldName || typeof fieldName !== 'string') {
       console.warn('Invalid field name:', fieldName)
       return 'Unknown Field'
@@ -260,17 +290,28 @@ export class ValueFormatter {
       return '(empty)'
     }
 
-    // Handle time fields
-    if (fieldName.includes('time') && typeof value === 'string') {
+    // Handle time fields - show just the time in 12-hour format
+    if ((fieldName.includes('time') || fieldName.includes('check_in') || fieldName.includes('check_out') || fieldName.includes('break_start') || fieldName.includes('break_end')) && typeof value === 'string') {
       try {
-        const date = new Date(value)
-        return new Intl.DateTimeFormat('en-US', {
-          month: 'short',
-          day: 'numeric',
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true
-        }).format(date)
+        // Handle time-only values (HH:MM:SS format)
+        if (/^\d{2}:\d{2}:\d{2}/.test(value)) {
+          // For time-only values, create a date with today's date to format properly
+          const today = new Date().toISOString().split('T')[0]
+          const date = new Date(`${today}T${value}`)
+          return date.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          })
+        } else {
+          // For full datetime values, just show the time part
+          const date = new Date(value)
+          return date.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          })
+        }
       } catch {
         return value
       }
@@ -287,14 +328,8 @@ export class ValueFormatter {
     }
 
     // Handle status fields
-    if (fieldName === 'status') {
-      const statusMap: Record<string, string> = {
-        'draft': 'Draft',
-        'submitted': 'Submitted',
-        'approved': 'Approved',
-        'rejected': 'Rejected'
-      }
-      return statusMap[value] || value
+    if (fieldName === 'status' || fieldName === null) {
+      return this.formatStatusValue(value)
     }
 
     // Handle boolean fields
@@ -332,6 +367,57 @@ export class AuditLogService {
 
   constructor(supabaseClient: SupabaseClient<any>) {
     this.supabase = supabaseClient
+  }
+
+  /**
+   * Log status change for a timecard
+   */
+  async logStatusChange(
+    timecardId: string,
+    oldStatus: string | null,
+    newStatus: string,
+    changedBy: string
+  ): Promise<void> {
+    try {
+      // Generate a unique change_id for this status change
+      const changeId = uuidv4()
+      const timestamp = new Date()
+
+      // Create audit log entry for status change
+      const auditEntry = {
+        timecard_id: timecardId,
+        change_id: changeId,
+        field_name: null, // null for status changes
+        old_value: oldStatus,
+        new_value: newStatus,
+        changed_by: changedBy,
+        changed_at: timestamp.toISOString(),
+        action_type: 'status_change' as const,
+        work_date: null // null for status changes
+      }
+
+      // Insert audit entry
+      const { error } = await this.supabase
+        .from('timecard_audit_log')
+        .insert([auditEntry] as any)
+
+      if (error) {
+        throw new AuditLogError(
+          `Failed to log status change: ${error.message}`,
+          timecardId,
+          error
+        )
+      }
+    } catch (error) {
+      if (error instanceof AuditLogError) {
+        throw error
+      }
+      throw new AuditLogError(
+        'Unexpected error during status change logging',
+        timecardId,
+        error instanceof Error ? error : new Error(String(error))
+      )
+    }
   }
 
   /**
@@ -446,7 +532,7 @@ export class AuditLogService {
       return (data || []).map((entry: any) => ({
         ...entry,
         changed_at: new Date(entry.changed_at),
-        work_date: entry.work_date ? new Date(entry.work_date) : null
+        work_date: entry.work_date ? parseDate(entry.work_date) : null
       }))
     } catch (error) {
       if (error instanceof AuditLogError) {

@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Clock, AlertTriangle, CheckCircle, XCircle } from "lucide-react"
 import { format } from "date-fns"
 import type { Timecard } from "@/lib/types"
+import { parseDate } from "@/lib/timezone-utils"
 
 interface MissingBreakData {
   timecardId: string
@@ -76,7 +77,7 @@ export function MissingBreakResolutionModal({
                     <Clock className="w-4 h-4 text-muted-foreground" />
                     <div>
                       <p className="font-medium">
-                        {format(new Date(missingBreak.date), "EEEE, MMMM d, yyyy")}
+                        {parseDate(missingBreak.date) ? format(parseDate(missingBreak.date)!, "EEEE, MMMM d, yyyy") : "Invalid Date"}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         {missingBreak.totalHours.toFixed(1)} hours worked

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Clock, Calendar, AlertTriangle, ArrowLeft, Check, X, Edit, Loader2, Save, RotateCcw, AlertCircle } from "lucide-react"
+import { Clock, Calendar, AlertTriangle, ArrowLeft, Check, X, Edit, Loader2, Save, RotateCcw, AlertCircle, FileText, Bug } from "lucide-react"
 import type { Timecard } from "@/lib/types"
 import { format } from "date-fns"
 import Link from "next/link"
@@ -48,6 +48,11 @@ export default function TimecardDetailPage() {
   const [showAdminEditDialog, setShowAdminEditDialog] = useState(false)
   const [showEditReasonDialog, setShowEditReasonDialog] = useState(false)
   const [showEditReturnDialog, setShowEditReturnDialog] = useState(false)
+  
+  // Admin notes states
+  const [isEditingAdminNotes, setIsEditingAdminNotes] = useState(false)
+  const [adminNotesValue, setAdminNotesValue] = useState('')
+  const [savingAdminNotes, setSavingAdminNotes] = useState(false)
   const [comments, setComments] = useState("")
   const [editReason, setEditReason] = useState("")
   
@@ -57,6 +62,9 @@ export default function TimecardDetailPage() {
   const [showReasonDialog, setShowReasonDialog] = useState(false)
   const [rejectionReason, setRejectionReason] = useState("")
   const [loadingRejection, setLoadingRejection] = useState(false)
+  
+  // Debug mode state
+  const [showDebugInfo, setShowDebugInfo] = useState(false)
   
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -92,6 +100,12 @@ export default function TimecardDetailPage() {
       fetchTimecard()
       fetchGlobalSettings()
     }
+    
+    // Check for debug mode in URL
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      setShowDebugInfo(urlParams.get('debug') === 'true')
+    }
   }, [params.id])
 
   // Initialize calculated values when timecard loads
@@ -104,6 +118,13 @@ export default function TimecardDetailPage() {
       })
     }
   }, [timecard, isEditing])
+
+  // Initialize admin notes value when timecard loads
+  useEffect(() => {
+    if (timecard) {
+      setAdminNotesValue(timecard.admin_notes || '')
+    }
+  }, [timecard])
 
   const fetchGlobalSettings = async () => {
     try {
@@ -141,6 +162,10 @@ export default function TimecardDetailPage() {
       }
 
       setTimecard(timecardData)
+      
+      // Note: Rejection mode should only be used when actively rejecting a timecard,
+      // not when viewing an already rejected timecard. For rejected timecards,
+      // we use showRejectedFields={true} to highlight the rejected fields instead.
     } catch (error) {
       const errorMessage = `Failed to fetch timecard: ${error instanceof Error ? error.message : 'Unknown error'}`
       console.error("Error fetching timecard:", error)
@@ -337,6 +362,46 @@ export default function TimecardDetailPage() {
     } catch (error) {
       console.error('Error calculating timecard values:', error)
     }
+  }
+
+  // Admin notes functions
+  const saveAdminNotes = async () => {
+    if (!timecard) return
+    
+    setSavingAdminNotes(true)
+    try {
+      const response = await fetch('/api/timecards/admin-notes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          timecardId: timecard.id,
+          adminNotes: adminNotesValue.trim()
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to save admin notes')
+      }
+
+      // Update the timecard object
+      if (timecard) {
+        timecard.admin_notes = adminNotesValue.trim()
+      }
+      setIsEditingAdminNotes(false)
+    } catch (error) {
+      console.error('Error saving admin notes:', error)
+      // Reset to original value on error
+      setAdminNotesValue(timecard?.admin_notes || '')
+    } finally {
+      setSavingAdminNotes(false)
+    }
+  }
+
+  const cancelAdminNotesEdit = () => {
+    setAdminNotesValue(timecard?.admin_notes || '')
+    setIsEditingAdminNotes(false)
   }
 
   const startEditing = () => {
@@ -650,6 +715,18 @@ export default function TimecardDetailPage() {
               >
                 {getStatusText(timecard.status)}
               </Badge>
+              {/* Debug Toggle - Only show for admin users */}
+              {canApprove && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowDebugInfo(!showDebugInfo)}
+                  className={`gap-2 ${showDebugInfo ? 'bg-purple-100 dark:bg-purple-950/20 text-purple-600 dark:text-purple-400' : ''}`}
+                >
+                  <Bug className="w-4 h-4" />
+                  Debug
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -669,6 +746,7 @@ export default function TimecardDetailPage() {
           selectedFields={selectedFields}
           onFieldToggle={toggleFieldSelection}
           showRejectedFields={timecard.status === 'rejected'}
+          showDebugInfo={showDebugInfo}
           actionButtons={
             /* Action Buttons - Right to Left: Approve, Reject, Edit & Return */
             isEditing ? (
@@ -779,17 +857,87 @@ export default function TimecardDetailPage() {
           }
         />
 
-        {/* Audit Trail Section - Below daily time breakdown */}
+        {/* Change Log */}
         <AuditTrailSection 
           timecardId={timecard.id}
           className="w-full"
         />
 
-        {/* Approval Information */}
+        {/* Admin Notes Section - Only visible to authorized users */}
+        {canApprove && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <FileText className="w-5 h-5 mr-2" />
+                Admin Notes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isEditingAdminNotes ? (
+                <div className="space-y-3">
+                  <Textarea
+                    value={adminNotesValue}
+                    onChange={(e) => setAdminNotesValue(e.target.value)}
+                    placeholder="Enter admin notes..."
+                    rows={4}
+                    disabled={savingAdminNotes}
+                  />
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={saveAdminNotes} 
+                      size="sm" 
+                      className="gap-2"
+                      disabled={savingAdminNotes}
+                    >
+                      <Save className="h-4 w-4" />
+                      {savingAdminNotes ? 'Saving...' : 'Save'}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={cancelAdminNotesEdit}
+                      size="sm"
+                      className="gap-2"
+                      disabled={savingAdminNotes}
+                    >
+                      <X className="h-4 w-4" />
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="min-h-[100px] p-3 border rounded-md bg-muted/50">
+                    {timecard.admin_notes ? (
+                      <span className="whitespace-pre-wrap">{timecard.admin_notes}</span>
+                    ) : (
+                      <span className="text-muted-foreground italic">
+                        No admin notes provided. Click edit to add notes.
+                      </span>
+                    )}
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsEditingAdminNotes(true)}
+                    size="sm"
+                    disabled={savingAdminNotes}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Notes
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Status Information */}
         {(timecard.approved_at || timecard.submitted_at) && (
           <Card>
             <CardHeader>
-              <CardTitle>Status Information</CardTitle>
+              <CardTitle className="flex items-center">
+                <Clock className="w-5 h-5 mr-2" />
+                Status Information
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {timecard.submitted_at && (

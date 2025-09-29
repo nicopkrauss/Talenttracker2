@@ -144,17 +144,18 @@ export async function POST(request: NextRequest) {
     try {
       const auditLogService = new AuditLogService(supabase)
       
-      // Create audit log entry for the status change
-      const statusChange = {
-        fieldName: 'status',
-        oldValue: currentTimecard.status,
-        newValue: 'rejected'
-      }
+      // Log status change using logStatusChange method (requirement 2.2, 3.3)
+      await auditLogService.logStatusChange(
+        timecardId,
+        currentTimecard.status, // Should be 'submitted'
+        'rejected',
+        user.id
+      )
 
-      // Add rejection reason change if comments were provided
-      const changes = [statusChange]
+      // Log other field changes using recordChanges
+      const otherChanges = []
       if (comments && comments !== currentTimecard.rejection_reason) {
-        changes.push({
+        otherChanges.push({
           fieldName: 'rejection_reason',
           oldValue: currentTimecard.rejection_reason,
           newValue: comments
@@ -163,19 +164,23 @@ export async function POST(request: NextRequest) {
 
       // Add rejected fields change if provided
       if (rejectedFields && rejectedFields.length > 0) {
-        changes.push({
+        otherChanges.push({
           fieldName: 'rejected_fields',
           oldValue: currentTimecard.rejected_fields || [],
           newValue: rejectedFields
         })
       }
 
-      await auditLogService.recordChanges(
-        timecardId,
-        changes,
-        user.id,
-        'rejection_edit' // Use rejection_edit to track rejection actions
-      )
+      // Record other field changes if any
+      if (otherChanges.length > 0) {
+        await auditLogService.recordChanges(
+          timecardId,
+          otherChanges,
+          user.id,
+          'rejection_edit', // Use rejection_edit to track rejection actions
+          new Date(currentTimecard.period_start_date)
+        )
+      }
     } catch (auditError) {
       console.error('Failed to create audit log for rejection:', auditError)
       // Don't fail the rejection if audit logging fails, but log the error

@@ -11,6 +11,7 @@ import type { Timecard } from "@/lib/types"
 import { format } from "date-fns"
 import { getRoleColor, getRoleDisplayName } from "@/lib/role-utils"
 import { DesktopTimecardGrid } from "./desktop-timecard-grid"
+import { parseDate, formatDateSafe } from "@/lib/timezone-utils"
 
 interface MultiDayTimecardDisplayProps {
   timecard: Timecard
@@ -53,15 +54,13 @@ export function MultiDayTimecardDisplay({
 
   // Helper function to safely format dates and times
   const safeFormat = (dateString: string | null | undefined, formatString: string, fallback: string = 'Invalid') => {
-    if (!dateString) return fallback
-    const date = new Date(dateString)
-    return isNaN(date.getTime()) ? fallback : format(date, formatString)
+    return formatDateSafe(dateString, formatString, fallback)
   }
 
   // Use the new multi-day fields from the API
-  const isMultiDay = timecard.is_multi_day || false
-  const workingDays = timecard.working_days || 1
   const dailyEntries = timecard.daily_entries || []
+  const isMultiDay = dailyEntries.length > 1
+  const workingDays = timecard.working_days || dailyEntries.length || 1
 
   // Helper function to check if a field is rejected
   const isFieldRejected = (fieldId: string) => {
@@ -81,154 +80,7 @@ export function MultiDayTimecardDisplay({
     return fieldEdits[fieldId] !== undefined ? fieldEdits[fieldId] : originalValue
   }
 
-  // EditableTimeField component for mobile layout
-  const EditableTimeField = ({ 
-    fieldId, 
-    originalValue, 
-    label 
-  }: { 
-    fieldId: string
-    originalValue: string | null | undefined
-    label: string 
-  }) => {
-    const currentValue = getFieldValue(fieldId, originalValue)
-    const isSelected = isFieldSelected(fieldId)
-    const isEdited = isFieldEdited(fieldId)
-    const isEditable = isEditMode && isSelected
 
-    // Debug logging to help troubleshoot (can be removed in production)
-    // if (isRejectionMode) {
-    //   console.log(`Field ${fieldId}:`, {
-    //     isRejectionMode,
-    //     isEditMode,
-    //     isSelected,
-    //     isEditable,
-    //     selectedFields,
-    //     fieldEdits: Object.keys(fieldEdits)
-    //   })
-    // }
-
-
-
-    const formatTime = (timeString: string | null) => {
-      if (!timeString) return "Not Recorded"
-      return new Date(timeString).toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit'
-      })
-    }
-
-    const formatTimeForInput = (timeString: string | null) => {
-      if (!timeString) return ""
-      const date = new Date(timeString)
-      return date.toTimeString().slice(0, 5) // HH:MM format
-    }
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const timeValue = e.target.value
-      if (onFieldEdit) {
-        if (timeValue) {
-          // Convert HH:MM to full datetime string
-          const today = new Date()
-          const [hours, minutes] = timeValue.split(':')
-          today.setHours(parseInt(hours), parseInt(minutes), 0, 0)
-          onFieldEdit(fieldId, today.toISOString())
-        } else {
-          onFieldEdit(fieldId, null)
-        }
-      }
-    }
-
-    const getFieldStyles = () => {
-      let baseStyles = "p-3 rounded-lg border transition-all "
-      
-      if (isRejectionMode) {
-        if (isSelected) {
-          if (isEditable) {
-            // Field is selected and in edit mode - make it very obvious
-            baseStyles += "border-2 border-blue-500 bg-blue-100 dark:bg-blue-900/30 cursor-text shadow-lg "
-          } else if (isEdited) {
-            // Field has been edited but not currently editable
-            baseStyles += "border-blue-500 bg-blue-50 dark:bg-blue-950/20 cursor-pointer "
-          } else {
-            // Field is selected but not in edit mode
-            baseStyles += "border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer "
-          }
-        } else {
-          if (originalValue) {
-            baseStyles += "border-border bg-card hover:border-white cursor-pointer "
-          } else {
-            baseStyles += "border-dashed border-muted-foreground/30 bg-muted/30 hover:border-white cursor-pointer "
-          }
-        }
-      } else {
-        if (originalValue) {
-          baseStyles += "border-border bg-card "
-        } else {
-          baseStyles += "border-dashed border-muted-foreground/30 bg-muted/30 "
-        }
-      }
-
-      return baseStyles
-    }
-
-    return (
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-muted-foreground">{label}</label>
-        <div
-          className={getFieldStyles()}
-          onClick={(e) => {
-            // Prevent any action if field is editable
-            if (isEditable) {
-              e.preventDefault()
-              e.stopPropagation()
-              return false
-            }
-            // Only handle click if field is not editable
-            handleFieldClick(fieldId)
-          }}
-        >
-          {isEditable ? (
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Edit3 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">
-                  🎯 EDITING MODE ACTIVE - FIELD IS EDITABLE
-                </span>
-              </div>
-
-              <Input
-                type="time"
-                value={formatTimeForInput(currentValue)}
-                onChange={handleInputChange}
-                onClick={(e) => e.stopPropagation()}
-                className="border-2 border-blue-500 p-2 h-auto bg-white dark:bg-gray-900 text-lg font-semibold focus:ring-2 focus:ring-blue-500"
-                autoFocus
-              />
-            </div>
-          ) : (
-            <div>
-              {isEdited && (
-                <div className="text-xs text-muted-foreground line-through mb-1">
-                  {formatTime(originalValue)}
-                </div>
-              )}
-              <p className={`text-lg font-semibold ${
-                isEdited 
-                  ? 'text-blue-600 dark:text-blue-400' 
-                  : originalValue 
-                    ? 'text-foreground' 
-                    : 'text-muted-foreground'
-              }`}>
-                {formatTime(currentValue)}
-              </p>
-
-            </div>
-          )}
-        </div>
-      </div>
-    )
-  }
 
   // Helper function to check if all fields for a day are rejected
   const isDayRejected = (dayIndex: number) => {
@@ -518,17 +370,19 @@ export function MultiDayTimecardDisplay({
         )}
 
         {/* Time Details Section - Desktop uses grid, mobile uses existing format */}
-        {timecard.check_in_time && timecard.check_out_time && (!showBreakdownToggle || isExpanded) && (
+        {(timecard.check_in_time || timecard.daily_entries?.length > 0) && (!showBreakdownToggle || isExpanded) && (
           <div className={showBreakdownToggle ? "pt-4" : ""}>
             {/* Desktop: Use DesktopTimecardGrid (same as approve tab) */}
             <div className="hidden lg:block">
               <DesktopTimecardGrid
                 timecard={timecard}
-                isRejectionMode={false}
+                isRejectionMode={isRejectionMode}
                 selectedFields={[]}
                 onFieldToggle={() => { }}
                 showHeader={false}
                 showRejectedFields={showRejectedFields}
+                fieldEdits={fieldEdits}
+                onFieldEdit={onFieldEdit}
               />
             </div>
 
@@ -554,6 +408,12 @@ export function MultiDayTimecardDisplay({
                     isRejectionMode={isRejectionMode}
                     fieldEdits={fieldEdits}
                     onFieldEdit={onFieldEdit || (() => {})}
+                    allFieldValues={{
+                      check_in_time: isMultiDay ? dailyEntries[0]?.check_in_time : timecard.check_in_time,
+                      break_start_time: isMultiDay ? dailyEntries[0]?.break_start_time : timecard.break_start_time,
+                      break_end_time: isMultiDay ? dailyEntries[0]?.break_end_time : timecard.break_end_time,
+                      check_out_time: isMultiDay ? dailyEntries[0]?.check_out_time : timecard.check_out_time
+                    }}
                   />
                   <SimpleEditableField
                     fieldId={isMultiDay ? getFieldId('break_start_time', 0) : "break_start_time"}
@@ -562,6 +422,12 @@ export function MultiDayTimecardDisplay({
                     isRejectionMode={isRejectionMode}
                     fieldEdits={fieldEdits}
                     onFieldEdit={onFieldEdit || (() => {})}
+                    allFieldValues={{
+                      check_in_time: isMultiDay ? dailyEntries[0]?.check_in_time : timecard.check_in_time,
+                      break_start_time: isMultiDay ? dailyEntries[0]?.break_start_time : timecard.break_start_time,
+                      break_end_time: isMultiDay ? dailyEntries[0]?.break_end_time : timecard.break_end_time,
+                      check_out_time: isMultiDay ? dailyEntries[0]?.check_out_time : timecard.check_out_time
+                    }}
                   />
                   <SimpleEditableField
                     fieldId={isMultiDay ? getFieldId('break_end_time', 0) : "break_end_time"}
@@ -570,6 +436,12 @@ export function MultiDayTimecardDisplay({
                     isRejectionMode={isRejectionMode}
                     fieldEdits={fieldEdits}
                     onFieldEdit={onFieldEdit || (() => {})}
+                    allFieldValues={{
+                      check_in_time: isMultiDay ? dailyEntries[0]?.check_in_time : timecard.check_in_time,
+                      break_start_time: isMultiDay ? dailyEntries[0]?.break_start_time : timecard.break_start_time,
+                      break_end_time: isMultiDay ? dailyEntries[0]?.break_end_time : timecard.break_end_time,
+                      check_out_time: isMultiDay ? dailyEntries[0]?.check_out_time : timecard.check_out_time
+                    }}
                   />
                   <SimpleEditableField
                     fieldId={isMultiDay ? getFieldId('check_out_time', 0) : "check_out_time"}
@@ -578,6 +450,12 @@ export function MultiDayTimecardDisplay({
                     isRejectionMode={isRejectionMode}
                     fieldEdits={fieldEdits}
                     onFieldEdit={onFieldEdit || (() => {})}
+                    allFieldValues={{
+                      check_in_time: isMultiDay ? dailyEntries[0]?.check_in_time : timecard.check_in_time,
+                      break_start_time: isMultiDay ? dailyEntries[0]?.break_start_time : timecard.break_start_time,
+                      break_end_time: isMultiDay ? dailyEntries[0]?.break_end_time : timecard.break_end_time,
+                      check_out_time: isMultiDay ? dailyEntries[0]?.check_out_time : timecard.check_out_time
+                    }}
                   />
                 </div>
               </div>
@@ -611,6 +489,12 @@ export function MultiDayTimecardDisplay({
                             isRejectionMode={isRejectionMode}
                             fieldEdits={fieldEdits}
                             onFieldEdit={onFieldEdit || (() => {})}
+                            allFieldValues={{
+                              check_in_time: entry.check_in_time,
+                              break_start_time: entry.break_start_time,
+                              break_end_time: entry.break_end_time,
+                              check_out_time: entry.check_out_time
+                            }}
                           />
                           <SimpleEditableField
                             fieldId={getFieldId('break_start_time', index + 1)}
@@ -619,6 +503,12 @@ export function MultiDayTimecardDisplay({
                             isRejectionMode={isRejectionMode}
                             fieldEdits={fieldEdits}
                             onFieldEdit={onFieldEdit || (() => {})}
+                            allFieldValues={{
+                              check_in_time: entry.check_in_time,
+                              break_start_time: entry.break_start_time,
+                              break_end_time: entry.break_end_time,
+                              check_out_time: entry.check_out_time
+                            }}
                           />
                           <SimpleEditableField
                             fieldId={getFieldId('break_end_time', index + 1)}
@@ -627,6 +517,12 @@ export function MultiDayTimecardDisplay({
                             isRejectionMode={isRejectionMode}
                             fieldEdits={fieldEdits}
                             onFieldEdit={onFieldEdit || (() => {})}
+                            allFieldValues={{
+                              check_in_time: entry.check_in_time,
+                              break_start_time: entry.break_start_time,
+                              break_end_time: entry.break_end_time,
+                              check_out_time: entry.check_out_time
+                            }}
                           />
                           <SimpleEditableField
                             fieldId={getFieldId('check_out_time', index + 1)}
@@ -635,6 +531,12 @@ export function MultiDayTimecardDisplay({
                             isRejectionMode={isRejectionMode}
                             fieldEdits={fieldEdits}
                             onFieldEdit={onFieldEdit || (() => {})}
+                            allFieldValues={{
+                              check_in_time: entry.check_in_time,
+                              break_start_time: entry.break_start_time,
+                              break_end_time: entry.break_end_time,
+                              check_out_time: entry.check_out_time
+                            }}
                           />
                         </div>
                       </div>

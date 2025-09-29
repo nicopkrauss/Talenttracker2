@@ -1,3 +1,5 @@
+import { format } from "date-fns"
+
 /**
  * Timezone utility functions for handling datetime-local inputs
  * 
@@ -96,4 +98,48 @@ export function getCurrentDatetimeLocal(): string {
   const timezoneOffset = now.getTimezoneOffset()
   const localDate = new Date(now.getTime() - (timezoneOffset * 60 * 1000))
   return localDate.toISOString().slice(0, 16)
+}
+
+/**
+ * Safely parse a date string that might be date-only (YYYY-MM-DD) or full datetime
+ * This prevents timezone shifting issues with date-only values
+ */
+export function parseDate(dateString: string | null | undefined): Date | null {
+  if (!dateString) return null
+  
+  try {
+    // Check if it's a date-only format (YYYY-MM-DD)
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      // For date-only strings, parse as local date to avoid timezone shifting
+      const [year, month, day] = dateString.split('-').map(Number)
+      return new Date(year, month - 1, day) // month is 0-indexed
+    }
+    
+    // For full datetime strings, parse normally
+    return new Date(dateString)
+  } catch (error) {
+    console.error('Error parsing date:', error, 'for value:', dateString)
+    return null
+  }
+}
+
+/**
+ * Format a date string safely, handling both date-only and datetime formats
+ */
+export function formatDateSafe(dateString: string | null | undefined, formatString: string, fallback: string = "Invalid Date"): string {
+  const date = parseDate(dateString)
+  if (!date || isNaN(date.getTime())) return fallback
+  
+  // Use date-fns format if available, otherwise use basic formatting
+  if (typeof format !== 'undefined') {
+    return format(date, formatString)
+  }
+  
+  // Fallback formatting
+  return date.toLocaleDateString('en-US', {
+    weekday: formatString.includes('EEEE') ? 'long' : formatString.includes('EEE') ? 'short' : undefined,
+    year: formatString.includes('yyyy') ? 'numeric' : undefined,
+    month: formatString.includes('MMMM') ? 'long' : formatString.includes('MMM') ? 'short' : formatString.includes('MM') ? '2-digit' : undefined,
+    day: formatString.includes('dd') ? '2-digit' : formatString.includes('d') ? 'numeric' : undefined
+  })
 }

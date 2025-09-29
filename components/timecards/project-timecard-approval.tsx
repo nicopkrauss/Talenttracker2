@@ -14,6 +14,7 @@ import type { Timecard } from "@/lib/types"
 import { MultiDayTimecardDisplay } from "@/components/timecards/multi-day-timecard-display"
 import { DesktopTimecardGrid } from "@/components/timecards/desktop-timecard-grid"
 import { getRoleColor, getRoleDisplayName } from "@/lib/role-utils"
+import { parseDate } from "@/lib/timezone-utils"
 
 interface Project {
   id: string
@@ -59,32 +60,56 @@ export function ProjectTimecardApproval({
 
   const fetchSubmittedTimecards = async () => {
     try {
-      const response = await fetch(`/api/timecards-v2?status=submitted&project_id=${projectId}`)
-      const result = await response.json()
-
+      setError(null) // Clear any previous errors
+      
+      const response = await fetch(`/api/timecards/submitted?project_id=${projectId}`)
+      
       if (!response.ok) {
-        console.error("Error fetching submitted timecards for approval:", result.error)
+        // Try to get error details from response
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`
+        try {
+          const errorResult = await response.json()
+          errorMessage = errorResult.error || errorMessage
+          console.error("API Error Details:", errorResult)
+        } catch (parseError) {
+          console.error("Could not parse error response:", parseError)
+        }
+        
+        console.error("Error fetching submitted timecards for approval:", errorMessage)
+        setError(`Failed to fetch timecards: ${errorMessage}`)
         setSubmittedTimecards([])
         return
       }
 
+      const result = await response.json()
       const data = result.data || []
+      console.log(`Loaded ${data.length} submitted timecards using ${result.structure} structure`)
       setSubmittedTimecards(data)
 
       // Fetch team assignments to get project roles
-      const teamResponse = await fetch(`/api/projects/${projectId}/team-assignments`)
-      const teamResult = await teamResponse.json()
-      const assignments = teamResponse.ok ? teamResult.assignments || [] : []
-      setTeamAssignments(assignments)
+      try {
+        const teamResponse = await fetch(`/api/projects/${projectId}/team-assignments`)
+        if (teamResponse.ok) {
+          const teamResult = await teamResponse.json()
+          const assignments = teamResult.assignments || []
+          setTeamAssignments(assignments)
+        } else {
+          console.warn("Could not fetch team assignments:", teamResponse.status)
+          setTeamAssignments([])
+        }
+      } catch (teamError) {
+        console.warn("Error fetching team assignments:", teamError)
+        setTeamAssignments([])
+      }
 
       // Reset current index if it's out of bounds
       if (data.length > 0 && currentApprovalIndex >= data.length) {
         setCurrentApprovalIndex(0)
       }
     } catch (error) {
-      console.error("Error fetching submitted timecards:", error)
+      console.error("Network error fetching submitted timecards:", error)
       setSubmittedTimecards([])
-      setError("Failed to load submitted timecards")
+      setError(`Network error: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setLoading(false)
     }
@@ -114,19 +139,118 @@ export function ProjectTimecardApproval({
     setFieldEdits({})
   }
 
+  // Helper function to get the original value for a field
+  const getOriginalValue = (fieldId: string) => {
+    if (fieldId.includes('_day_')) {
+      const parts = fieldId.split('_day_')
+      const dayIndex = parseInt(parts[1])
+      const fieldName = parts[0]
+
+      if (!isNaN(dayIndex) && currentTimecard?.daily_entries && currentTimecard.daily_entries[dayIndex]) {
+        return currentTimecard.daily_entries[dayIndex][fieldName as keyof typeof currentTimecard.daily_entries[0]]
+      }
+    } else {
+      return currentTimecard[fieldId as keyof typeof currentTimecard]
+    }
+    return null
+  }
+
+  // Helper function to normalize time values for comparison
+  // Handle both simple time strings and ISO format for backward compatibility
+  const normalizeTimeValue = (timeValue: string | null | undefined): string | null => {
+    if (!timeValue) return null
+    
+    try {
+      // If it's already a simple time string (HH:MM:SS), return as-is
+      if (timeValue.includes(':') && !timeValue.includes('T')) {
+        // Ensure it's in HH:MM:SS format
+        const parts = timeValue.split(':')
+        if (parts.length >= 2) {
+          const hours = parts[0].padStart(2, '0')
+          const minutes = parts[1].padStart(2, '0')
+          const seconds = parts[2] ? parts[2].padStart(2, '0') : '00'
+          return `${hours}:${minutes}:${seconds}`
+        }
+      }
+      
+      // If it's an ISO string, parse and extract time
+      const date = new Date(timeValue)
+      if (isNaN(date.getTime())) return timeValue.trim()
+      
+      // Extract only the time portion for comparison
+      const hours = date.getHours().toString().padStart(2, '0')
+      const minutes = date.getMinutes().toString().padStart(2, '0')
+      const seconds = date.getSeconds().toString().padStart(2, '0')
+      return `${hours}:${minutes}:${seconds}`
+    } catch {
+      return timeValue.trim()
+    }
+  }
+
   const handleFieldEdit = (fieldId: string, newValue: any) => {
+    console.log(`🔧 handleFieldEdit called:`, {
+      fieldId,
+      newValue,
+      newValueType: typeof newValue,
+      currentFieldEdits: fieldEdits
+    })
+    
     setFieldEdits(prev => {
+      let newFieldEdits
       if (newValue === undefined) {
         // Remove the field from edits if value is undefined (matches original)
         const { [fieldId]: removed, ...rest } = prev
-        return rest
+        newFieldEdits = rest
+        console.log(`🗑️ Removing field edit (undefined):`, {
+          fieldId,
+          removedValue: removed,
+          newFieldEdits
+        })
       } else {
-        // Add or update the field edit
-        return {
-          ...prev,
-          [fieldId]: newValue
+        // Get the original value for comparison
+        const originalValue = getOriginalValue(fieldId)
+        
+        // Compare normalized values to determine if they match
+        const normalizedNew = normalizeTimeValue(newValue)
+        const normalizedOriginal = normalizeTimeValue(originalValue as string)
+        
+        console.log(`🔍 Comparing values:`, {
+          fieldId,
+          originalValue,
+          originalValueType: typeof originalValue,
+          newValue,
+          newValueType: typeof newValue,
+          normalizedOriginal,
+          normalizedNew,
+          valuesMatch: normalizedNew === normalizedOriginal
+        })
+        
+        if (normalizedNew === normalizedOriginal) {
+          // Values match - remove the field from edits
+          const { [fieldId]: removed, ...rest } = prev
+          newFieldEdits = rest
+          console.log(`🗑️ Removing field edit (values match):`, {
+            fieldId,
+            removedValue: removed,
+            newFieldEdits
+          })
+        } else {
+          // Values differ - add or update the field edit
+          newFieldEdits = {
+            ...prev,
+            [fieldId]: newValue
+          }
+          console.log(`📝 Adding/updating field edit:`, {
+            fieldId,
+            originalValue,
+            newValue,
+            normalizedOriginal,
+            normalizedNew,
+            newFieldEdits
+          })
         }
       }
+      return newFieldEdits
     })
   }
 
@@ -144,6 +268,13 @@ export function ProjectTimecardApproval({
       const rejectedFields = Object.keys(fieldEdits) // Fields that were edited are the rejected fields
 
       if (hasEdits) {
+        console.log('🔧 Rejection with edits:', {
+          timecardId: currentTimecard.id,
+          fieldEdits,
+          rejectedFields,
+          rejectionReason: rejectionReason.trim()
+        })
+
         // Apply edits and reject the timecard
         const response = await fetch('/api/timecards/edit', {
           method: 'POST',
@@ -164,9 +295,19 @@ export function ProjectTimecardApproval({
 
         if (!response.ok) {
           const errorData = await response.json()
+          console.error('Edit API error:', errorData)
           throw new Error(errorData.error || 'Failed to edit and reject timecard')
         }
+
+        const result = await response.json()
+        console.log('✅ Edit API success:', result)
       } else {
+        console.log('🔧 Rejection without edits:', {
+          timecardId: currentTimecard.id,
+          rejectionReason: rejectionReason.trim(),
+          rejectedFields
+        })
+
         // Standard rejection without edits
         const response = await fetch('/api/timecards/reject', {
           method: 'POST',
@@ -182,8 +323,12 @@ export function ProjectTimecardApproval({
 
         if (!response.ok) {
           const errorData = await response.json()
+          console.error('Reject API error:', errorData)
           throw new Error(errorData.error || 'Failed to reject timecard')
         }
+
+        const result = await response.json()
+        console.log('✅ Reject API success:', result)
       }
 
       // Reset rejection state and refresh data
@@ -234,10 +379,10 @@ export function ProjectTimecardApproval({
 
       if (!isNaN(dayIndex) && currentTimecard?.daily_entries && currentTimecard.daily_entries[dayIndex]) {
         const entry = currentTimecard.daily_entries[dayIndex]
-        const date = new Date(entry.work_date).toLocaleDateString('en-US', {
+        const date = parseDate(entry.work_date)?.toLocaleDateString('en-US', {
           month: 'short',
           day: 'numeric'
-        })
+        }) || 'Invalid'
         return `${date} - ${fieldMap[baseField] || baseField}`
       }
 
@@ -559,27 +704,35 @@ export function ProjectTimecardApproval({
                 <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
                   <div className="space-y-2">
                     {Object.entries(fieldEdits).map(([fieldId, newValue]) => {
-                      const originalValue = (() => {
-                        if (fieldId.includes('_day_')) {
-                          const parts = fieldId.split('_day_')
-                          const dayIndex = parseInt(parts[1])
-                          const fieldName = parts[0]
-
-                          if (!isNaN(dayIndex) && currentTimecard?.daily_entries && currentTimecard.daily_entries[dayIndex]) {
-                            return currentTimecard.daily_entries[dayIndex][fieldName as keyof typeof currentTimecard.daily_entries[0]]
-                          }
-                        } else {
-                          return currentTimecard[fieldId as keyof typeof currentTimecard]
-                        }
-                        return null
-                      })()
+                      const originalValue = getOriginalValue(fieldId)
 
                       const formatTime = (timeString: string | null) => {
                         if (!timeString) return "Not Recorded"
-                        return new Date(timeString).toLocaleTimeString('en-US', {
-                          hour: 'numeric',
-                          minute: '2-digit'
-                        })
+                        
+                        try {
+                          // Handle both full datetime and simple time formats
+                          let date: Date;
+                          
+                          if (timeString.includes('T')) {
+                            // Full datetime string
+                            date = new Date(timeString)
+                          } else if (timeString.includes(':')) {
+                            // Simple time format (HH:MM:SS) - combine with today's date
+                            const today = new Date().toISOString().split('T')[0]
+                            date = new Date(`${today}T${timeString}`)
+                          } else {
+                            return "Not Recorded"
+                          }
+                          
+                          if (isNaN(date.getTime())) return "Not Recorded"
+                          
+                          return date.toLocaleTimeString('en-US', {
+                            hour: 'numeric',
+                            minute: '2-digit'
+                          })
+                        } catch {
+                          return "Not Recorded"
+                        }
                       }
 
                       return (
@@ -594,6 +747,9 @@ export function ProjectTimecardApproval({
                           <span className="font-medium text-blue-600 dark:text-blue-400">
                             {formatTime(newValue)}
                           </span>
+                          <div className="text-xs text-muted-foreground mt-1 font-mono">
+                            Raw: {originalValue} → {newValue}
+                          </div>
                         </div>
                       )
                     })}

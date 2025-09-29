@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { withTimecardAuditLogging, type TimecardAuditContext } from '@/lib/timecard-audit-integration'
+import { AuditLogService } from '@/lib/audit-log-service'
 import { TIMECARD_HEADERS_SELECT } from '@/lib/timecard-columns'
 
 export async function POST(request: NextRequest) {
@@ -60,28 +61,34 @@ export async function POST(request: NextRequest) {
       workDate: new Date(timecard.period_start_date)
     }
 
-    // Update timecard status to submitted with audit logging
-    await withTimecardAuditLogging(
-      supabase,
-      auditContext,
-      async () => {
-        const { error } = await supabase
-          .from('timecard_headers')
-          .update({
-            status: 'submitted',
-            submitted_at: new Date().toISOString(),
-          })
-          .eq('id', timecardId)
-          .eq('user_id', user.id) // Ensure user can only submit their own timecards
+    // Update timecard status to submitted
+    const { error } = await supabase
+      .from('timecard_headers')
+      .update({
+        status: 'submitted',
+        submitted_at: new Date().toISOString(),
+      })
+      .eq('id', timecardId)
+      .eq('user_id', user.id) // Ensure user can only submit their own timecards
 
-        if (error) {
-          console.error('Error submitting timecard:', error)
-          throw new Error('Failed to submit timecard')
-        }
+    if (error) {
+      console.error('Error submitting timecard:', error)
+      throw new Error('Failed to submit timecard')
+    }
 
-        return true
-      }
-    )
+    // Create status change audit log entry
+    try {
+      const auditLogService = new AuditLogService(supabase)
+      await auditLogService.logStatusChange(
+        timecardId,
+        timecard.status,
+        'submitted',
+        user.id
+      )
+    } catch (auditError) {
+      console.error('Failed to create status change audit log:', auditError)
+      // Don't fail the submission if audit logging fails, but log the error
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {

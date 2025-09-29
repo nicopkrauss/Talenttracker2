@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { TIMECARD_HEADERS_SELECT } from '@/lib/timecard-columns'
 import { canApproveTimecardsWithSettings } from '@/lib/role-utils'
 import { withTimecardAuditLogging, type TimecardAuditContext } from '@/lib/timecard-audit-integration'
+import { AuditLogService } from '@/lib/audit-log-service'
 
 const editTimecardSchema = z.object({
   timecardId: z.string().uuid(),
@@ -69,15 +70,45 @@ export async function POST(request: NextRequest) {
     const { timecardId, updates, dailyUpdates, adminNote, editComment, returnToDraft } = validationResult.data
 
     // Validate timecard exists and get current data
+    console.log('🔍 Looking for timecard:', timecardId)
+    
     const { data: timecard, error: fetchError } = await supabase
       .from('timecard_headers')
       .select(TIMECARD_HEADERS_SELECT)
       .eq('id', timecardId)
       .single()
 
+    console.log('🔍 Timecard lookup result:', {
+      found: !!timecard,
+      error: fetchError?.message,
+      errorCode: fetchError?.code
+    })
+
     if (fetchError || !timecard) {
+      // Try to find any timecard with this ID regardless of status
+      const { data: anyTimecard, error: anyError } = await supabase
+        .from('timecard_headers')
+        .select('id, status, user_id, project_id')
+        .eq('id', timecardId)
+        .maybeSingle()
+      
+      console.log('🔍 Any status lookup:', {
+        found: !!anyTimecard,
+        data: anyTimecard,
+        error: anyError?.message
+      })
+      
       return NextResponse.json(
-        { error: 'Timecard not found', code: 'TIMECARD_NOT_FOUND' },
+        { 
+          error: 'Timecard not found', 
+          code: 'TIMECARD_NOT_FOUND',
+          debug: {
+            timecardId,
+            originalError: fetchError?.message,
+            anyStatusFound: !!anyTimecard,
+            anyStatusData: anyTimecard
+          }
+        },
         { status: 404 }
       )
     }
@@ -197,6 +228,7 @@ export async function POST(request: NextRequest) {
         if (editedFields.length > 0) {
           updateData.rejected_fields = editedFields
         }
+        console.log('🔍 Edited fields during rejection:', editedFields)
         
         console.log('🔍 REJECTED FIELDS DEBUG: editedFields:', editedFields)
         
@@ -222,6 +254,11 @@ export async function POST(request: NextRequest) {
           updateData.admin_edited = true
           updateData.last_edited_by = user.id
           updateData.edit_type = 'admin_adjustment'
+          
+          // Change status to 'edited_draft' when admin edits draft timecard (requirement 3.4)
+          if (timecard.status === 'draft') {
+            updateData.status = 'edited_draft'
+          }
         } else if (isOwner) {
           updateData.edit_type = 'user_correction'
         }
@@ -581,6 +618,22 @@ export async function POST(request: NextRequest) {
           return true
         }
       )
+    }
+
+    // Create status change audit log if status changed to 'edited_draft' (requirement 3.4)
+    if (updateData.status === 'edited_draft' && timecard.status === 'draft') {
+      try {
+        const auditLogService = new AuditLogService(supabase)
+        await auditLogService.logStatusChange(
+          timecardId,
+          'draft',
+          'edited_draft',
+          user.id
+        )
+      } catch (auditError) {
+        console.error('Failed to create status change audit log for edited_draft:', auditError)
+        // Don't fail the edit if audit logging fails, but log the error
+      }
     }
 
     return NextResponse.json({

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Time Picker Initialization Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        .test-case {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ccc;
+        }
+
+        .time-display {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .time-input {
+            font-size: 16px;
+            padding: 5px;
+        }
+
+        button {
+            padding: 8px 16px;
+            margin: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Time Picker Initialization Test</h1>
+
+    <div class="test-case">
+        <h3>Test Case 1: Time-only format (08:00:00)</h3>
+        <div class="time-display" id="display1">Loading...</div>
+        <input type="time" class="time-input" id="input1" style="display: none;">
+        <button onclick="editTime(1, '08:00:00')">Edit Time</button>
+        <button onclick="cancelEdit(1)">Cancel</button>
+    </div>
+
+    <div class="test-case">
+        <h3>Test Case 2: Full datetime UTC (2024-01-15T08:00:00.000Z)</h3>
+        <div class="time-display" id="display2">Loading...</div>
+        <input type="time" class="time-input" id="input2" style="display: none;">
+        <button onclick="editTime(2, '2024-01-15T08:00:00.000Z')">Edit Time</button>
+        <button onclick="cancelEdit(2)">Cancel</button>
+    </div>
+
+    <div class="test-case">
+        <h3>Test Case 3: Full datetime local morning (2024-01-15T08:00:00)</h3>
+        <div class="time-display" id="display3">Loading...</div>
+        <input type="time" class="time-input" id="input3" style="display: none;">
+        <button onclick="editTime(3, '2024-01-15T08:00:00')">Edit Time</button>
+        <button onclick="cancelEdit(3)">Cancel</button>
+    </div>
+
+    <script>
+        // Simulate the formatTime function (for display)
+        function formatTime(timeStr) {
+            if (!timeStr) return "Not Recorded"
+
+            try {
+                // Handle both full datetime and time-only formats
+                if (timeStr.includes('T')) {
+                    return new Date(timeStr).toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit'
+                    })
+                }
+                // Already in time format (HH:MM:SS)
+                const today = new Date().toISOString().split('T')[0]
+                const date = new Date(`${today}T${timeStr}`)
+                return date.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit'
+                })
+            } catch (error) {
+                return "Not Recorded"
+            }
+        }
+
+        // Simulate the formatTimeForInput function (for input field) - FIXED VERSION
+        function formatTimeForInput(timeString) {
+            if (!timeString) return ""
+            try {
+                // Handle both full datetime and time-only formats
+                if (timeString.includes('T')) {
+                    // Full datetime - convert to local time
+                    const date = new Date(timeString)
+                    if (isNaN(date.getTime())) return ""
+                    return date.toTimeString().slice(0, 5) // HH:MM format
+                } else {
+                    // Time-only format (HH:MM:SS) - use as-is
+                    return timeString.slice(0, 5) // Just take HH:MM part
+                }
+            } catch {
+                return ""
+            }
+        }
+
+        // Initialize displays
+        function initializeDisplays() {
+            const testValues = ['08:00:00', '2024-01-15T08:00:00.000Z', '2024-01-15T08:00:00'];
+
+            testValues.forEach((value, index) => {
+                const displayId = `display${index + 1}`;
+                const displayValue = formatTime(value);
+                document.getElementById(displayId).textContent = `Display: "${displayValue}"`;
+
+                console.log(`Test ${index + 1}:`);
+                console.log(`  Original: ${value}`);
+                console.log(`  Display: "${displayValue}"`);
+                console.log(`  Input would be: "${formatTimeForInput(value)}"`);
+            });
+        }
+
+        function editTime(testCase, originalValue) {
+            const displayEl = document.getElementById(`display${testCase}`);
+            const inputEl = document.getElementById(`input${testCase}`);
+
+            // Hide display, show input
+            displayEl.style.display = 'none';
+            inputEl.style.display = 'inline-block';
+
+            // Set input value
+            const inputValue = formatTimeForInput(originalValue);
+            inputEl.value = inputValue;
+            inputEl.focus();
+
+            console.log(`Editing test ${testCase}:`);
+            console.log(`  Original value: ${originalValue}`);
+            console.log(`  Display showed: "${formatTime(originalValue)}"`);
+            console.log(`  Input initialized to: "${inputValue}"`);
+            console.log(`  Expected: Input should match what display showed`);
+        }
+
+        function cancelEdit(testCase) {
+            const displayEl = document.getElementById(`display${testCase}`);
+            const inputEl = document.getElementById(`input${testCase}`);
+
+            // Show display, hide input
+            displayEl.style.display = 'block';
+            inputEl.style.display = 'none';
+        }
+
+        // Initialize on load
+        window.onload = initializeDisplays;
+    </script>
+</body>
+
+</html>

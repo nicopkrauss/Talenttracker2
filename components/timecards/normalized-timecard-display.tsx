@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { ChevronDown, ChevronRight, Calendar, Clock, DollarSign, Coffee, FileText } from 'lucide-react'
+import { parseDate } from '@/lib/timezone-utils'
 
 interface DailyEntry {
   id: string
@@ -32,8 +33,6 @@ interface TimecardHeader {
   pay_rate: number
   admin_notes?: string
   submitted_at?: string
-  approved_at?: string
-  approved_by?: string
   rejection_reason?: string
   daily_entries: DailyEntry[]
 }
@@ -86,7 +85,9 @@ export function NormalizedTimecardDisplay({
 
   // Format date for display
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
+    const date = parseDate(dateStr)
+    if (!date) return 'Invalid Date'
+    return date.toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
       day: 'numeric'
@@ -113,9 +114,11 @@ export function NormalizedTimecardDisplay({
   }
 
   // Sort daily entries by date
-  const sortedEntries = [...timecard.daily_entries].sort((a, b) => 
-    new Date(a.work_date).getTime() - new Date(b.work_date).getTime()
-  )
+  const sortedEntries = [...timecard.daily_entries].sort((a, b) => {
+    const dateA = parseDate(a.work_date)
+    const dateB = parseDate(b.work_date)
+    return (dateA?.getTime() || 0) - (dateB?.getTime() || 0)
+  })
 
   return (
     <Card className="w-full">
@@ -286,19 +289,6 @@ export function NormalizedTimecardDisplay({
             <CardContent className="p-4">
               <h4 className="font-medium text-red-800 mb-2">Rejection Reason</h4>
               <p className="text-sm text-red-700">{timecard.rejection_reason}</p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Approval Information */}
-        {timecard.status === 'approved' && timecard.approved_at && (
-          <Card className="border-green-200 bg-green-50">
-            <CardContent className="p-4">
-              <h4 className="font-medium text-green-800 mb-2">Approved</h4>
-              <p className="text-sm text-green-700">
-                Approved on {new Date(timecard.approved_at).toLocaleDateString()}
-                {timecard.approved_by && ` by ${timecard.approved_by}`}
-              </p>
             </CardContent>
           </Card>
         )}

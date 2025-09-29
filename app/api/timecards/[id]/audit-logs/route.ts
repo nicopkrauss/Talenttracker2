@@ -6,7 +6,14 @@ import { AuditLogService } from '@/lib/audit-log-service';
 
 // Query parameter validation schema
 const auditLogQuerySchema = z.object({
-  action_type: z.string().optional(),
+  action_type: z.string()
+    .optional()
+    .refine(val => {
+      if (!val) return true;
+      const validTypes = ['user_edit', 'admin_edit', 'rejection_edit', 'status_change'];
+      const types = val.split(',');
+      return types.every(type => validTypes.includes(type.trim()));
+    }, 'Invalid action_type. Must be one of: user_edit, admin_edit, rejection_edit, status_change'),
   field_name: z.string().optional(),
   date_from: z.string().datetime().optional(),
   date_to: z.string().datetime().optional(),
@@ -140,7 +147,7 @@ export async function GET(
     // Initialize audit log service
     const auditLogService = new AuditLogService(supabase);
 
-    // Fetch audit logs
+    // Fetch audit logs (includes status changes and field changes in chronological order)
     let auditLogs;
     let total = 0;
 
@@ -173,7 +180,7 @@ export async function GET(
     const hasMore = offset + limit < total;
 
     return NextResponse.json({
-      data: auditLogs,
+      auditLogs: auditLogs,
       pagination: {
         total,
         limit,

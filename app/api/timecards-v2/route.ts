@@ -18,13 +18,8 @@ export async function GET(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
+          get(name: string) {
+            return cookieStore.get(name)?.value
           },
         },
       }
@@ -34,6 +29,7 @@ export async function GET(request: NextRequest) {
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     
     if (userError || !user) {
+      console.error('Authentication error:', userError)
       return NextResponse.json(
         { error: 'Authentication required', code: 'UNAUTHORIZED' },
         { status: 401 }
@@ -43,13 +39,21 @@ export async function GET(request: NextRequest) {
     // Get user profile for role-based access
     const { data: userProfile, error: profileError } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, status')
       .eq('id', user.id)
       .single()
 
     if (profileError || !userProfile) {
+      console.error('Profile error:', profileError)
       return NextResponse.json(
         { error: 'User profile not found', code: 'PROFILE_NOT_FOUND' },
+        { status: 403 }
+      )
+    }
+
+    if (userProfile.status !== 'active') {
+      return NextResponse.json(
+        { error: 'Account not active', code: 'ACCOUNT_NOT_ACTIVE' },
         { status: 403 }
       )
     }
@@ -60,29 +64,9 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
     const userId = searchParams.get('user_id')
 
-    // Validate project access if project_id is provided
-    if (projectId) {
-      const isAdmin = userProfile.role === 'admin' || userProfile.role === 'in_house'
-      
-      if (!isAdmin) {
-        // Regular users can only access projects where they have timecards
-        const { data: accessCheck, error: accessError } = await supabase
-          .from('timecard_headers')
-          .select('id')
-          .eq('project_id', projectId)
-          .eq('user_id', user.id)
-          .limit(1)
+    console.log('Query params:', { projectId, status, userId, userRole: userProfile.role })
 
-        if (accessError || !accessCheck || accessCheck.length === 0) {
-          return NextResponse.json(
-            { error: 'Access denied to this project', code: 'PROJECT_ACCESS_DENIED' },
-            { status: 403 }
-          )
-        }
-      }
-    }
-
-    // Build query
+    // Build query - simplified approach
     let query = supabase
       .from('timecard_headers')
       .select(`
@@ -141,6 +125,7 @@ export async function GET(request: NextRequest) {
       query = query.eq('user_id', userId)
     }
 
+    console.log('Executing timecard query...')
     const { data: timecards, error } = await query
 
     if (error) {
@@ -151,14 +136,21 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get rejected fields for all timecards from audit logs
-    const timecardIds = timecards.map(tc => tc.id)
+    console.log(`Found ${timecards?.length || 0} timecards`)
+
+    // Get rejected fields for all timecards from audit logs (simplified)
+    const timecardIds = (timecards || []).map(tc => tc.id)
     const rejectedFieldsMap = new Map<string, string[]>()
     
-    // Batch fetch rejected fields for all timecards
+    // Batch fetch rejected fields for all timecards (with error handling)
     for (const timecardId of timecardIds) {
-      const rejectedFields = await getRejectedFields(supabase, timecardId)
-      rejectedFieldsMap.set(timecardId, rejectedFields)
+      try {
+        const rejectedFields = await getRejectedFields(supabase, timecardId)
+        rejectedFieldsMap.set(timecardId, rejectedFields)
+      } catch (error) {
+        console.warn(`Could not get rejected fields for timecard ${timecardId}:`, error)
+        rejectedFieldsMap.set(timecardId, [])
+      }
     }
 
     // Transform normalized structure for multi-day timecard display

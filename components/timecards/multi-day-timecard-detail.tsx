@@ -1,15 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { Calendar, Clock, Users, DollarSign, AlertTriangle, FileText, Edit, Save, X } from "lucide-react"
+import { Calendar, Clock, Users, DollarSign, AlertTriangle, FileText, Edit, Save, X, Bug, ChevronDown, ChevronUp } from "lucide-react"
 import type { Timecard } from "@/lib/types"
 import { format } from "date-fns"
-import { utcToDatetimeLocal } from "@/lib/timezone-utils"
+import { utcToDatetimeLocal, parseDate, formatDateSafe } from "@/lib/timezone-utils"
 import { useAuth } from "@/lib/auth-context"
 import { canApproveTimecardsWithSettings } from "@/lib/role-utils"
 import { DesktopTimecardGrid } from "@/components/timecards/desktop-timecard-grid"
@@ -30,6 +30,7 @@ interface MultiDayTimecardDetailProps {
   selectedFields?: string[]
   onFieldToggle?: (fieldId: string) => void
   showRejectedFields?: boolean
+  showDebugInfo?: boolean
 }
 
 export function MultiDayTimecardDetail({ 
@@ -43,12 +44,17 @@ export function MultiDayTimecardDetail({
   isRejectionMode = false,
   selectedFields = [],
   onFieldToggle,
-  showRejectedFields = false
+  showRejectedFields = false,
+  showDebugInfo = false
 }: MultiDayTimecardDetailProps) {
   const { userProfile } = useAuth()
   const [isEditingAdminNotes, setIsEditingAdminNotes] = useState(false)
   const [adminNotesValue, setAdminNotesValue] = useState(timecard.admin_notes || '')
   const [savingAdminNotes, setSavingAdminNotes] = useState(false)
+  const [showDebugPanel, setShowDebugPanel] = useState(false)
+  const [auditLogs, setAuditLogs] = useState<any[]>([])
+  const [loadingAuditLogs, setLoadingAuditLogs] = useState(false)
+  const [auditLogsError, setAuditLogsError] = useState<string | null>(null)
 
   // Check if user can manage admin notes
   const canManageAdminNotes = userProfile ? canApproveTimecardsWithSettings(
@@ -60,19 +66,19 @@ export function MultiDayTimecardDetail({
   const formatDate = (dateValue: string | null | undefined, formatString: string, fallback: string = "Not Recorded") => {
     if (!dateValue) return fallback
     try {
-      let date: Date
+      let date: Date | null
       
       // Check if it's a time-only value (HH:MM:SS format)
       if (/^\d{2}:\d{2}:\d{2}/.test(dateValue)) {
         // For time-only values, create a date with today's date
         const today = new Date().toISOString().split('T')[0]
-        date = new Date(`${today}T${dateValue}`)
+        date = parseDate(`${today}T${dateValue}`)
       } else {
-        // For full datetime values
-        date = new Date(dateValue)
+        // For date or datetime values, use safe parsing
+        date = parseDate(dateValue)
       }
       
-      if (isNaN(date.getTime())) return fallback
+      if (!date || isNaN(date.getTime())) return fallback
       return format(date, formatString)
     } catch (error) {
       console.error('Date formatting error:', error, 'for value:', dateValue)
@@ -113,6 +119,55 @@ export function MultiDayTimecardDetail({
   const cancelAdminNotesEdit = () => {
     setAdminNotesValue(timecard.admin_notes || '')
     setIsEditingAdminNotes(false)
+  }
+
+  // Debug functionality
+  const loadAuditLogs = async () => {
+    setLoadingAuditLogs(true)
+    setAuditLogsError(null)
+    try {
+      const response = await fetch(`/api/timecards/${timecard.id}/audit-logs`)
+      if (response.ok) {
+        const data = await response.json()
+        setAuditLogs(data.auditLogs || [])
+        setAuditLogsError(null)
+      } else {
+        const errorMessage = `API Error ${response.status}: ${response.statusText}`
+        console.error('Failed to load audit logs:', errorMessage)
+        // Try to get the error details from the response
+        try {
+          const errorData = await response.json()
+          console.error('API error details:', errorData)
+          setAuditLogsError(`${errorMessage} - ${errorData.error || 'Unknown error'}`)
+        } catch (e) {
+          console.error('Could not parse error response')
+          setAuditLogsError(errorMessage)
+        }
+        setAuditLogs([])
+      }
+    } catch (error) {
+      const errorMessage = `Network Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      console.error('Error loading audit logs:', error)
+      setAuditLogsError(errorMessage)
+      setAuditLogs([])
+    } finally {
+      setLoadingAuditLogs(false)
+    }
+  }
+
+  useEffect(() => {
+    if (showDebugPanel && auditLogs.length === 0) {
+      loadAuditLogs()
+    }
+  }, [showDebugPanel, timecard.id])
+
+  const formatAuditLogTime = (timestamp: string | Date) => {
+    try {
+      const date = timestamp instanceof Date ? timestamp : new Date(timestamp)
+      return format(date, "MMM d, yyyy 'at' h:mm:ss a")
+    } catch (error) {
+      return String(timestamp)
+    }
   }
   // Determine if this is a multi-day timecard based on actual data
   const isMultiDay = timecard.daily_entries && timecard.daily_entries.length > 1
@@ -685,72 +740,7 @@ export function MultiDayTimecardDetail({
         </Card>
       )}
 
-      {/* Admin Notes Section - Only visible to authorized users */}
-      {canManageAdminNotes && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <FileText className="w-5 h-5 mr-2" />
-              Admin Notes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isEditingAdminNotes ? (
-              <div className="space-y-3">
-                <Textarea
-                  value={adminNotesValue}
-                  onChange={(e) => setAdminNotesValue(e.target.value)}
-                  placeholder="Enter admin notes..."
-                  rows={4}
-                  disabled={savingAdminNotes}
-                />
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={saveAdminNotes} 
-                    size="sm" 
-                    className="gap-2"
-                    disabled={savingAdminNotes}
-                  >
-                    <Save className="h-4 w-4" />
-                    {savingAdminNotes ? 'Saving...' : 'Save'}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={cancelAdminNotesEdit}
-                    size="sm"
-                    className="gap-2"
-                    disabled={savingAdminNotes}
-                  >
-                    <X className="h-4 w-4" />
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="min-h-[100px] p-3 border rounded-md bg-muted/50">
-                  {timecard.admin_notes ? (
-                    <span className="whitespace-pre-wrap">{timecard.admin_notes}</span>
-                  ) : (
-                    <span className="text-muted-foreground italic">
-                      No admin notes provided. Click edit to add notes.
-                    </span>
-                  )}
-                </div>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsEditingAdminNotes(true)}
-                  size="sm"
-                  disabled={savingAdminNotes}
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Notes
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+
 
       {/* User-Facing Edit Comments - Only show if there are comments */}
       {timecard.edit_comments && (
@@ -776,7 +766,7 @@ export function MultiDayTimecardDetail({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
-              <AlertTriangle className="w-5 h-5 mr-2 text-red-700 dark:text-red-300" />
+              <AlertTriangle className="w-5 h-5 mr-2 text-red-600 dark:text-red-400" />
               Rejection Reason
             </CardTitle>
           </CardHeader>
@@ -787,6 +777,135 @@ export function MultiDayTimecardDetail({
               </p>
             </div>
           </CardContent>
+        </Card>
+      )}
+
+      {/* Debug Panel - Only show if showDebugInfo is true */}
+      {showDebugInfo && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Bug className="w-5 h-5 mr-2 text-purple-600 dark:text-purple-400" />
+                Debug Information
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowDebugPanel(!showDebugPanel)}
+                className="text-purple-600 dark:text-purple-400"
+              >
+                {showDebugPanel ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          {showDebugPanel && (
+            <CardContent className="space-y-4">
+              {/* Timecard Raw Data */}
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2">Timecard Raw Data</h4>
+                <div className="p-3 bg-muted rounded-lg">
+                  <pre className="text-xs text-foreground overflow-x-auto whitespace-pre-wrap">
+                    {JSON.stringify(timecard, null, 2)}
+                  </pre>
+                </div>
+              </div>
+
+              {/* Audit Logs */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">Audit Logs</h4>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={loadAuditLogs}
+                    disabled={loadingAuditLogs}
+                  >
+                    {loadingAuditLogs ? 'Loading...' : 'Refresh'}
+                  </Button>
+                </div>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {auditLogs.length === 0 ? (
+                    <div className="p-3 bg-muted rounded-lg text-center text-sm">
+                      {loadingAuditLogs ? (
+                        <span className="text-muted-foreground">Loading audit logs...</span>
+                      ) : auditLogsError ? (
+                        <div className="text-red-600 dark:text-red-400">
+                          <div className="font-medium">Failed to load audit logs</div>
+                          <div className="text-xs mt-1">{auditLogsError}</div>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">No audit logs found</span>
+                      )}
+                    </div>
+                  ) : (
+                    auditLogs.map((log, index) => (
+                      <div key={index} className="p-3 bg-muted rounded-lg border">
+                        <div className="flex items-center justify-between mb-2">
+                          <Badge variant={
+                            log.action_type === 'status_change' ? 'default' :
+                            log.action_type === 'admin_edit' ? 'secondary' :
+                            log.action_type === 'rejection_edit' ? 'destructive' :
+                            log.action_type === 'user_edit' ? 'outline' :
+                            'outline'
+                          }>
+                            {log.action_type}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {formatAuditLogTime(log.changed_at)}
+                          </span>
+                        </div>
+                        <div className="text-sm">
+                          <p className="font-medium">
+                            {log.field_name ? `${log.field_name} changed` : 'Status change'}
+                          </p>
+                          {log.old_value && log.new_value && (
+                            <div className="mt-1 text-xs">
+                              <span className="text-red-600 dark:text-red-400">From: {log.old_value}</span>
+                              <span className="mx-2">→</span>
+                              <span className="text-green-600 dark:text-green-400">To: {log.new_value}</span>
+                            </div>
+                          )}
+                          {log.changed_by_profile?.full_name && (
+                            <p className="text-muted-foreground mt-1">by {log.changed_by_profile.full_name}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Rejected Fields Debug */}
+              {timecard.rejected_fields && (
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Rejected Fields</h4>
+                  <div className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+                    <pre className="text-xs text-foreground whitespace-pre-wrap">
+                      {JSON.stringify(timecard.rejected_fields, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
+              {/* Current State Debug */}
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2">Current Component State</h4>
+                <div className="p-3 bg-muted rounded-lg">
+                  <pre className="text-xs text-foreground overflow-x-auto whitespace-pre-wrap">
+                    {JSON.stringify({
+                      isRejectionMode,
+                      selectedFields,
+                      showRejectedFields,
+                      isEditing,
+                      editedTimecard,
+                      calculatedValues
+                    }, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            </CardContent>
+          )}
         </Card>
       )}
     </div>
