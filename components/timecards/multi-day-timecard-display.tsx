@@ -52,6 +52,13 @@ export function MultiDayTimecardDisplay({
     setIsExpanded(defaultExpanded)
   }, [defaultExpanded])
 
+  // Always show all days for multi-day timecards
+  useEffect(() => {
+    if (timecard.is_multi_day) {
+      setIsExpanded(true)
+    }
+  }, [timecard.is_multi_day])
+
   // Helper function to safely format dates and times
   const safeFormat = (dateString: string | null | undefined, formatString: string, fallback: string = 'Invalid') => {
     return formatDateSafe(dateString, formatString, fallback)
@@ -341,8 +348,8 @@ export function MultiDayTimecardDisplay({
           </div>
         )}
 
-        {/* Mobile Breakdown Toggle Button - Show when showBreakdownToggle is true */}
-        {showBreakdownToggle && (
+        {/* Mobile Breakdown Toggle Button - Hide for multi-day timecards since we always show all days */}
+        {showBreakdownToggle && !timecard.is_multi_day && (
           <div className="flex justify-center mb-4 sm:hidden">
             <Button
               variant="outline"

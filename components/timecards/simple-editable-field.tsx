@@ -371,14 +371,16 @@ export function SimpleEditableField({
 
 
   const getFieldStyles = () => {
-    let baseStyles = "p-3 rounded-lg border transition-all "
+    // Use consistent border width and padding to prevent size changes
+    let baseStyles = "p-2 rounded-lg border transition-all "
     
     // Add error styling if there's a validation error
     if (validationError) {
       baseStyles += "border-red-500 bg-red-50 dark:bg-red-950/20 "
     } else if (isRejectionMode) {
       if (isEditing) {
-        baseStyles += "border-2 border-blue-500 bg-blue-100 dark:bg-blue-900/30 cursor-text shadow-lg "
+        // Keep same border width but change color and background - no shadow to prevent size change
+        baseStyles += "border-blue-500 bg-blue-100 dark:bg-blue-900/30 cursor-text "
       } else if (isEdited) {
         baseStyles += "border-blue-500 bg-blue-50 dark:bg-blue-950/20 cursor-pointer "
       } else {
@@ -397,61 +399,69 @@ export function SimpleEditableField({
 
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium text-muted-foreground">{label}</label>
+      <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+        {label}
+        {/* Mobile: Show edit indicator in label when in rejection mode */}
+        {isRejectionMode && (
+          <div className="lg:hidden">
+            {isEdited ? (
+              <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">✏️</span>
+            ) : (
+              <Edit3 className="w-3 h-3 text-gray-400" />
+            )}
+          </div>
+        )}
+      </label>
       <div
         className={getFieldStyles()}
         onClick={handleFieldClick}
       >
-        <div className="relative" style={{ minHeight: '72px' }}>
-          {isEdited && !isEditing && (
-            <div className="absolute -top-1 left-0 text-xs text-muted-foreground line-through">
-              Original: {formatTime(originalValue)}
+        <div className="flex flex-col justify-center" style={{ minHeight: '48px', maxHeight: '48px', height: '48px', overflow: 'hidden' }}>
+          {isEditing ? (
+            <div className="flex items-center justify-center h-full">
+              <CustomTimePicker
+                value={currentValue}
+                onChange={handleTimeChange}
+                onBlur={handleInputBlur}
+                className="text-lg font-semibold leading-none"
+                autoFocus
+              />
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full gap-0">
+              {/* Show original time above current time when edited */}
+              {isEdited && (
+                <div className="text-xs text-muted-foreground line-through text-center leading-tight">
+                  <span className="hidden lg:inline">Original: </span>{formatTime(originalValue)}
+                </div>
+              )}
+              
+              {/* Current time value */}
+              <p className={`text-lg font-semibold text-center leading-none ${
+                isEdited 
+                  ? 'text-red-600 dark:text-red-400' 
+                  : originalValue 
+                    ? 'text-foreground' 
+                    : 'text-muted-foreground'
+              }`}>
+                {formatTime(currentValue)}
+              </p>
+              
+              {/* Desktop: Keep the tap to edit text */}
+              {isRejectionMode && (
+                <div className="hidden lg:block text-xs text-gray-500 mt-1 text-center">
+                  {isEdited ? '✏️ Modified' : 'Tap to edit'}
+                </div>
+              )}
+              
+              {/* Validation error */}
+              {validationError && (
+                <div className="text-xs text-red-600 dark:text-red-400 mt-1 text-center font-medium">
+                  ⚠️ {validationError}
+                </div>
+              )}
             </div>
           )}
-          
-          <div className="flex flex-col justify-center" style={{ height: '72px' }}>
-            {isEditing ? (
-              <div className="flex flex-col items-center justify-center">
-                <div className="flex items-center gap-2 mb-2">
-                  <Edit3 className="w-4 h-4 text-red-600 dark:text-red-400" />
-                  <span className="text-xs font-medium text-red-600 dark:text-red-400 uppercase tracking-wide">
-                    Editing
-                  </span>
-                </div>
-                <div className="flex items-center justify-center">
-                  <CustomTimePicker
-                    value={currentValue}
-                    onChange={handleTimeChange}
-                    onBlur={handleInputBlur}
-                    className="text-lg font-semibold"
-                    autoFocus
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center">
-                <p className={`text-lg font-semibold text-center ${
-                  isEdited 
-                    ? 'text-red-600 dark:text-red-400' 
-                    : originalValue 
-                      ? 'text-foreground' 
-                      : 'text-muted-foreground'
-                }`}>
-                  {formatTime(currentValue)}
-                </p>
-                {isRejectionMode && (
-                  <div className="text-xs text-gray-500 mt-1 text-center">
-                    {isEdited ? '✏️ Modified' : 'Tap to edit'}
-                  </div>
-                )}
-                {validationError && (
-                  <div className="text-xs text-red-600 dark:text-red-400 mt-1 text-center font-medium">
-                    ⚠️ {validationError}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>

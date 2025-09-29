@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Rejection Mode Improvements Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .field {
+            margin-bottom: 16px;
+        }
+        .label {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        .edit-icon {
+            width: 12px;
+            height: 12px;
+            color: #999;
+        }
+        .edit-indicator {
+            font-size: 12px;
+            color: #2563eb;
+        }
+        .field-box {
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 8px;
+            min-height: 48px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .field-box:hover {
+            border-color: #fca5a5;
+            background-color: #fef2f2;
+        }
+        .field-box.edited {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+        .time-value {
+            font-size: 18px;
+            font-weight: 600;
+            text-align: center;
+        }
+        .time-value.edited {
+            color: #dc2626;
+        }
+        .help-text {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 8px 12px;
+            text-align: center;
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 16px;
+        }
+        .day-section {
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .day-section:last-child {
+            border-bottom: none;
+        }
+        .day-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .toggle {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Timecard Field Improvements</h2>
+        
+        <p><strong>Mobile Changes:</strong></p>
+        <ul style="font-size: 14px; margin-bottom: 15px;">
+            <li>✅ All days always visible (no toggle needed)</li>
+            <li>✅ Reduced field padding from 72px to 48px height</li>
+            <li>✅ Edit indicators in field labels (mobile only)</li>
+            <li>✅ Removed "Editing" label for cleaner editing experience</li>
+            <li>✅ Time picker stays vertically centered while editing</li>
+            <li>✅ Fixed field height growth when editing (consistent 48px)</li>
+            <li>✅ Removed "Original: " label on mobile (shows just the time)</li>
+            <li>✅ Both original and current time values vertically centered together</li>
+        </ul>
+        
+        <p><strong>Desktop Changes:</strong></p>
+        <ul style="font-size: 14px; margin-bottom: 20px;">
+            <li>✅ Both original and current time values vertically centered together</li>
+            <li>✅ Improved layout when field is edited (no absolute positioning)</li>
+            <li>✅ Better visual hierarchy with proper spacing</li>
+            <li>✅ Fixed DesktopTimecardGrid to properly center both values in field</li>
+        </ul>
+        
+        <p><strong>Universal Improvements:</strong></p>
+        <ul style="font-size: 14px; margin-bottom: 20px;">
+            <li>✅ Consistent vertical centering across mobile and desktop</li>
+            <li>✅ No more absolute positioning issues</li>
+            <li>✅ Clean, professional appearance when fields are edited</li>
+        </ul>
+        
+        <div class="toggle">
+            <button class="button" onclick="toggleRejectionMode()">
+                Toggle Rejection Mode
+            </button>
+            <p id="mode-status">Mode: Normal</p>
+        </div>
+
+        <div id="help-text" class="help-text" style="display: none;">
+            All days shown for editing
+        </div>
+
+        <!-- Day 1 -->
+        <div class="day-section">
+            <div class="day-title">Dec 15, 2024</div>
+            <div class="grid">
+                <div class="field">
+                    <div class="label">
+                        Check In
+                        <span id="checkin-icon" class="edit-icon" style="display: none;">✏️</span>
+                    </div>
+                    <div class="field-box" id="checkin-field" onclick="editField('checkin')">
+                        <div class="time-value" id="checkin-value">9:00 AM</div>
+                    </div>
+                </div>
+                
+                <div class="field">
+                    <div class="label">
+                        Break Start
+                        <span id="break-start-icon" class="edit-icon" style="display: none;">✏️</span>
+                    </div>
+                    <div class="field-box" id="break-start-field" onclick="editField('break-start')">
+                        <div class="time-value" id="break-start-value">12:00 PM</div>
+                    </div>
+                </div>
+                
+                <div class="field">
+                    <div class="label">
+                        Break End
+                        <span id="break-end-icon" class="edit-icon" style="display: none;">✏️</span>
+                    </div>
+                    <div class="field-box" id="break-end-field" onclick="editField('break-end')">
+                        <div class="time-value" id="break-end-value">1:00 PM</div>
+                    </div>
+                </div>
+                
+                <div class="field">
+                    <div class="label">
+                        Check Out
+                        <span id="checkout-icon" class="edit-icon" style="display: none;">✏️</span>
+                    </div>
+                    <div class="field-box" id="checkout-field" onclick="editField('checkout')">
+                        <div class="time-value" id="checkout-value">6:00 PM</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Day 2 (always shown now) -->
+        <div class="day-section" id="day2">
+            <div class="day-title">Dec 16, 2024</div>
+            <div class="grid">
+                <div class="field">
+                    <div class="label">
+                        Check In
+                        <span class="edit-icon" style="display: none;">✏️</span>
+                    </div>
+                    <div class="field-box">
+                        <div class="time-value">9:15 AM</div>
+                    </div>
+                </div>
+                
+                <div class="field">
+                    <div class="label">
+                        Break Start
+                        <span class="edit-icon" style="display: none;">✏️</span>
+                    </div>
+                    <div class="field-box">
+                        <div class="time-value">12:30 PM</div>
+                    </div>
+                </div>
+                
+                <div class="field">
+                    <div class="label">
+                        Break End
+                        <span class="edit-icon" style="display: none;">✏️</span>
+                    </div>
+                    <div class="field-box">
+                        <div class="time-value">1:30 PM</div>
+                    </div>
+                </div>
+                
+                <div class="field">
+                    <div class="label">
+                        Check Out
+                        <span class="edit-icon" style="display: none;">✏️</span>
+                    </div>
+                    <div class="field-box">
+                        <div class="time-value">7:00 PM</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isRejectionMode = false;
+        let editedFields = new Set();
+
+        function toggleRejectionMode() {
+            isRejectionMode = !isRejectionMode;
+            const status = document.getElementById('mode-status');
+            const helpText = document.getElementById('help-text');
+            const day2 = document.getElementById('day2');
+            const icons = document.querySelectorAll('.edit-icon');
+            
+            if (isRejectionMode) {
+                status.textContent = 'Mode: Rejection (Mobile)';
+                helpText.style.display = 'block';
+                // Day 2 is always shown now
+                
+                // Show edit icons in labels
+                icons.forEach(icon => {
+                    icon.style.display = 'inline';
+                    icon.innerHTML = '✏️';
+                    icon.style.color = '#999';
+                });
+            } else {
+                status.textContent = 'Mode: Normal';
+                helpText.style.display = 'none';
+                // Day 2 remains visible
+                
+                // Hide edit icons
+                icons.forEach(icon => {
+                    icon.style.display = 'none';
+                });
+                
+                // Reset edited state
+                editedFields.clear();
+                document.querySelectorAll('.field-box').forEach(box => {
+                    box.classList.remove('edited');
+                });
+                document.querySelectorAll('.time-value').forEach(value => {
+                    value.classList.remove('edited');
+                });
+            }
+        }
+
+        function editField(fieldName) {
+            if (!isRejectionMode) return;
+            
+            const field = document.getElementById(fieldName + '-field');
+            const value = document.getElementById(fieldName + '-value');
+            const icon = document.getElementById(fieldName + '-icon');
+            
+            if (!editedFields.has(fieldName)) {
+                editedFields.add(fieldName);
+                field.classList.add('edited');
+                value.classList.add('edited');
+                
+                // Change icon to show edited state
+                if (icon) {
+                    icon.innerHTML = '✏️';
+                    icon.style.color = '#2563eb';
+                }
+                
+                // Simulate time change
+                const currentTime = value.textContent;
+                const newTime = prompt('Enter new time:', currentTime);
+                if (newTime && newTime !== currentTime) {
+                    value.textContent = newTime;
+                }
+            }
+        }
+    </script>
+</body>
+</html>

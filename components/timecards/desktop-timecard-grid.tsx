@@ -443,24 +443,29 @@ export function DesktopTimecardGrid({
     
     return (
       <div className="relative">
-        <div className="flex items-center justify-center relative" style={{ height: '28px' }}>
-          {isEdited && !isEditing && (
-            <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 text-xs text-muted-foreground line-through leading-none whitespace-nowrap">
-              {formatTime(originalValue)}
-            </div>
-          )}
-          <div className="relative w-full flex items-center justify-center" style={{ height: '28px' }}>
-            {isEditing && isRejectionMode ? (
+        <div className="flex flex-col items-center justify-center" style={{ height: '28px' }}>
+          {isEditing && isRejectionMode ? (
+            <div className="flex items-center justify-center h-full">
               <CustomTimePicker
                 value={currentValue}
                 onChange={(newValue) => handleTimeChange(fieldId, originalValue, newValue, dayIndex)}
                 onBlur={handleTimePickerBlur}
-                className="text-lg font-semibold"
+                className="text-lg font-semibold leading-none"
                 autoFocus
               />
-            ) : (
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full gap-0">
+              {/* Show original time above current time when edited */}
+              {isEdited && (
+                <div className="text-xs text-muted-foreground line-through text-center leading-tight whitespace-nowrap">
+                  {formatTime(originalValue)}
+                </div>
+              )}
+              
+              {/* Current time value */}
               <p 
-                className={`text-lg font-semibold m-0 text-center ${
+                className={`text-lg font-semibold m-0 text-center leading-none ${
                   isRejectionMode ? 'cursor-pointer' : ''
                 } ${
                   validationError
@@ -471,13 +476,12 @@ export function DesktopTimecardGrid({
                         ? 'text-foreground' 
                         : 'text-muted-foreground'
                 }`}
-                style={{ height: '28px', lineHeight: '28px' }}
                 onClick={() => handleFieldClick(fieldId)}
               >
                 {formatTime(currentValue)}
               </p>
-            )}
-          </div>
+            </div>
+          )}
         </div>
         {validationError && (
           <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 z-50 px-3 py-2 bg-background text-white rounded-md shadow-lg border border-border min-w-max">
