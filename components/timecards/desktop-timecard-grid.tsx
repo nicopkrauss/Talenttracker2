@@ -639,8 +639,7 @@ export function DesktopTimecardGrid({
                   {/* Date number with hours and pay */}
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-1 text-xs">
-                      <Clock className="w-3 h-3 text-blue-600" />
-                      <span className="font-medium text-foreground">
+                      <span className="font-medium text-blue-600 dark:text-blue-500">
                         {(day.entry?.hours_worked || 0).toFixed(1)}
                       </span>
                     </div>
@@ -662,7 +661,7 @@ export function DesktopTimecardGrid({
           {/* Check In Row */}
           <div className="grid gap-4" style={{ gridTemplateColumns: `120px repeat(${dayColumns.length}, 1fr)` }}>
             <div className="flex items-center gap-2 py-3">
-              <Clock className="w-4 h-4 text-blue-600" />
+              <Clock className="w-4 h-4 text-blue-600 dark:text-blue-500" />
               <span className="text-sm font-medium text-muted-foreground">Check In</span>
             </div>
             {dayColumns.map((day, index) => {

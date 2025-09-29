@@ -6,13 +6,14 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { Calendar, Clock, Users, DollarSign, AlertTriangle, FileText, Edit, Save, X, Bug, ChevronDown, ChevronUp } from "lucide-react"
+import { Calendar, Clock, Users, DollarSign, AlertTriangle, FileText, Edit, Save, X } from "lucide-react"
 import type { Timecard } from "@/lib/types"
 import { format } from "date-fns"
 import { utcToDatetimeLocal, parseDate, formatDateSafe } from "@/lib/timezone-utils"
 import { useAuth } from "@/lib/auth-context"
 import { canApproveTimecardsWithSettings } from "@/lib/role-utils"
 import { DesktopTimecardGrid } from "@/components/timecards/desktop-timecard-grid"
+import { SimpleEditableField } from "@/components/timecards/simple-editable-field"
 
 interface MultiDayTimecardDetailProps {
   timecard: Timecard
@@ -27,10 +28,9 @@ interface MultiDayTimecardDetailProps {
   actionButtons?: React.ReactNode
   globalSettings?: any
   isRejectionMode?: boolean
-  selectedFields?: string[]
-  onFieldToggle?: (fieldId: string) => void
+  fieldEdits?: Record<string, any>
+  onFieldEdit?: (fieldId: string, newValue: any) => void
   showRejectedFields?: boolean
-  showDebugInfo?: boolean
 }
 
 export function MultiDayTimecardDetail({ 
@@ -42,19 +42,15 @@ export function MultiDayTimecardDetail({
   actionButtons,
   globalSettings,
   isRejectionMode = false,
-  selectedFields = [],
-  onFieldToggle,
-  showRejectedFields = false,
-  showDebugInfo = false
+  fieldEdits = {},
+  onFieldEdit,
+  showRejectedFields = false
 }: MultiDayTimecardDetailProps) {
   const { userProfile } = useAuth()
   const [isEditingAdminNotes, setIsEditingAdminNotes] = useState(false)
   const [adminNotesValue, setAdminNotesValue] = useState(timecard.admin_notes || '')
   const [savingAdminNotes, setSavingAdminNotes] = useState(false)
-  const [showDebugPanel, setShowDebugPanel] = useState(false)
-  const [auditLogs, setAuditLogs] = useState<any[]>([])
-  const [loadingAuditLogs, setLoadingAuditLogs] = useState(false)
-  const [auditLogsError, setAuditLogsError] = useState<string | null>(null)
+
 
   // Check if user can manage admin notes
   const canManageAdminNotes = userProfile ? canApproveTimecardsWithSettings(
@@ -121,54 +117,7 @@ export function MultiDayTimecardDetail({
     setIsEditingAdminNotes(false)
   }
 
-  // Debug functionality
-  const loadAuditLogs = async () => {
-    setLoadingAuditLogs(true)
-    setAuditLogsError(null)
-    try {
-      const response = await fetch(`/api/timecards/${timecard.id}/audit-logs`)
-      if (response.ok) {
-        const data = await response.json()
-        setAuditLogs(data.auditLogs || [])
-        setAuditLogsError(null)
-      } else {
-        const errorMessage = `API Error ${response.status}: ${response.statusText}`
-        console.error('Failed to load audit logs:', errorMessage)
-        // Try to get the error details from the response
-        try {
-          const errorData = await response.json()
-          console.error('API error details:', errorData)
-          setAuditLogsError(`${errorMessage} - ${errorData.error || 'Unknown error'}`)
-        } catch (e) {
-          console.error('Could not parse error response')
-          setAuditLogsError(errorMessage)
-        }
-        setAuditLogs([])
-      }
-    } catch (error) {
-      const errorMessage = `Network Error: ${error instanceof Error ? error.message : 'Unknown error'}`
-      console.error('Error loading audit logs:', error)
-      setAuditLogsError(errorMessage)
-      setAuditLogs([])
-    } finally {
-      setLoadingAuditLogs(false)
-    }
-  }
 
-  useEffect(() => {
-    if (showDebugPanel && auditLogs.length === 0) {
-      loadAuditLogs()
-    }
-  }, [showDebugPanel, timecard.id])
-
-  const formatAuditLogTime = (timestamp: string | Date) => {
-    try {
-      const date = timestamp instanceof Date ? timestamp : new Date(timestamp)
-      return format(date, "MMM d, yyyy 'at' h:mm:ss a")
-    } catch (error) {
-      return String(timestamp)
-    }
-  }
   // Determine if this is a multi-day timecard based on actual data
   const isMultiDay = timecard.daily_entries && timecard.daily_entries.length > 1
   const workingDays = timecard.daily_entries?.length || 1
@@ -198,14 +147,48 @@ export function MultiDayTimecardDetail({
     return fieldType
   }
 
-  const isFieldSelected = (fieldId: string) => {
-    return isRejectionMode && selectedFields.includes(fieldId)
+  const isFieldEdited = (fieldId: string, originalValue: any) => {
+    if (fieldEdits[fieldId] === undefined) return false
+    
+    // Use the same normalization logic for consistency
+    const normalizeTimeForComparison = (timeValue: string | null | undefined): string | null => {
+      if (!timeValue) return null
+      try {
+        // Handle both ISO and simple time formats
+        let date: Date;
+        
+        if (timeValue.includes('T')) {
+          // Full datetime string
+          date = new Date(timeValue)
+        } else if (timeValue.includes(':')) {
+          // Simple time format - combine with today's date
+          const today = new Date().toISOString().split('T')[0]
+          date = new Date(`${today}T${timeValue}`)
+        } else {
+          return null
+        }
+        
+        if (isNaN(date.getTime())) return null
+        
+        // Extract only the time portion for comparison
+        const hours = date.getHours().toString().padStart(2, '0')
+        const minutes = date.getMinutes().toString().padStart(2, '0')
+        const seconds = date.getSeconds().toString().padStart(2, '0')
+        return `${hours}:${minutes}:${seconds}`
+      } catch {
+        return null
+      }
+    }
+    
+    const editedValue = fieldEdits[fieldId]
+    const normalizedOriginal = normalizeTimeForComparison(originalValue)
+    const normalizedEdited = normalizeTimeForComparison(editedValue)
+    
+    return normalizedOriginal !== normalizedEdited
   }
 
-  const handleFieldClick = (fieldId: string) => {
-    if (isRejectionMode && onFieldToggle) {
-      onFieldToggle(fieldId)
-    }
+  const getFieldValue = (fieldId: string, originalValue: any) => {
+    return fieldEdits[fieldId] || originalValue
   }
 
   const isFieldRejected = (fieldId: string) => {
@@ -222,7 +205,7 @@ export function MultiDayTimecardDetail({
       getFieldId('check_out_time', dayIndex)
     ]
     
-    return dayFieldIds.every(fieldId => timecard.rejected_fields!.includes(fieldId))
+    return dayFieldIds.some(fieldId => timecard.rejected_fields!.includes(fieldId))
   }
   
   // Calculate average values for multi-day timecards
@@ -293,8 +276,8 @@ export function MultiDayTimecardDetail({
             <DesktopTimecardGrid
               timecard={timecard}
               isRejectionMode={isRejectionMode}
-              selectedFields={selectedFields}
-              onFieldToggle={onFieldToggle}
+              fieldEdits={fieldEdits}
+              onFieldEdit={onFieldEdit}
               actionButtons={actionButtons}
               showSummaryInHeader={true}
               showRejectedFields={showRejectedFields}
@@ -305,20 +288,13 @@ export function MultiDayTimecardDetail({
           <div className="lg:hidden">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <Calendar className="w-5 h-5 mr-2" />
-                    Daily Time Breakdown
-                    <span className={`ml-2 text-sm text-red-600 dark:text-red-400 font-normal transition-opacity ${
-                      isRejectionMode ? 'opacity-100' : 'opacity-0'
-                    }`}>
-                      (Click fields to flag issues)
+                <CardTitle className="flex items-center">
+                  <Calendar className="w-5 h-5 mr-2 flex-shrink-0" />
+                  <span className="truncate">Daily Time Breakdown</span>
+                  {isRejectionMode && (
+                    <span className="ml-2 text-xs text-red-600 dark:text-red-400 font-normal whitespace-nowrap">
+                      (Tap to edit)
                     </span>
-                  </div>
-                  {actionButtons && (
-                    <div className="flex items-center space-x-2">
-                      {actionButtons}
-                    </div>
                   )}
                 </CardTitle>
               </CardHeader>
@@ -326,158 +302,86 @@ export function MultiDayTimecardDetail({
                 <div className="space-y-6">
                   {timecard.daily_entries.map((entry, index) => (
                     <div key={index} className="space-y-4">
-                      {/* Day Header - Clickable in rejection mode */}
-                      {(() => {
-                        // Check if all fields for this day are selected
-                        const dayFieldIds = [
-                          getFieldId('check_in_time', index),
-                          getFieldId('break_start_time', index),
-                          getFieldId('break_end_time', index),
-                          getFieldId('check_out_time', index)
-                        ]
-                        const allDayFieldsSelected = dayFieldIds.every(fieldId => isFieldSelected(fieldId))
-                        
-                        const handleDayClick = () => {
-                          if (isRejectionMode && onFieldToggle) {
-                            if (allDayFieldsSelected) {
-                              // If all fields are selected, deselect them
-                              dayFieldIds.forEach(fieldId => onFieldToggle(fieldId))
-                            } else {
-                              // If not all fields are selected, select all of them
-                              dayFieldIds.forEach(fieldId => {
-                                if (!isFieldSelected(fieldId)) {
-                                  onFieldToggle(fieldId)
-                                }
-                              })
-                            }
-                          }
-                        }
-
-                        return (
-                          <div 
-                            className={`flex items-center justify-between pb-2 transition-all ${
-                              isRejectionMode 
-                                ? allDayFieldsSelected
-                                  ? 'p-2 -m-2 rounded-lg border-2 border-red-500 bg-red-50 dark:bg-red-950/20 hover:bg-red-200 dark:hover:bg-red-950/40 cursor-pointer'
-                                  : 'p-2 -m-2 rounded-lg hover:bg-muted/50 cursor-pointer'
-                                : isDayRejected(index)
-                                  ? 'p-2 -m-2 rounded-lg border-2 border-red-500 bg-red-50 dark:bg-red-950/20'
-                                  : ''
-                            }`}
-                            onClick={handleDayClick}
-                          >
-                            <h3 className="text-sm font-medium text-foreground">
-                              Day {index + 1} - {formatDate(entry.work_date, "EEEE, MMM d, yyyy")}
-                            </h3>
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                              <span>{(entry.hours_worked || 0).toFixed(1)} hrs</span>
-                              <span>${(entry.daily_pay || 0).toFixed(2)}</span>
-                            </div>
-                          </div>
-                        )
-                      })()}
+                      {/* Day Header */}
+                      <div className="flex items-center justify-between pb-2">
+                        <h3 className="text-sm font-medium text-foreground">
+                          {formatDate(entry.work_date, "EEEE, MMM d, yyyy")}
+                        </h3>
+                        <div className="flex items-center gap-4 text-sm">
+                          <span className="text-blue-600 dark:text-blue-400 font-medium">{(entry.hours_worked || 0).toFixed(1)} hrs</span>
+                          <span className="text-green-600 dark:text-green-400 font-medium">${(entry.daily_pay || 0).toFixed(2)}</span>
+                        </div>
+                      </div>
 
                       {/* Time Events Grid - matching timecards page format */}
                       <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         {/* Check In */}
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-muted-foreground">Check In</label>
-                          <div 
-                            className={`p-3 rounded-lg border transition-all ${
-                              isFieldSelected(getFieldId('check_in_time', index))
-                                ? 'border-red-500 bg-red-50 dark:bg-red-950/20 hover:bg-red-200 dark:hover:bg-red-950/40 cursor-pointer'
-                                : isFieldRejected(getFieldId('check_in_time', index))
-                                  ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
-                                  : isRejectionMode
-                                    ? 'border-border bg-card hover:border-white cursor-pointer'
-                                    : 'border-border bg-card'
-                            }`}
-                            onClick={() => handleFieldClick(getFieldId('check_in_time', index))}
-                          >
-                            <p className="text-lg font-semibold text-foreground">
-                              {formatDate(entry.check_in_time, "h:mm a", "Not Recorded")}
-                            </p>
-                          </div>
-                        </div>
+                        <SimpleEditableField
+                          fieldId={getFieldId('check_in_time', index)}
+                          originalValue={entry.check_in_time || null}
+                          label="Check In"
+                          isRejectionMode={isRejectionMode}
+                          fieldEdits={fieldEdits}
+                          onFieldEdit={onFieldEdit || (() => {})}
+                          allFieldValues={{
+                            check_in_time: entry.check_in_time,
+                            break_start_time: entry.break_start_time,
+                            break_end_time: entry.break_end_time,
+                            check_out_time: entry.check_out_time
+                          }}
+                          isRejected={isFieldRejected(getFieldId('check_in_time', index))}
+                        />
 
                         {/* Break Start */}
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-muted-foreground">Break Start</label>
-                          <div 
-                            className={`p-3 rounded-lg border transition-all ${
-                              isFieldSelected(getFieldId('break_start_time', index))
-                                ? 'border-red-500 bg-red-50 dark:bg-red-950/20 hover:bg-red-200 dark:hover:bg-red-950/40 cursor-pointer'
-                                : isFieldRejected(getFieldId('break_start_time', index))
-                                  ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
-                                  : isRejectionMode
-                                    ? entry.break_start_time 
-                                      ? 'border-border bg-card hover:border-white cursor-pointer'
-                                      : 'border-dashed border-muted-foreground/30 bg-muted/30 hover:border-white cursor-pointer'
-                                    : entry.break_start_time 
-                                      ? 'border-border bg-card' 
-                                      : 'border-dashed border-muted-foreground/30 bg-muted/30'
-                            }`}
-                            onClick={() => handleFieldClick(getFieldId('break_start_time', index))}
-                          >
-                            {entry.break_start_time ? (
-                              <p className="text-lg font-semibold text-foreground">
-                                {formatDate(entry.break_start_time, "h:mm a")}
-                              </p>
-                            ) : (
-                              <p className="text-lg font-semibold text-muted-foreground">Not Recorded</p>
-                            )}
-                          </div>
-                        </div>
+                        <SimpleEditableField
+                          fieldId={getFieldId('break_start_time', index)}
+                          originalValue={entry.break_start_time || null}
+                          label="Break Start"
+                          isRejectionMode={isRejectionMode}
+                          fieldEdits={fieldEdits}
+                          onFieldEdit={onFieldEdit || (() => {})}
+                          allFieldValues={{
+                            check_in_time: entry.check_in_time,
+                            break_start_time: entry.break_start_time,
+                            break_end_time: entry.break_end_time,
+                            check_out_time: entry.check_out_time
+                          }}
+                          isRejected={isFieldRejected(getFieldId('break_start_time', index))}
+                        />
 
                         {/* Break End */}
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-muted-foreground">Break End</label>
-                          <div 
-                            className={`p-3 rounded-lg border transition-all ${
-                              isFieldSelected(getFieldId('break_end_time', index))
-                                ? 'border-red-500 bg-red-50 dark:bg-red-950/20 hover:bg-red-200 dark:hover:bg-red-950/40 cursor-pointer'
-                                : isFieldRejected(getFieldId('break_end_time', index))
-                                  ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
-                                  : isRejectionMode
-                                    ? entry.break_end_time 
-                                      ? 'border-border bg-card hover:border-white cursor-pointer'
-                                      : 'border-dashed border-muted-foreground/30 bg-muted/30 hover:border-white cursor-pointer'
-                                    : entry.break_end_time 
-                                      ? 'border-border bg-card' 
-                                      : 'border-dashed border-muted-foreground/30 bg-muted/30'
-                            }`}
-                            onClick={() => handleFieldClick(getFieldId('break_end_time', index))}
-                          >
-                            {entry.break_end_time ? (
-                              <p className="text-lg font-semibold text-foreground">
-                                {formatDate(entry.break_end_time, "h:mm a")}
-                              </p>
-                            ) : (
-                              <p className="text-lg font-semibold text-muted-foreground">Not Recorded</p>
-                            )}
-                          </div>
-                        </div>
+                        <SimpleEditableField
+                          fieldId={getFieldId('break_end_time', index)}
+                          originalValue={entry.break_end_time || null}
+                          label="Break End"
+                          isRejectionMode={isRejectionMode}
+                          fieldEdits={fieldEdits}
+                          onFieldEdit={onFieldEdit || (() => {})}
+                          allFieldValues={{
+                            check_in_time: entry.check_in_time,
+                            break_start_time: entry.break_start_time,
+                            break_end_time: entry.break_end_time,
+                            check_out_time: entry.check_out_time
+                          }}
+                          isRejected={isFieldRejected(getFieldId('break_end_time', index))}
+                        />
 
                         {/* Check Out */}
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-muted-foreground">Check Out</label>
-                          <div 
-                            className={`p-3 rounded-lg border transition-all ${
-                              isFieldSelected(getFieldId('check_out_time', index))
-                                ? 'border-red-500 bg-red-50 dark:bg-red-950/20 hover:bg-red-200 dark:hover:bg-red-950/40 cursor-pointer'
-                                : isFieldRejected(getFieldId('check_out_time', index))
-                                  ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
-                                  : isRejectionMode
-                                    ? 'border-border bg-card hover:border-white cursor-pointer'
-                                    : 'border-border bg-card'
-                            }`}
-                            onClick={() => handleFieldClick(getFieldId('check_out_time', index))}
-                          >
-                            <p className="text-lg font-semibold text-foreground">
-                              {formatDate(entry.check_out_time, "h:mm a", "Not Recorded")}
-                            </p>
-                          </div>
-                        </div>
+                        <SimpleEditableField
+                          fieldId={getFieldId('check_out_time', index)}
+                          originalValue={entry.check_out_time || null}
+                          label="Check Out"
+                          isRejectionMode={isRejectionMode}
+                          fieldEdits={fieldEdits}
+                          onFieldEdit={onFieldEdit || (() => {})}
+                          allFieldValues={{
+                            check_in_time: entry.check_in_time,
+                            break_start_time: entry.break_start_time,
+                            break_end_time: entry.break_end_time,
+                            check_out_time: entry.check_out_time
+                          }}
+                          isRejected={isFieldRejected(getFieldId('check_out_time', index))}
+                        />
                       </div>
 
                       {/* Dividing line between days (except for last entry) */}
@@ -520,6 +424,13 @@ export function MultiDayTimecardDetail({
                       </div>
                     </div>
                   </div>
+
+                  {/* Mobile Action Buttons - Centered at bottom of Daily Time Breakdown */}
+                  {actionButtons && (
+                    <div className="flex justify-center gap-2 mt-6 pt-4 border-t border-border">
+                      {actionButtons}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -575,166 +486,122 @@ export function MultiDayTimecardDetail({
             {/* Time Events Grid */}
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {/* Check In */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">
-                  {isEditing 
-                    ? 'Check In' 
-                    : isMultiDay 
-                      ? 'Typical Check In' 
-                      : 'Check In'
-                  }
-                </label>
-                <div 
-                  className={`p-3 rounded-lg border transition-all ${
-                    isFieldSelected('check_in_time')
-                      ? 'border-red-500 bg-red-50 dark:bg-red-950/20 hover:bg-red-200 dark:hover:bg-red-950/40 cursor-pointer'
-                      : isFieldRejected('check_in_time')
-                        ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
-                        : isRejectionMode
-                          ? 'border-border bg-card hover:border-white cursor-pointer'
-                          : 'border-border bg-card'
-                  }`}
-                  onClick={() => handleFieldClick('check_in_time')}
-                >
-                  {isEditing && onTimeChange ? (
-                    <Input
-                      type="datetime-local"
-                      value={utcToDatetimeLocal(editedTimecard.check_in_time || null)}
-                      onChange={(e) => onTimeChange('check_in_time', e.target.value)}
-                      className="text-sm"
-                    />
-                  ) : (
-                    <p className="text-lg font-semibold text-foreground">
-                      {formatDate(timecard.check_in_time, "h:mm a")}
-                    </p>
-                  )}
+              {isEditing && onTimeChange ? (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Check In</label>
+                  <Input
+                    type="datetime-local"
+                    value={utcToDatetimeLocal(editedTimecard.check_in_time || null)}
+                    onChange={(e) => onTimeChange('check_in_time', e.target.value)}
+                    className="text-sm"
+                  />
                 </div>
-              </div>
+              ) : (
+                <SimpleEditableField
+                  fieldId="check_in_time"
+                  originalValue={timecard.check_in_time || null}
+                  label={isMultiDay ? 'Typical Check In' : 'Check In'}
+                  isRejectionMode={isRejectionMode}
+                  fieldEdits={fieldEdits}
+                  onFieldEdit={onFieldEdit || (() => {})}
+                  allFieldValues={{
+                    check_in_time: timecard.check_in_time,
+                    break_start_time: timecard.break_start_time,
+                    break_end_time: timecard.break_end_time,
+                    check_out_time: timecard.check_out_time
+                  }}
+                  isRejected={isFieldRejected('check_in_time')}
+                />
+              )}
 
               {/* Break Start */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">
-                  {isEditing 
-                    ? 'Break Start' 
-                    : isMultiDay 
-                      ? 'Typical Break Start' 
-                      : 'Break Start'
-                  }
-                </label>
-                <div 
-                  className={`p-3 rounded-lg border transition-all ${
-                    isFieldSelected('break_start_time')
-                      ? 'border-red-500 bg-red-50 dark:bg-red-950/20 hover:bg-red-200 dark:hover:bg-red-950/40 cursor-pointer'
-                      : isFieldRejected('break_start_time')
-                        ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
-                        : isRejectionMode
-                          ? (isEditing ? editedTimecard.break_start_time : timecard.break_start_time) 
-                            ? 'border-border bg-card hover:border-white cursor-pointer'
-                            : 'border-dashed border-muted-foreground/30 bg-muted/30 hover:border-white cursor-pointer'
-                          : (isEditing ? editedTimecard.break_start_time : timecard.break_start_time) 
-                            ? 'border-border bg-card' 
-                            : 'border-dashed border-muted-foreground/30 bg-muted/30'
-                  }`}
-                  onClick={() => handleFieldClick('break_start_time')}
-                >
-                  {isEditing && onTimeChange ? (
-                    <Input
-                      type="datetime-local"
-                      value={utcToDatetimeLocal(editedTimecard.break_start_time || null)}
-                      onChange={(e) => onTimeChange('break_start_time', e.target.value)}
-                      className="text-sm"
-                      placeholder="Optional"
-                    />
-                  ) : timecard.break_start_time ? (
-                    <p className="text-lg font-semibold text-foreground">
-                      {formatDate(timecard.break_start_time, "h:mm a")}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Not Recorded</p>
-                  )}
+              {isEditing && onTimeChange ? (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Break Start</label>
+                  <Input
+                    type="datetime-local"
+                    value={utcToDatetimeLocal(editedTimecard.break_start_time || null)}
+                    onChange={(e) => onTimeChange('break_start_time', e.target.value)}
+                    className="text-sm"
+                    placeholder="Optional"
+                  />
                 </div>
-              </div>
+              ) : (
+                <SimpleEditableField
+                  fieldId="break_start_time"
+                  originalValue={timecard.break_start_time || null}
+                  label={isMultiDay ? 'Typical Break Start' : 'Break Start'}
+                  isRejectionMode={isRejectionMode}
+                  fieldEdits={fieldEdits}
+                  onFieldEdit={onFieldEdit || (() => {})}
+                  allFieldValues={{
+                    check_in_time: timecard.check_in_time,
+                    break_start_time: timecard.break_start_time,
+                    break_end_time: timecard.break_end_time,
+                    check_out_time: timecard.check_out_time
+                  }}
+                  isRejected={isFieldRejected('break_start_time')}
+                />
+              )}
 
               {/* Break End */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">
-                  {isEditing 
-                    ? 'Break End' 
-                    : isMultiDay 
-                      ? 'Typical Break End' 
-                      : 'Break End'
-                  }
-                </label>
-                <div 
-                  className={`p-3 rounded-lg border transition-all ${
-                    isFieldSelected('break_end_time')
-                      ? 'border-red-500 bg-red-50 dark:bg-red-950/20 hover:bg-red-200 dark:hover:bg-red-950/40 cursor-pointer'
-                      : isFieldRejected('break_end_time')
-                        ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
-                        : isRejectionMode
-                          ? (isEditing ? editedTimecard.break_end_time : timecard.break_end_time) 
-                            ? 'border-border bg-card hover:border-white cursor-pointer'
-                            : 'border-dashed border-muted-foreground/30 bg-muted/30 hover:border-white cursor-pointer'
-                          : (isEditing ? editedTimecard.break_end_time : timecard.break_end_time) 
-                            ? 'border-border bg-card' 
-                            : 'border-dashed border-muted-foreground/30 bg-muted/30'
-                  }`}
-                  onClick={() => handleFieldClick('break_end_time')}
-                >
-                  {isEditing && onTimeChange ? (
-                    <Input
-                      type="datetime-local"
-                      value={utcToDatetimeLocal(editedTimecard.break_end_time || null)}
-                      onChange={(e) => onTimeChange('break_end_time', e.target.value)}
-                      className="text-sm"
-                      placeholder="Optional"
-                    />
-                  ) : timecard.break_end_time ? (
-                    <p className="text-lg font-semibold text-foreground">
-                      {formatDate(timecard.break_end_time, "h:mm a")}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Not Recorded</p>
-                  )}
+              {isEditing && onTimeChange ? (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Break End</label>
+                  <Input
+                    type="datetime-local"
+                    value={utcToDatetimeLocal(editedTimecard.break_end_time || null)}
+                    onChange={(e) => onTimeChange('break_end_time', e.target.value)}
+                    className="text-sm"
+                    placeholder="Optional"
+                  />
                 </div>
-              </div>
+              ) : (
+                <SimpleEditableField
+                  fieldId="break_end_time"
+                  originalValue={timecard.break_end_time || null}
+                  label={isMultiDay ? 'Typical Break End' : 'Break End'}
+                  isRejectionMode={isRejectionMode}
+                  fieldEdits={fieldEdits}
+                  onFieldEdit={onFieldEdit || (() => {})}
+                  allFieldValues={{
+                    check_in_time: timecard.check_in_time,
+                    break_start_time: timecard.break_start_time,
+                    break_end_time: timecard.break_end_time,
+                    check_out_time: timecard.check_out_time
+                  }}
+                  isRejected={isFieldRejected('break_end_time')}
+                />
+              )}
 
               {/* Check Out */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">
-                  {isEditing 
-                    ? 'Check Out' 
-                    : isMultiDay 
-                      ? 'Typical Check Out' 
-                      : 'Check Out'
-                  }
-                </label>
-                <div 
-                  className={`p-3 rounded-lg border transition-all ${
-                    isFieldSelected('check_out_time')
-                      ? 'border-red-500 bg-red-50 dark:bg-red-950/20 hover:bg-red-200 dark:hover:bg-red-950/40 cursor-pointer'
-                      : isFieldRejected('check_out_time')
-                        ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
-                        : isRejectionMode
-                          ? 'border-border bg-card hover:border-white cursor-pointer'
-                          : 'border-border bg-card'
-                  }`}
-                  onClick={() => handleFieldClick('check_out_time')}
-                >
-                  {isEditing && onTimeChange ? (
-                    <Input
-                      type="datetime-local"
-                      value={utcToDatetimeLocal(editedTimecard.check_out_time || null)}
-                      onChange={(e) => onTimeChange('check_out_time', e.target.value)}
-                      className="text-sm"
-                    />
-                  ) : (
-                    <p className="text-lg font-semibold text-foreground">
-                      {formatDate(timecard.check_out_time, "h:mm a")}
-                    </p>
-                  )}
+              {isEditing && onTimeChange ? (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Check Out</label>
+                  <Input
+                    type="datetime-local"
+                    value={utcToDatetimeLocal(editedTimecard.check_out_time || null)}
+                    onChange={(e) => onTimeChange('check_out_time', e.target.value)}
+                    className="text-sm"
+                  />
                 </div>
-              </div>
+              ) : (
+                <SimpleEditableField
+                  fieldId="check_out_time"
+                  originalValue={timecard.check_out_time || null}
+                  label={isMultiDay ? 'Typical Check Out' : 'Check Out'}
+                  isRejectionMode={isRejectionMode}
+                  fieldEdits={fieldEdits}
+                  onFieldEdit={onFieldEdit || (() => {})}
+                  allFieldValues={{
+                    check_in_time: timecard.check_in_time,
+                    break_start_time: timecard.break_start_time,
+                    break_end_time: timecard.break_end_time,
+                    check_out_time: timecard.check_out_time
+                  }}
+                  isRejected={isFieldRejected('check_out_time')}
+                />
+              )}
             </div>
           </CardContent>
         </Card>
@@ -780,134 +647,7 @@ export function MultiDayTimecardDetail({
         </Card>
       )}
 
-      {/* Debug Panel - Only show if showDebugInfo is true */}
-      {showDebugInfo && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center">
-                <Bug className="w-5 h-5 mr-2 text-purple-600 dark:text-purple-400" />
-                Debug Information
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowDebugPanel(!showDebugPanel)}
-                className="text-purple-600 dark:text-purple-400"
-              >
-                {showDebugPanel ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          {showDebugPanel && (
-            <CardContent className="space-y-4">
-              {/* Timecard Raw Data */}
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-2">Timecard Raw Data</h4>
-                <div className="p-3 bg-muted rounded-lg">
-                  <pre className="text-xs text-foreground overflow-x-auto whitespace-pre-wrap">
-                    {JSON.stringify(timecard, null, 2)}
-                  </pre>
-                </div>
-              </div>
 
-              {/* Audit Logs */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-medium text-muted-foreground">Audit Logs</h4>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={loadAuditLogs}
-                    disabled={loadingAuditLogs}
-                  >
-                    {loadingAuditLogs ? 'Loading...' : 'Refresh'}
-                  </Button>
-                </div>
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {auditLogs.length === 0 ? (
-                    <div className="p-3 bg-muted rounded-lg text-center text-sm">
-                      {loadingAuditLogs ? (
-                        <span className="text-muted-foreground">Loading audit logs...</span>
-                      ) : auditLogsError ? (
-                        <div className="text-red-600 dark:text-red-400">
-                          <div className="font-medium">Failed to load audit logs</div>
-                          <div className="text-xs mt-1">{auditLogsError}</div>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">No audit logs found</span>
-                      )}
-                    </div>
-                  ) : (
-                    auditLogs.map((log, index) => (
-                      <div key={index} className="p-3 bg-muted rounded-lg border">
-                        <div className="flex items-center justify-between mb-2">
-                          <Badge variant={
-                            log.action_type === 'status_change' ? 'default' :
-                            log.action_type === 'admin_edit' ? 'secondary' :
-                            log.action_type === 'rejection_edit' ? 'destructive' :
-                            log.action_type === 'user_edit' ? 'outline' :
-                            'outline'
-                          }>
-                            {log.action_type}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {formatAuditLogTime(log.changed_at)}
-                          </span>
-                        </div>
-                        <div className="text-sm">
-                          <p className="font-medium">
-                            {log.field_name ? `${log.field_name} changed` : 'Status change'}
-                          </p>
-                          {log.old_value && log.new_value && (
-                            <div className="mt-1 text-xs">
-                              <span className="text-red-600 dark:text-red-400">From: {log.old_value}</span>
-                              <span className="mx-2">→</span>
-                              <span className="text-green-600 dark:text-green-400">To: {log.new_value}</span>
-                            </div>
-                          )}
-                          {log.changed_by_profile?.full_name && (
-                            <p className="text-muted-foreground mt-1">by {log.changed_by_profile.full_name}</p>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Rejected Fields Debug */}
-              {timecard.rejected_fields && (
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Rejected Fields</h4>
-                  <div className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
-                    <pre className="text-xs text-foreground whitespace-pre-wrap">
-                      {JSON.stringify(timecard.rejected_fields, null, 2)}
-                    </pre>
-                  </div>
-                </div>
-              )}
-
-              {/* Current State Debug */}
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-2">Current Component State</h4>
-                <div className="p-3 bg-muted rounded-lg">
-                  <pre className="text-xs text-foreground overflow-x-auto whitespace-pre-wrap">
-                    {JSON.stringify({
-                      isRejectionMode,
-                      selectedFields,
-                      showRejectedFields,
-                      isEditing,
-                      editedTimecard,
-                      calculatedValues
-                    }, null, 2)}
-                  </pre>
-                </div>
-              </div>
-            </CardContent>
-          )}
-        </Card>
-      )}
     </div>
   )
 }

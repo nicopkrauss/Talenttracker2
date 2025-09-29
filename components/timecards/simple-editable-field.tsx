@@ -18,6 +18,8 @@ interface SimpleEditableFieldProps {
     break_end_time?: string | null
     check_out_time?: string | null
   }
+  // Rejected fields support
+  isRejected?: boolean
 }
 
 export function SimpleEditableField({
@@ -27,7 +29,8 @@ export function SimpleEditableField({
   isRejectionMode,
   fieldEdits,
   onFieldEdit,
-  allFieldValues
+  allFieldValues,
+  isRejected = false
 }: SimpleEditableFieldProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [validationError, setValidationError] = useState<string | null>(null)
@@ -386,6 +389,9 @@ export function SimpleEditableField({
       } else {
         baseStyles += "border-border bg-card hover:border-red-200 hover:bg-red-50 cursor-pointer "
       }
+    } else if (isRejected) {
+      // Show rejected fields with red styling when not in rejection mode
+      baseStyles += "border-red-500 bg-red-50 dark:bg-red-950/20 "
     } else {
       if (originalValue) {
         baseStyles += "border-border bg-card "

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Highlighting Fixes Summary</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            background: #f5f5f5;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        li {
+            margin: 5px 0;
+        }
+        code {
+            background: #f8f9fa;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>📱 Mobile Highlighting Fixes Complete</h1>
+    
+    <div class="test-section success">
+        <h2>✅ Issues Fixed</h2>
+        <p>Successfully resolved the mobile highlighting issues in the timecard details page:</p>
+        <ul>
+            <li><strong>Removed day header highlighting</strong> - Day headers no longer show blue highlighting when fields are edited</li>
+            <li><strong>Fixed rejected field highlighting</strong> - Time fields that were rejected now properly show red highlighting on mobile</li>
+        </ul>
+    </div>
+
+    <div class="test-section info">
+        <h2>🔧 Changes Made</h2>
+        
+        <h3>1. Removed Day Header Highlighting</h3>
+        <ul>
+            <li>✅ Removed complex day header highlighting logic in MultiDayTimecardDetail</li>
+            <li>✅ Simplified day header to show only basic information without highlighting</li>
+            <li>✅ Removed blue border and background when fields are edited</li>
+            <li>✅ Removed "✏️ Modified" indicator from day headers</li>
+        </ul>
+
+        <h3>2. Enhanced SimpleEditableField Component</h3>
+        <ul>
+            <li>✅ Added <code>isRejected</code> prop to interface</li>
+            <li>✅ Updated styling logic to handle rejected fields</li>
+            <li>✅ Added red highlighting for rejected fields when not in rejection mode</li>
+            <li>✅ Maintained existing rejection mode functionality</li>
+        </ul>
+
+        <h3>3. Updated Component Usage</h3>
+        <ul>
+            <li>✅ Added <code>isRejected</code> prop to all SimpleEditableField components in MultiDayTimecardDetail</li>
+            <li>✅ Added <code>isRejected</code> prop to all SimpleEditableField components in MultiDayTimecardDisplay</li>
+            <li>✅ Updated both single-day and multi-day layouts</li>
+            <li>✅ Updated both main days and additional days sections</li>
+        </ul>
+    </div>
+
+    <div class="test-section info">
+        <h2>🎯 How It Works Now</h2>
+        
+        <h3>Day Headers (Mobile)</h3>
+        <ul>
+            <li><strong>Clean Design:</strong> Simple day headers without highlighting clutter</li>
+            <li><strong>Essential Info:</strong> Shows day number, date, hours worked, and pay</li>
+            <li><strong>No Highlighting:</strong> No blue borders or backgrounds when fields are edited</li>
+            <li><strong>Consistent:</strong> Same appearance regardless of field edit status</li>
+        </ul>
+
+        <h3>Time Fields (Mobile)</h3>
+        <ul>
+            <li><strong>Rejected Fields:</strong> Show red border and background when field was rejected</li>
+            <li><strong>Edited Fields:</strong> Show blue border and background when actively editing in rejection mode</li>
+            <li><strong>Normal Fields:</strong> Standard appearance with proper hover states</li>
+            <li><strong>Empty Fields:</strong> Dashed border for fields without values</li>
+        </ul>
+
+        <h3>Field States</h3>
+        <ul>
+            <li><strong>Normal:</strong> Standard border and background</li>
+            <li><strong>Rejected:</strong> Red border and light red background</li>
+            <li><strong>Rejection Mode (Editing):</strong> Blue border and light blue background</li>
+            <li><strong>Rejection Mode (Edited):</strong> Blue border and light blue background</li>
+            <li><strong>Validation Error:</strong> Red border and background with error message</li>
+        </ul>
+    </div>
+
+    <div class="test-section info">
+        <h2>🔍 Technical Details</h2>
+        
+        <h3>SimpleEditableField Styling Logic</h3>
+        <pre><code>const getFieldStyles = () => {
+  let baseStyles = "p-2 rounded-lg border transition-all "
+  
+  if (validationError) {
+    baseStyles += "border-red-500 bg-red-50 dark:bg-red-950/20 "
+  } else if (isRejectionMode) {
+    if (isEditing) {
+      baseStyles += "border-blue-500 bg-blue-100 dark:bg-blue-900/30 cursor-text "
+    } else if (isEdited) {
+      baseStyles += "border-blue-500 bg-blue-50 dark:bg-blue-950/20 cursor-pointer "
+    } else {
+      baseStyles += "border-border bg-card hover:border-red-200 hover:bg-red-50 cursor-pointer "
+    }
+  } else if (isRejected) {
+    // NEW: Show rejected fields with red styling when not in rejection mode
+    baseStyles += "border-red-500 bg-red-50 dark:bg-red-950/20 "
+  } else {
+    // Standard styling for normal fields
+    baseStyles += originalValue ? "border-border bg-card " : "border-dashed border-muted-foreground/30 bg-muted/30 "
+  }
+  
+  return baseStyles
+}</code></pre>
+
+        <h3>Component Integration</h3>
+        <pre><code>// Example usage in MultiDayTimecardDetail
+&lt;SimpleEditableField
+  fieldId={getFieldId('check_in_time', index)}
+  originalValue={entry.check_in_time || null}
+  label="Check In"
+  isRejectionMode={isRejectionMode}
+  fieldEdits={fieldEdits}
+  onFieldEdit={onFieldEdit || (() => {})}
+  allFieldValues={{...}}
+  isRejected={isFieldRejected(getFieldId('check_in_time', index))} // NEW
+/&gt;</code></pre>
+    </div>
+
+    <div class="test-section warning">
+        <h2>🧪 Testing Checklist</h2>
+        
+        <h3>Mobile Layout Testing</h3>
+        <ul>
+            <li>□ View a rejected timecard on mobile - verify rejected fields show red highlighting</li>
+            <li>□ View a normal timecard on mobile - verify no unwanted highlighting</li>
+            <li>□ Enter rejection mode on mobile - verify fields become editable with proper styling</li>
+            <li>□ Edit fields in rejection mode - verify blue highlighting for edited fields</li>
+            <li>□ Check day headers - verify they don't show highlighting when fields are edited</li>
+        </ul>
+
+        <h3>Cross-Component Testing</h3>
+        <ul>
+            <li>□ Test MultiDayTimecardDetail component (timecard details page)</li>
+            <li>□ Test MultiDayTimecardDisplay component (project approval tab)</li>
+            <li>□ Test both single-day and multi-day timecards</li>
+            <li>□ Test both main days and additional days sections</li>
+        </ul>
+
+        <h3>Field State Testing</h3>
+        <ul>
+            <li>□ Normal fields - standard appearance</li>
+            <li>□ Rejected fields - red highlighting</li>
+            <li>□ Empty fields - dashed border</li>
+            <li>□ Validation errors - red highlighting with error message</li>
+            <li>□ Rejection mode editing - blue highlighting</li>
+        </ul>
+    </div>
+
+    <div class="test-section success">
+        <h2>🎉 Expected Results</h2>
+        
+        <h3>Clean Mobile Interface</h3>
+        <ul>
+            <li><strong>Day Headers:</strong> Clean, simple headers without distracting highlighting</li>
+            <li><strong>Field Focus:</strong> Highlighting only on individual fields that need attention</li>
+            <li><strong>Clear Feedback:</strong> Red highlighting clearly indicates rejected fields</li>
+            <li><strong>Intuitive Editing:</strong> Blue highlighting shows active editing state</li>
+        </ul>
+
+        <h3>Improved User Experience</h3>
+        <ul>
+            <li><strong>Less Visual Noise:</strong> Removed unnecessary day header highlighting</li>
+            <li><strong>Better Field Visibility:</strong> Rejected fields now properly highlighted</li>
+            <li><strong>Consistent Behavior:</strong> Same highlighting logic across all components</li>
+            <li><strong>Mobile Optimized:</strong> Clean, touch-friendly interface</li>
+        </ul>
+    </div>
+
+    <div class="test-section success">
+        <h2>✨ Summary</h2>
+        <p>The mobile highlighting issues have been successfully resolved:</p>
+        <ul>
+            <li>✅ <strong>Day headers</strong> no longer show unwanted highlighting</li>
+            <li>✅ <strong>Rejected fields</strong> now properly show red highlighting on mobile</li>
+            <li>✅ <strong>Field editing</strong> maintains proper blue highlighting in rejection mode</li>
+            <li>✅ <strong>Cross-component</strong> consistency across all timecard displays</li>
+        </ul>
+        
+        <p><strong>The mobile timecard interface now provides clear, consistent visual feedback without unnecessary clutter!</strong></p>
+    </div>
+</body>
+</html>

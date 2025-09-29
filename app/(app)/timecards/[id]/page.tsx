@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Clock, Calendar, AlertTriangle, ArrowLeft, Check, X, Edit, Loader2, Save, RotateCcw, AlertCircle, FileText, Bug } from "lucide-react"
+import { Clock, Calendar, AlertTriangle, ArrowLeft, Check, X, Edit, Loader2, Save, RotateCcw, AlertCircle, FileText } from "lucide-react"
 import type { Timecard } from "@/lib/types"
 import { format } from "date-fns"
 import Link from "next/link"
@@ -58,13 +58,13 @@ export default function TimecardDetailPage() {
   
   // Rejection mode states
   const [isRejectionMode, setIsRejectionMode] = useState(false)
-  const [selectedFields, setSelectedFields] = useState<string[]>([])
+  const [fieldEdits, setFieldEdits] = useState<Record<string, any>>({})
   const [showReasonDialog, setShowReasonDialog] = useState(false)
   const [rejectionReason, setRejectionReason] = useState("")
   const [loadingRejection, setLoadingRejection] = useState(false)
   
-  // Debug mode state
-  const [showDebugInfo, setShowDebugInfo] = useState(false)
+  // Audit trail refresh trigger
+  const [auditRefreshTrigger, setAuditRefreshTrigger] = useState(0)
   
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -99,12 +99,6 @@ export default function TimecardDetailPage() {
     if (params.id) {
       fetchTimecard()
       fetchGlobalSettings()
-    }
-    
-    // Check for debug mode in URL
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search)
-      setShowDebugInfo(urlParams.get('debug') === 'true')
     }
   }, [params.id])
 
@@ -199,6 +193,8 @@ export default function TimecardDetailPage() {
       await fetchTimecard()
       setShowApproveDialog(false)
       setComments("")
+      // Trigger audit trail refresh
+      setAuditRefreshTrigger(prev => prev + 1)
     } catch (error) {
       console.error('Error approving timecard:', error)
       setError(error instanceof Error ? error.message : 'Failed to approve timecard')
@@ -231,6 +227,8 @@ export default function TimecardDetailPage() {
       await fetchTimecard()
       setShowRejectDialog(false)
       setComments("")
+      // Trigger audit trail refresh
+      setAuditRefreshTrigger(prev => prev + 1)
     } catch (error) {
       console.error('Error rejecting timecard:', error)
       setError(error instanceof Error ? error.message : 'Failed to reject timecard')
@@ -242,20 +240,126 @@ export default function TimecardDetailPage() {
   // Rejection mode functions
   const enterRejectionMode = () => {
     setIsRejectionMode(true)
-    setSelectedFields([])
+    setFieldEdits({})
   }
 
   const exitRejectionMode = () => {
     setIsRejectionMode(false)
-    setSelectedFields([])
+    setFieldEdits({})
   }
 
-  const toggleFieldSelection = (fieldId: string) => {
-    setSelectedFields(prev => 
-      prev.includes(fieldId) 
-        ? prev.filter(id => id !== fieldId)
-        : [...prev, fieldId]
-    )
+  // Helper function to get the original value for a field
+  const getOriginalValue = (fieldId: string) => {
+    if (fieldId.includes('_day_')) {
+      const parts = fieldId.split('_day_')
+      const dayIndex = parseInt(parts[1])
+      const fieldName = parts[0]
+
+      if (!isNaN(dayIndex) && timecard?.daily_entries && timecard.daily_entries[dayIndex]) {
+        return timecard.daily_entries[dayIndex][fieldName as keyof typeof timecard.daily_entries[0]]
+      }
+    } else {
+      return timecard?.[fieldId as keyof typeof timecard]
+    }
+    return null
+  }
+
+  // Helper function to normalize time values for comparison
+  const normalizeTimeValue = (timeValue: string | null | undefined): string | null => {
+    if (!timeValue) return null
+    
+    try {
+      // If it's already a simple time string (HH:MM:SS), return as-is
+      if (timeValue.includes(':') && !timeValue.includes('T')) {
+        // Ensure it's in HH:MM:SS format
+        const parts = timeValue.split(':')
+        if (parts.length >= 2) {
+          const hours = parts[0].padStart(2, '0')
+          const minutes = parts[1].padStart(2, '0')
+          const seconds = parts[2] ? parts[2].padStart(2, '0') : '00'
+          return `${hours}:${minutes}:${seconds}`
+        }
+      }
+      
+      // If it's an ISO string, parse and extract time
+      const date = new Date(timeValue)
+      if (isNaN(date.getTime())) return timeValue.trim()
+      
+      // Extract only the time portion for comparison
+      const hours = date.getHours().toString().padStart(2, '0')
+      const minutes = date.getMinutes().toString().padStart(2, '0')
+      const seconds = date.getSeconds().toString().padStart(2, '0')
+      return `${hours}:${minutes}:${seconds}`
+    } catch {
+      return timeValue.trim()
+    }
+  }
+
+  const handleFieldEdit = (fieldId: string, newValue: any) => {
+    console.log(`🔧 handleFieldEdit called:`, {
+      fieldId,
+      newValue,
+      newValueType: typeof newValue,
+      currentFieldEdits: fieldEdits
+    })
+    
+    setFieldEdits(prev => {
+      let newFieldEdits
+      if (newValue === undefined) {
+        // Remove the field from edits if value is undefined (matches original)
+        const { [fieldId]: removed, ...rest } = prev
+        newFieldEdits = rest
+        console.log(`🗑️ Removing field edit (undefined):`, {
+          fieldId,
+          removedValue: removed,
+          newFieldEdits
+        })
+      } else {
+        // Get the original value for comparison
+        const originalValue = getOriginalValue(fieldId)
+        
+        // Compare normalized values to determine if they match
+        const normalizedNew = normalizeTimeValue(newValue)
+        const normalizedOriginal = normalizeTimeValue(originalValue as string)
+        
+        console.log(`🔍 Comparing values:`, {
+          fieldId,
+          originalValue,
+          originalValueType: typeof originalValue,
+          newValue,
+          newValueType: typeof newValue,
+          normalizedOriginal,
+          normalizedNew,
+          valuesMatch: normalizedNew === normalizedOriginal
+        })
+        
+        if (normalizedNew === normalizedOriginal) {
+          // Values match - remove the field from edits
+          const { [fieldId]: removed, ...rest } = prev
+          newFieldEdits = rest
+          console.log(`🗑️ Removing field edit (values match):`, {
+            fieldId,
+            removedValue: removed,
+            newFieldEdits
+          })
+        } else {
+          // Values differ - add or update the field edit
+          newFieldEdits = {
+            ...prev,
+            [fieldId]: newValue
+          }
+          console.log(`📝 Adding/updating field edit:`, {
+            fieldId,
+            originalValue,
+            newValue,
+            normalizedOriginal,
+            normalizedNew,
+            newFieldEdits
+          })
+        }
+      }
+      return newFieldEdits
+    })
   }
 
   const confirmRejection = () => {
@@ -267,30 +371,80 @@ export default function TimecardDetailPage() {
 
     setLoadingRejection(true)
     try {
-      const response = await fetch('/api/timecards/reject', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          timecardId: timecard.id,
-          comments: rejectionReason.trim(),
-          rejectedFields: selectedFields,
-        }),
-      })
+      const hasEdits = Object.keys(fieldEdits).length > 0
+      const rejectedFields = Object.keys(fieldEdits) // Fields that were edited are the rejected fields
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to reject timecard')
+      if (hasEdits) {
+        console.log('🔧 Rejection with edits:', {
+          timecardId: timecard.id,
+          fieldEdits,
+          rejectedFields,
+          rejectionReason: rejectionReason.trim()
+        })
+
+        // Apply edits and reject the timecard
+        const response = await fetch('/api/timecards/edit', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            timecardId: timecard.id,
+            updates: {
+              ...fieldEdits,
+              status: 'rejected' // Set status to rejected when editing during rejection
+            },
+            editComment: rejectionReason.trim(),
+            returnToDraft: false, // Don't return to draft, we want to reject
+          }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          console.error('Edit API error:', errorData)
+          throw new Error(errorData.error || 'Failed to edit and reject timecard')
+        }
+
+        const result = await response.json()
+        console.log('✅ Edit API success:', result)
+      } else {
+        console.log('🔧 Rejection without edits:', {
+          timecardId: timecard.id,
+          rejectionReason: rejectionReason.trim(),
+          rejectedFields
+        })
+
+        // Standard rejection without edits
+        const response = await fetch('/api/timecards/reject', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            timecardId: timecard.id,
+            comments: rejectionReason.trim(),
+            rejectedFields: rejectedFields,
+          }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          console.error('Reject API error:', errorData)
+          throw new Error(errorData.error || 'Failed to reject timecard')
+        }
+
+        const result = await response.json()
+        console.log('✅ Reject API success:', result)
       }
 
       // Reset rejection state and refresh data
-      setIsRejectionMode(false)
-      setSelectedFields([])
+      exitRejectionMode()
       setShowReasonDialog(false)
       setRejectionReason("")
       
       await fetchTimecard()
+      // Trigger audit trail refresh
+      setAuditRefreshTrigger(prev => prev + 1)
     } catch (error) {
       console.error('Error rejecting timecard:', error)
       setError(error instanceof Error ? error.message : 'Failed to reject timecard')
@@ -487,6 +641,8 @@ export default function TimecardDetailPage() {
       setEditedTimecard({})
       setShowEditReasonDialog(false)
       setEditReason("")
+      // Trigger audit trail refresh
+      setAuditRefreshTrigger(prev => prev + 1)
     } catch (error) {
       console.error('Error saving timecard changes:', error)
       setError(error instanceof Error ? error.message : 'Failed to save changes')
@@ -530,6 +686,8 @@ export default function TimecardDetailPage() {
       setEditedTimecard({})
       setShowEditReturnDialog(false)
       setComments("")
+      // Trigger audit trail refresh
+      setAuditRefreshTrigger(prev => prev + 1)
     } catch (error) {
       console.error('Error returning timecard to draft:', error)
       setError(error instanceof Error ? error.message : 'Failed to return timecard to draft')
@@ -715,18 +873,6 @@ export default function TimecardDetailPage() {
               >
                 {getStatusText(timecard.status)}
               </Badge>
-              {/* Debug Toggle - Only show for admin users */}
-              {canApprove && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowDebugInfo(!showDebugInfo)}
-                  className={`gap-2 ${showDebugInfo ? 'bg-purple-100 dark:bg-purple-950/20 text-purple-600 dark:text-purple-400' : ''}`}
-                >
-                  <Bug className="w-4 h-4" />
-                  Debug
-                </Button>
-              )}
             </div>
           </div>
         </div>
@@ -743,10 +889,9 @@ export default function TimecardDetailPage() {
           onTimeChange={handleTimeChange}
           globalSettings={globalSettings}
           isRejectionMode={isRejectionMode}
-          selectedFields={selectedFields}
-          onFieldToggle={toggleFieldSelection}
+          fieldEdits={fieldEdits}
+          onFieldEdit={handleFieldEdit}
           showRejectedFields={timecard.status === 'rejected'}
-          showDebugInfo={showDebugInfo}
           actionButtons={
             /* Action Buttons - Right to Left: Approve, Reject, Edit & Return */
             isEditing ? (
@@ -788,10 +933,9 @@ export default function TimecardDetailPage() {
                 <Button
                   size="sm"
                   onClick={confirmRejection}
-                  disabled={selectedFields.length === 0}
                   className="bg-red-600 dark:bg-red-800 hover:bg-red-700 dark:hover:bg-red-900 text-white"
                 >
-                  Confirm Rejection
+                  {Object.keys(fieldEdits).length > 0 ? "Apply Changes & Return" : "Reject Without Changes"}
                 </Button>
               </>
             ) : (
@@ -810,7 +954,8 @@ export default function TimecardDetailPage() {
                       className="gap-2"
                     >
                       <Edit className="w-4 h-4" />
-                      Edit & Return
+                      <span className="hidden sm:inline">Edit & Return</span>
+                      <span className="sm:hidden">Edit</span>
                     </Button>
                     
                     <Button 
@@ -849,7 +994,8 @@ export default function TimecardDetailPage() {
                     className="gap-2"
                   >
                     <Edit className="w-4 h-4" />
-                    Edit Times
+                    <span className="hidden sm:inline">Edit Times</span>
+                    <span className="sm:hidden">Edit</span>
                   </Button>
                 )}
               </>
@@ -861,6 +1007,7 @@ export default function TimecardDetailPage() {
         <AuditTrailSection 
           timecardId={timecard.id}
           className="w-full"
+          refreshTrigger={auditRefreshTrigger}
         />
 
         {/* Admin Notes Section - Only visible to authorized users */}
@@ -1223,134 +1370,112 @@ export default function TimecardDetailPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Rejection Reason Dialog */}
+        {/* Enhanced Rejection Reason Dialog */}
         <Dialog open={showReasonDialog} onOpenChange={setShowReasonDialog}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle className="text-red-600 dark:text-red-400">Reject Timecard</DialogTitle>
+              <DialogTitle className={Object.keys(fieldEdits).length > 0 ? "text-blue-600 dark:text-blue-400" : "text-red-600 dark:text-red-400"}>
+                {Object.keys(fieldEdits).length > 0 ? 'Return Timecard with Changes' : 'Reject Timecard'}
+              </DialogTitle>
             </DialogHeader>
-            
+
             <div className="space-y-4">
-              {selectedFields.length > 0 && (
+              {Object.keys(fieldEdits).length > 0 && (
                 <div>
-                  <Label className="text-sm font-medium">Selected problematic fields:</Label>
+                  <Label className="text-sm font-medium">Modified fields:</Label>
                   <div className="mt-2 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
-                    {(() => {
-                      // Group fields by date
-                      const groupedFields: Record<string, string[]> = {}
-                      const summaryFields: string[] = []
-                      
-                      // Define field order for consistent display
-                      const fieldOrder = ['check_in_time', 'break_start_time', 'break_end_time', 'check_out_time']
-                      const fieldMap: Record<string, string> = {
-                        'check_in_time': 'Check In',
-                        'break_start_time': 'Break Start',
-                        'break_end_time': 'Break End',
-                        'check_out_time': 'Check Out'
-                      }
-                      
-                      selectedFields.forEach(fieldId => {
-                        if (fieldId.includes('_day_')) {
-                          const parts = fieldId.split('_day_')
-                          const dayIndex = parseInt(parts[1])
+                    <div className="flex flex-wrap gap-2">
+                      {Object.keys(fieldEdits).map((fieldId, index) => (
+                        <span
+                          key={index}
+                          className="px-2 py-1 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded text-xs font-medium"
+                        >
+                          {getFieldDisplayName(fieldId)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Show changes made */}
+              {Object.keys(fieldEdits).length > 0 && (
+                <div>
+                  <Label className="text-sm font-medium">Changes made:</Label>
+                  <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div className="space-y-2">
+                      {Object.entries(fieldEdits).map(([fieldId, newValue]) => {
+                        const originalValue = getOriginalValue(fieldId)
+
+                        const formatTime = (timeString: string | null) => {
+                          if (!timeString) return "Not Recorded"
                           
-                          if (!isNaN(dayIndex) && timecard?.daily_entries && timecard.daily_entries[dayIndex]) {
-                            const entry = timecard.daily_entries[dayIndex]
-                            const date = new Date(entry.work_date).toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric' 
-                            })
+                          try {
+                            // Handle both full datetime and simple time formats
+                            let date: Date;
                             
-                            if (!groupedFields[date]) {
-                              groupedFields[date] = []
+                            if (timeString.includes('T')) {
+                              // Full datetime string
+                              date = new Date(timeString)
+                            } else if (timeString.includes(':')) {
+                              // Simple time format (HH:MM:SS) - combine with today's date
+                              const today = new Date().toISOString().split('T')[0]
+                              date = new Date(`${today}T${timeString}`)
+                            } else {
+                              return "Not Recorded"
                             }
                             
-                            groupedFields[date].push(fieldMap[parts[0]] || parts[0])
+                            if (isNaN(date.getTime())) return "Not Recorded"
+                            
+                            return date.toLocaleTimeString('en-US', {
+                              hour: 'numeric',
+                              minute: '2-digit'
+                            })
+                          } catch {
+                            return "Not Recorded"
                           }
-                        } else {
-                          summaryFields.push(getFieldDisplayName(fieldId))
                         }
-                      })
-                      
-                      // Sort fields within each date group according to chronological order
-                      Object.keys(groupedFields).forEach(date => {
-                        groupedFields[date] = groupedFields[date].sort((a, b) => {
-                          const aIndex = fieldOrder.findIndex(field => fieldMap[field] === a)
-                          const bIndex = fieldOrder.findIndex(field => fieldMap[field] === b)
-                          return aIndex - bIndex
-                        })
-                      })
-                      
-                      return (
-                        <div className="text-sm text-red-700 dark:text-red-300 space-y-3">
-                          {/* Summary fields first */}
-                          {summaryFields.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                              {summaryFields.map((field, index) => (
-                                <span 
-                                  key={index} 
-                                  className="px-2 py-1 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded text-xs font-medium"
-                                >
-                                  {field}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          
-                          {/* Grouped by date - horizontal layout */}
-                          {Object.keys(groupedFields).length > 0 && (
-                            <div className="space-y-2">
-                              {/* Date headers */}
-                              <div className="flex gap-4">
-                                {Object.keys(groupedFields).map((date) => (
-                                  <div key={date} className="flex-1 min-w-0">
-                                    <div className="font-medium text-center pb-2 border-b border-red-300 dark:border-red-700">
-                                      {date}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                              
-                              {/* Fields under each date */}
-                              <div className="flex gap-4">
-                                {Object.entries(groupedFields).map(([date, fields]) => (
-                                  <div key={date} className="flex-1 min-w-0">
-                                    <div className="flex flex-col gap-1">
-                                      {fields.map((field, index) => (
-                                        <span 
-                                          key={index}
-                                          className="px-2 py-1 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded text-xs font-medium text-center"
-                                        >
-                                          {field}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })()}
+
+                        return (
+                          <div key={fieldId} className="text-sm">
+                            <span className="font-medium text-blue-700 dark:text-blue-300">
+                              {getFieldDisplayName(fieldId)}:
+                            </span>
+                            <span className="ml-2 text-muted-foreground line-through">
+                              {formatTime(originalValue as string)}
+                            </span>
+                            <span className="mx-2 text-blue-600 dark:text-blue-400">→</span>
+                            <span className="font-medium text-blue-600 dark:text-blue-400">
+                              {formatTime(newValue)}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
                 </div>
               )}
 
               <div>
                 <Label htmlFor="rejection-reason" className="text-sm font-medium">
-                  Reason for rejection <span className="text-red-500">*</span>
+                  {Object.keys(fieldEdits).length > 0 ? 'Explanation of changes' : 'Reason for rejection'} <span className="text-red-500">*</span>
                 </Label>
                 <Textarea
                   id="rejection-reason"
-                  placeholder="Please explain the issues with this timecard..."
+                  placeholder={Object.keys(fieldEdits).length > 0
+                    ? "Explain the corrections made and any remaining issues..."
+                    : "Please explain the issues with this timecard..."
+                  }
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
                   className="mt-1 min-h-[100px]"
                 />
                 {!rejectionReason.trim() && (
                   <p className="text-xs text-red-500 mt-1">
-                    A reason is required when rejecting a timecard
+                    {Object.keys(fieldEdits).length > 0
+                      ? 'An explanation is required when making changes'
+                      : 'A reason is required when rejecting a timecard'
+                    }
                   </p>
                 )}
               </div>
@@ -1369,7 +1494,7 @@ export default function TimecardDetailPage() {
                 disabled={!rejectionReason.trim() || loadingRejection}
                 className="bg-red-600 dark:bg-red-800 hover:bg-red-700 dark:hover:bg-red-900 text-white"
               >
-                {loadingRejection ? 'Rejecting...' : 'Reject Timecard'}
+                {loadingRejection ? 'Processing...' : Object.keys(fieldEdits).length > 0 ? 'Apply Changes & Return' : 'Reject Timecard'}
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rejection Mode Test - Timecard Details</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            background: #f5f5f5;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        li {
+            margin: 5px 0;
+        }
+        code {
+            background: #f8f9fa;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Rejection Mode Implementation - Timecard Details Page</h1>
+    
+    <div class="test-section success">
+        <h2>✅ Implementation Complete</h2>
+        <p>Successfully implemented rejection mode functionality in the timecard details page to match the approve tab functionality.</p>
+    </div>
+
+    <div class="test-section info">
+        <h2>📋 Changes Made</h2>
+        
+        <h3>1. Timecard Details Page (app/(app)/timecards/[id]/page.tsx)</h3>
+        <ul>
+            <li>✅ Replaced <code>selectedFields</code> state with <code>fieldEdits</code> state</li>
+            <li>✅ Added field editing functionality with <code>handleFieldEdit</code></li>
+            <li>✅ Added time value normalization for consistent comparison</li>
+            <li>✅ Updated rejection workflow to support both editing and non-editing rejection</li>
+            <li>✅ Enhanced rejection dialog to show field changes and explanations</li>
+            <li>✅ Updated action buttons to show correct text based on edits</li>
+        </ul>
+
+        <h3>2. MultiDayTimecardDetail Component</h3>
+        <ul>
+            <li>✅ Updated interface to use <code>fieldEdits</code> and <code>onFieldEdit</code></li>
+            <li>✅ Replaced field selection logic with field editing logic</li>
+            <li>✅ Added SimpleEditableField components for mobile layout</li>
+            <li>✅ Updated desktop timecard grid integration</li>
+            <li>✅ Enhanced day headers to show edit indicators</li>
+            <li>✅ Maintained backward compatibility with existing editing mode</li>
+        </ul>
+
+        <h3>3. Field Editing Integration</h3>
+        <ul>
+            <li>✅ Integrated SimpleEditableField component for consistent editing</li>
+            <li>✅ Added CustomTimePicker for time input with validation</li>
+            <li>✅ Implemented real-time validation with error display</li>
+            <li>✅ Added field value normalization for accurate comparison</li>
+            <li>✅ Maintained visual consistency with approve tab</li>
+        </ul>
+    </div>
+
+    <div class="test-section info">
+        <h2>🎯 Key Features Implemented</h2>
+        
+        <h3>Rejection Mode Workflow</h3>
+        <ul>
+            <li><strong>Enter Rejection Mode:</strong> Click "Reject" button to enable field editing</li>
+            <li><strong>Edit Fields:</strong> Click on time fields to edit them with time picker</li>
+            <li><strong>Real-time Validation:</strong> Time sequence validation with error messages</li>
+            <li><strong>Visual Feedback:</strong> Edited fields show original vs new values</li>
+            <li><strong>Flexible Rejection:</strong> Can reject with or without edits</li>
+        </ul>
+
+        <h3>Enhanced Rejection Dialog</h3>
+        <ul>
+            <li><strong>Dynamic Title:</strong> Changes based on whether edits were made</li>
+            <li><strong>Field Summary:</strong> Shows which fields were modified</li>
+            <li><strong>Change Preview:</strong> Displays before/after values for edited fields</li>
+            <li><strong>Contextual Prompts:</strong> Different prompts for edits vs rejections</li>
+            <li><strong>Validation:</strong> Requires explanation for all rejection types</li>
+        </ul>
+
+        <h3>Mobile & Desktop Support</h3>
+        <ul>
+            <li><strong>Responsive Design:</strong> Works on both mobile and desktop</li>
+            <li><strong>Touch-Friendly:</strong> Proper touch targets for mobile editing</li>
+            <li><strong>Consistent UX:</strong> Same behavior across all screen sizes</li>
+            <li><strong>Visual Indicators:</strong> Clear edit indicators on mobile</li>
+        </ul>
+    </div>
+
+    <div class="test-section warning">
+        <h2>🧪 Testing Checklist</h2>
+        
+        <h3>Basic Functionality</h3>
+        <ul>
+            <li>□ Navigate to a submitted timecard details page</li>
+            <li>□ Click "Reject" button to enter rejection mode</li>
+            <li>□ Verify fields become clickable with hover effects</li>
+            <li>□ Click on a time field to open time picker</li>
+            <li>□ Edit time value and verify validation works</li>
+            <li>□ Verify edited fields show visual indicators</li>
+        </ul>
+
+        <h3>Rejection Workflow</h3>
+        <ul>
+            <li>□ Test rejection without edits (standard rejection)</li>
+            <li>□ Test rejection with edits (edit + reject)</li>
+            <li>□ Verify rejection dialog shows correct information</li>
+            <li>□ Verify field changes are displayed properly</li>
+            <li>□ Test canceling rejection mode</li>
+            <li>□ Verify API calls work correctly for both scenarios</li>
+        </ul>
+
+        <h3>Validation & Error Handling</h3>
+        <ul>
+            <li>□ Test time sequence validation (break start after check-in, etc.)</li>
+            <li>□ Verify validation error messages display correctly</li>
+            <li>□ Test edge cases (empty times, invalid formats)</li>
+            <li>□ Verify field normalization works correctly</li>
+            <li>□ Test multi-day timecard editing</li>
+        </ul>
+
+        <h3>Cross-Platform Testing</h3>
+        <ul>
+            <li>□ Test on mobile devices (touch interaction)</li>
+            <li>□ Test on desktop (mouse interaction)</li>
+            <li>□ Verify responsive design works correctly</li>
+            <li>□ Test keyboard navigation and accessibility</li>
+        </ul>
+    </div>
+
+    <div class="test-section info">
+        <h2>🔄 Integration Points</h2>
+        
+        <h3>API Endpoints Used</h3>
+        <ul>
+            <li><code>/api/timecards/edit</code> - For rejection with edits</li>
+            <li><code>/api/timecards/reject</code> - For standard rejection</li>
+            <li><code>/api/timecards/[id]</code> - For fetching timecard data</li>
+        </ul>
+
+        <h3>Component Dependencies</h3>
+        <ul>
+            <li><code>SimpleEditableField</code> - Handles individual field editing</li>
+            <li><code>CustomTimePicker</code> - Time input with validation</li>
+            <li><code>DesktopTimecardGrid</code> - Desktop layout with editing support</li>
+            <li><code>MultiDayTimecardDisplay</code> - Mobile layout component</li>
+        </ul>
+    </div>
+
+    <div class="test-section success">
+        <h2>🎉 Summary</h2>
+        <p>The timecard details page now has full rejection mode functionality that matches the approve tab implementation. Users can:</p>
+        <ul>
+            <li>Enter rejection mode to edit timecard fields</li>
+            <li>Make corrections with real-time validation</li>
+            <li>Reject timecards with or without edits</li>
+            <li>See clear visual feedback for all changes</li>
+            <li>Use the same interface on both mobile and desktop</li>
+        </ul>
+        <p><strong>The implementation is complete and ready for testing!</strong></p>
+    </div>
+</body>
+</html>

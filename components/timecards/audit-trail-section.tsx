@@ -13,6 +13,7 @@ import { parseDate } from '@/lib/timezone-utils'
 interface AuditTrailSectionProps {
   timecardId: string
   className?: string
+  refreshTrigger?: number // Add a refresh trigger prop
 }
 
 interface AuditTrailState {
@@ -27,7 +28,7 @@ interface AuditTrailState {
   }
 }
 
-export function AuditTrailSection({ timecardId, className }: AuditTrailSectionProps) {
+export function AuditTrailSection({ timecardId, className, refreshTrigger }: AuditTrailSectionProps) {
   const [state, setState] = useState<AuditTrailState>({
     data: [],
     loading: true,
@@ -86,10 +87,10 @@ export function AuditTrailSection({ timecardId, className }: AuditTrailSectionPr
     }
   }
 
-  // Initial load
+  // Initial load and refresh when trigger changes
   useEffect(() => {
     fetchAuditLogs(0)
-  }, [timecardId])
+  }, [timecardId, refreshTrigger])
 
   // Load more entries
   const loadMore = () => {

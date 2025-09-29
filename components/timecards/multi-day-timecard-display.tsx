@@ -421,6 +421,7 @@ export function MultiDayTimecardDisplay({
                       break_end_time: isMultiDay ? dailyEntries[0]?.break_end_time : timecard.break_end_time,
                       check_out_time: isMultiDay ? dailyEntries[0]?.check_out_time : timecard.check_out_time
                     }}
+                    isRejected={isFieldRejected(isMultiDay ? getFieldId('check_in_time', 0) : "check_in_time")}
                   />
                   <SimpleEditableField
                     fieldId={isMultiDay ? getFieldId('break_start_time', 0) : "break_start_time"}
@@ -435,6 +436,7 @@ export function MultiDayTimecardDisplay({
                       break_end_time: isMultiDay ? dailyEntries[0]?.break_end_time : timecard.break_end_time,
                       check_out_time: isMultiDay ? dailyEntries[0]?.check_out_time : timecard.check_out_time
                     }}
+                    isRejected={isFieldRejected(isMultiDay ? getFieldId('break_start_time', 0) : "break_start_time")}
                   />
                   <SimpleEditableField
                     fieldId={isMultiDay ? getFieldId('break_end_time', 0) : "break_end_time"}
@@ -449,6 +451,7 @@ export function MultiDayTimecardDisplay({
                       break_end_time: isMultiDay ? dailyEntries[0]?.break_end_time : timecard.break_end_time,
                       check_out_time: isMultiDay ? dailyEntries[0]?.check_out_time : timecard.check_out_time
                     }}
+                    isRejected={isFieldRejected(isMultiDay ? getFieldId('break_end_time', 0) : "break_end_time")}
                   />
                   <SimpleEditableField
                     fieldId={isMultiDay ? getFieldId('check_out_time', 0) : "check_out_time"}
@@ -463,6 +466,7 @@ export function MultiDayTimecardDisplay({
                       break_end_time: isMultiDay ? dailyEntries[0]?.break_end_time : timecard.break_end_time,
                       check_out_time: isMultiDay ? dailyEntries[0]?.check_out_time : timecard.check_out_time
                     }}
+                    isRejected={isFieldRejected(isMultiDay ? getFieldId('check_out_time', 0) : "check_out_time")}
                   />
                 </div>
               </div>
@@ -502,6 +506,7 @@ export function MultiDayTimecardDisplay({
                               break_end_time: entry.break_end_time,
                               check_out_time: entry.check_out_time
                             }}
+                            isRejected={isFieldRejected(getFieldId('check_in_time', index + 1))}
                           />
                           <SimpleEditableField
                             fieldId={getFieldId('break_start_time', index + 1)}
@@ -516,6 +521,7 @@ export function MultiDayTimecardDisplay({
                               break_end_time: entry.break_end_time,
                               check_out_time: entry.check_out_time
                             }}
+                            isRejected={isFieldRejected(getFieldId('break_start_time', index + 1))}
                           />
                           <SimpleEditableField
                             fieldId={getFieldId('break_end_time', index + 1)}
@@ -530,6 +536,7 @@ export function MultiDayTimecardDisplay({
                               break_end_time: entry.break_end_time,
                               check_out_time: entry.check_out_time
                             }}
+                            isRejected={isFieldRejected(getFieldId('break_end_time', index + 1))}
                           />
                           <SimpleEditableField
                             fieldId={getFieldId('check_out_time', index + 1)}
@@ -544,6 +551,7 @@ export function MultiDayTimecardDisplay({
                               break_end_time: entry.break_end_time,
                               check_out_time: entry.check_out_time
                             }}
+                            isRejected={isFieldRejected(getFieldId('check_out_time', index + 1))}
                           />
                         </div>
                       </div>
