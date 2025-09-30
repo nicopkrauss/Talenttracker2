@@ -68,14 +68,14 @@ export function MobileTimecardGrid({
   // Helper functions for direct editing
   const isFieldEdited = (fieldId: string, originalValue: any) => {
     if (fieldEdits[fieldId] === undefined) return false
-    
+
     // Use the same normalization logic as handleInputChange for consistency
     const normalizeTimeForComparison = (timeValue: string | null | undefined): string | null => {
       if (!timeValue) return null
       try {
         // Handle both ISO and simple time formats
         let date: Date;
-        
+
         if (timeValue.includes('T')) {
           // Full datetime string
           date = new Date(timeValue)
@@ -86,9 +86,9 @@ export function MobileTimecardGrid({
         } else {
           return null
         }
-        
+
         if (isNaN(date.getTime())) return null
-        
+
         // Extract only the time portion for comparison
         const hours = date.getHours().toString().padStart(2, '0')
         const minutes = date.getMinutes().toString().padStart(2, '0')
@@ -98,11 +98,11 @@ export function MobileTimecardGrid({
         return null
       }
     }
-    
+
     const editedValue = fieldEdits[fieldId]
     const normalizedOriginal = normalizeTimeForComparison(originalValue)
     const normalizedEdited = normalizeTimeForComparison(editedValue)
-    
+
     return normalizedOriginal !== normalizedEdited
   }
 
@@ -114,27 +114,30 @@ export function MobileTimecardGrid({
     return editingField === fieldId
   }
 
-  // Format time for display (matching existing format)
+  // Format time for display (two-line format: time on top, AM/PM on bottom)
   const formatTime = (timeStr?: string) => {
-    if (!timeStr) return "—"
+    if (!timeStr) return { time: "—", ampm: "" }
 
     try {
+      let date: Date
       // Handle both full datetime and time-only formats
       if (timeStr.includes('T')) {
-        return new Date(timeStr).toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit'
-        })
+        date = new Date(timeStr)
+      } else {
+        // Already in time format (HH:MM:SS)
+        const today = new Date().toISOString().split('T')[0]
+        date = new Date(`${today}T${timeStr}`)
       }
-      // Already in time format (HH:MM:SS)
-      const today = new Date().toISOString().split('T')[0]
-      const date = new Date(`${today}T${timeStr}`)
-      return date.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit'
-      })
+
+      const hours24 = date.getHours()
+      const minutes = date.getMinutes()
+      const hours12 = hours24 === 0 ? 12 : hours24 > 12 ? hours24 - 12 : hours24
+      const ampm = hours24 >= 12 ? 'PM' : 'AM'
+      const timeOnly = `${hours12}:${minutes.toString().padStart(2, '0')}`
+
+      return { time: timeOnly, ampm: ampm }
     } catch (error) {
-      return "—"
+      return { time: "—", ampm: "" }
     }
   }
 
@@ -161,7 +164,7 @@ export function MobileTimecardGrid({
   // Helper function to validate time sequence (same logic as SimpleEditableField)
   const validateTimeSequence = (fieldId: string, newValue: string, dayIndex?: number): string | null => {
     const allFieldValues = getAllFieldValuesForDay(dayIndex)
-    
+
     try {
       // Parse the new value (could be simple time string or ISO)
       let newTime: Date;
@@ -176,20 +179,20 @@ export function MobileTimecardGrid({
       } else {
         return "Invalid time format"
       }
-      
+
       if (isNaN(newTime.getTime())) {
         return "Invalid time format"
       }
-      
+
       // Get current values (including any edits) for the same day
       const getCurrentValue = (baseField: string): Date | null => {
         const relatedFieldId = dayIndex !== undefined ? `${baseField}_day_${dayIndex}` : baseField
-        
+
         // First check if there's an edit for this field
         if (fieldEdits[relatedFieldId] !== undefined) {
           const value = fieldEdits[relatedFieldId]
           if (!value) return null
-          
+
           // Parse the edit value (could be simple time string or ISO)
           if (value.includes('T')) {
             return new Date(value)
@@ -199,16 +202,16 @@ export function MobileTimecardGrid({
           }
           return null
         }
-        
+
         // Then check the original values
         const value = allFieldValues[baseField as keyof typeof allFieldValues]
-        
+
         if (!value) return null
-        
+
         // Handle different time formats
         try {
           let date: Date
-          
+
           if (value.includes('T')) {
             // Full datetime string (ISO format)
             date = new Date(value)
@@ -219,43 +222,43 @@ export function MobileTimecardGrid({
           } else {
             return null
           }
-          
+
           if (isNaN(date.getTime())) {
             return null
           }
-          
+
           return date
         } catch (error) {
           return null
         }
       }
-      
+
       // Determine which field we're updating
       const baseFieldName = fieldId.replace(/_day_\d+$/, '')
-      
+
       // Apply the new value to the appropriate field
       const checkIn = baseFieldName === 'check_in_time' ? newTime : getCurrentValue('check_in_time')
       const breakStart = baseFieldName === 'break_start_time' ? newTime : getCurrentValue('break_start_time')
       const breakEnd = baseFieldName === 'break_end_time' ? newTime : getCurrentValue('break_end_time')
       const checkOut = baseFieldName === 'check_out_time' ? newTime : getCurrentValue('check_out_time')
-      
+
       // Validate time sequence
       if (checkIn && breakStart && breakStart <= checkIn) {
         return "Break start must be after check-in time"
       }
-      
+
       if (breakStart && breakEnd && breakEnd <= breakStart) {
         return "Break end must be after break start"
       }
-      
+
       if (breakEnd && checkOut && checkOut <= breakEnd) {
         return "Check-out must be after break end"
       }
-      
+
       if (checkIn && checkOut && checkOut <= checkIn) {
         return "Check-out must be after check-in time"
       }
-      
+
       return null // No validation errors
     } catch (error) {
       return "Invalid time format"
@@ -265,10 +268,10 @@ export function MobileTimecardGrid({
   // Helper function to handle time change from CustomTimePicker
   const handleTimeChange = (fieldId: string, originalValue: any, newValue: string, dayIndex?: number) => {
     if (!onFieldEdit) return
-    
+
     // Validate the new time value
     const validationError = validateTimeSequence(fieldId, newValue, dayIndex)
-    
+
     if (validationError) {
       // Store error for inline display and prevent change
       setValidationErrors(prev => ({
@@ -277,14 +280,14 @@ export function MobileTimecardGrid({
       }))
       return // Prevent the change
     }
-    
+
     // Clear any existing validation error for this field
     setValidationErrors(prev => {
       const newErrors = { ...prev }
       delete newErrors[fieldId]
       return newErrors
     })
-    
+
     // Use same normalization logic as SimpleEditableField
     // Extract only the time portion (HH:MM:SS) to avoid date-based comparison issues
     const normalizeTimeValue = (timeValue: string | null | undefined): string | null => {
@@ -292,7 +295,7 @@ export function MobileTimecardGrid({
       try {
         // Handle both ISO and simple time formats
         let date: Date;
-        
+
         if (timeValue.includes('T')) {
           // Full datetime string
           date = new Date(timeValue)
@@ -303,9 +306,9 @@ export function MobileTimecardGrid({
         } else {
           return null
         }
-        
+
         if (isNaN(date.getTime())) return null
-        
+
         // Extract only the time portion for comparison
         const hours = date.getHours().toString().padStart(2, '0')
         const minutes = date.getMinutes().toString().padStart(2, '0')
@@ -315,10 +318,10 @@ export function MobileTimecardGrid({
         return null
       }
     }
-    
+
     const normalizedNew = normalizeTimeValue(newValue)
     const normalizedOriginal = normalizeTimeValue(originalValue)
-    
+
     if (normalizedNew === normalizedOriginal) {
       onFieldEdit(fieldId, undefined) // Remove edit if same as original
     } else {
@@ -339,49 +342,163 @@ export function MobileTimecardGrid({
     setEditingField(null)
   }
 
+  // Helper function to convert time to HH:MM format for native input
+  const formatTimeForInput = (timeStr?: string) => {
+    if (!timeStr) return ""
+    
+    try {
+      let date: Date
+      if (timeStr.includes('T')) {
+        date = new Date(timeStr)
+      } else {
+        const today = new Date().toISOString().split('T')[0]
+        date = new Date(`${today}T${timeStr}`)
+      }
+      
+      const hours = date.getHours().toString().padStart(2, '0')
+      const minutes = date.getMinutes().toString().padStart(2, '0')
+      return `${hours}:${minutes}`
+    } catch {
+      return ""
+    }
+  }
+
+  // Helper function to convert HH:MM format back to time string with 5-minute rounding
+  const formatTimeFromInput = (inputValue: string) => {
+    if (!inputValue) return ""
+    
+    // Parse the time and round to nearest 5 minutes
+    const [hours, minutes] = inputValue.split(':').map(Number)
+    const roundedMinutes = Math.round(minutes / 5) * 5
+    
+    // Handle minute overflow (e.g., 59 minutes rounds to 60)
+    let finalHours = hours
+    let finalMinutes = roundedMinutes
+    
+    if (finalMinutes >= 60) {
+      finalHours = (hours + 1) % 24
+      finalMinutes = 0
+    }
+    
+    // Format back to HH:MM:SS
+    const hoursStr = finalHours.toString().padStart(2, '0')
+    const minutesStr = finalMinutes.toString().padStart(2, '0')
+    
+    return `${hoursStr}:${minutesStr}:00`
+  }
+
+  // Helper function to round time to 5-minute intervals for display
+  const roundTimeToFiveMinutes = (timeStr: string) => {
+    if (!timeStr) return timeStr
+    
+    try {
+      let date: Date
+      if (timeStr.includes('T')) {
+        date = new Date(timeStr)
+      } else {
+        const today = new Date().toISOString().split('T')[0]
+        date = new Date(`${today}T${timeStr}`)
+      }
+      
+      const hours = date.getHours()
+      const minutes = date.getMinutes()
+      const roundedMinutes = Math.round(minutes / 5) * 5
+      
+      // Handle overflow
+      let finalHours = hours
+      let finalMinutes = roundedMinutes
+      
+      if (finalMinutes >= 60) {
+        finalHours = (hours + 1) % 24
+        finalMinutes = 0
+      }
+      
+      const hoursStr = finalHours.toString().padStart(2, '0')
+      const minutesStr = finalMinutes.toString().padStart(2, '0')
+      
+      return `${hoursStr}:${minutesStr}:00`
+    } catch {
+      return timeStr
+    }
+  }
+
   // Helper component to render editable time field with validation
   const renderTimeField = (fieldId: string, originalValue: any, currentValue: any, isEdited: boolean, isEditing: boolean, hasValue: boolean = true, dayIndex?: number) => {
     const validationError = validationErrors[fieldId]
-    
+
     return (
-      <div className="relative">
-        <div className="flex flex-col items-center justify-center min-h-[2.5rem]">
+      <div className="relative w-full">
+        <div className="flex flex-col items-center justify-center min-h-[2.5rem] w-full">
           {isEditing && isRejectionMode ? (
             <div className="flex items-center justify-center h-full">
-              <CustomTimePicker
-                value={currentValue}
-                onChange={(newValue) => handleTimeChange(fieldId, originalValue, newValue, dayIndex)}
+              {/* Native time input for mobile with 5-minute intervals */}
+              <input
+                type="time"
+                step="300"
+                value={formatTimeForInput(roundTimeToFiveMinutes(currentValue))}
+                onChange={(e) => {
+                  const newValue = formatTimeFromInput(e.target.value)
+                  handleTimeChange(fieldId, originalValue, newValue, dayIndex)
+                }}
                 onBlur={handleTimePickerBlur}
-                className="text-sm font-semibold leading-none text-center"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 autoFocus
+                title="Times are automatically rounded to 5-minute intervals"
+                aria-label="Select time (rounded to 5-minute intervals)"
               />
+              {/* Visual display that matches the non-editing state */}
+              <div className="text-sm font-semibold text-center leading-tight pointer-events-none">
+                {(() => {
+                  const timeData = formatTime(currentValue)
+                  return (
+                    <>
+                      <div>{timeData.time}</div>
+                      {timeData.ampm && <div className="text-xs">{timeData.ampm}</div>}
+                    </>
+                  )
+                })()}
+              </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full gap-0">
+            <div className="flex flex-col items-center justify-center min-h-[2.5rem] gap-0 w-full">
               {/* Show original time above current time when edited */}
               {isEdited && (
-                <div className="text-xs text-muted-foreground line-through text-center leading-tight whitespace-nowrap">
-                  {formatTime(originalValue)}
+                <div className="text-xs text-muted-foreground line-through text-center leading-tight whitespace-nowrap mb-1">
+                  {(() => {
+                    const timeData = formatTime(originalValue)
+                    return (
+                      <>
+                        <div>{timeData.time}</div>
+                        {timeData.ampm && <div className="text-xs">{timeData.ampm}</div>}
+                      </>
+                    )
+                  })()}
                 </div>
               )}
-              
-              {/* Current time value */}
-              <p 
-                className={`text-sm font-semibold m-0 text-center leading-none ${
-                  isRejectionMode ? 'cursor-pointer' : ''
-                } ${
-                  validationError
+
+              {/* Current time value - two line format */}
+              <div
+                className={`text-sm font-semibold m-0 text-center leading-tight ${isRejectionMode ? 'cursor-pointer' : ''
+                  } ${validationError
                     ? 'text-red-600 dark:text-red-400'
-                    : isEdited 
-                      ? 'text-red-600 dark:text-red-400' 
-                      : hasValue 
-                        ? 'text-foreground' 
+                    : isEdited
+                      ? 'text-red-600 dark:text-red-400'
+                      : hasValue
+                        ? 'text-foreground'
                         : 'text-muted-foreground'
-                }`}
+                  }`}
                 onClick={() => handleFieldClick(fieldId)}
               >
-                {formatTime(currentValue)}
-              </p>
+                {(() => {
+                  const timeData = formatTime(currentValue)
+                  return (
+                    <>
+                      <div>{timeData.time}</div>
+                      {timeData.ampm && <div className="text-xs">{timeData.ampm}</div>}
+                    </>
+                  )
+                })()}
+              </div>
             </div>
           )}
         </div>
@@ -425,11 +542,57 @@ export function MobileTimecardGrid({
 
   // Prepare day rows - use currentWeekEntries if provided for pagination
   const prepareDayRows = () => {
+    if (isCalendarWeekMode) {
+      // Calendar week mode - always create 7 rows (Sun-Sat) with some potentially empty
+      const weekStart = new Date()
+      if (timecard.daily_entries && timecard.daily_entries.length > 0) {
+        // Find the first date in current week entries
+        const firstEntry = currentWeekEntries?.find(entry => entry !== null)
+        if (firstEntry) {
+          const firstDate = parseDate(firstEntry.work_date)
+          if (firstDate) {
+            weekStart.setTime(firstDate.getTime())
+            weekStart.setDate(firstDate.getDate() - firstDate.getDay()) // Go to Sunday
+          }
+        }
+      }
+      
+      const rows = []
+      for (let i = 0; i < 7; i++) {
+        const dayDate = new Date(weekStart)
+        dayDate.setDate(weekStart.getDate() + i)
+        const dayKey = dayDate.toISOString().split('T')[0]
+        
+        // Find entry for this specific date
+        const dayEntry = currentWeekEntries?.find(entry => entry && entry.work_date === dayKey)
+        
+        const baseData = {
+          date: dayKey,
+          dayNumber: dayDate.toLocaleDateString('en-US', { day: 'numeric' }),
+          monthAbbr: dayDate.toLocaleDateString('en-US', { month: 'short' }),
+          entry: dayEntry || null
+        }
+
+        // Add day of week only in approve context
+        if (isApproveContext) {
+          rows.push({
+            ...baseData,
+            dayOfWeek: dayDate.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
+          })
+        } else {
+          rows.push(baseData)
+        }
+      }
+      
+      return rows
+    }
+
     const entriesToUse = currentWeekEntries || timecard.daily_entries || []
-    
+
     if (entriesToUse.length > 0) {
       // Multi-day timecard - use provided entries (could be paginated week)
       return entriesToUse
+        .filter(entry => entry !== null) // Filter out null entries for non-calendar mode
         .sort((a, b) => {
           const dateA = parseDate(a.work_date)
           const dateB = parseDate(b.work_date)
@@ -443,7 +606,7 @@ export function MobileTimecardGrid({
             monthAbbr: date ? date.toLocaleDateString('en-US', { month: 'short' }) : 'Jan',
             entry
           }
-          
+
           // Add day of week only in approve context
           if (isApproveContext) {
             return {
@@ -451,7 +614,7 @@ export function MobileTimecardGrid({
               dayOfWeek: date ? date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase() : 'MON'
             }
           }
-          
+
           return baseData
         })
     } else {
@@ -473,25 +636,15 @@ export function MobileTimecardGrid({
           daily_pay: timecard.total_pay
         }
       }
-      
+
       // Add day of week only in approve context
       if (isApproveContext) {
         return [{
           ...baseData,
-          dayOfWeek: parsedDate?.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase() || 'MON',
-          entry: {
-            work_date: date,
-            check_in_time: timecard.check_in_time,
-            check_out_time: timecard.check_out_time,
-            break_start_time: timecard.break_start_time,
-            break_end_time: timecard.break_end_time,
-            hours_worked: timecard.total_hours,
-            break_duration: timecard.break_duration,
-            daily_pay: timecard.total_pay
-          }
+          dayOfWeek: parsedDate?.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase() || 'MON'
         }]
       }
-      
+
       return [baseData]
     }
   }
@@ -526,48 +679,48 @@ export function MobileTimecardGrid({
 
   return (
     <div className={`lg:hidden ${showBreakdownToggle ? "pt-4" : ""}`}>
-      {/* Week navigation for multi-week timecards */}
-      {needsPagination && (
-        <div className="mb-4 flex items-center justify-center p-3 bg-muted/50 rounded-lg border">
-          <div className="flex flex-col items-center gap-2">
-            <span className="text-sm font-medium text-muted-foreground">
-              Week {currentWeekIndex + 1} of {totalWeeks}
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  onWeekChange && onWeekChange(Math.max(0, currentWeekIndex - 1))
-                }}
-                disabled={currentWeekIndex === 0}
-                className="p-1.5 rounded-md bg-background border border-border hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                aria-label="Previous week"
-              >
-                <ChevronDown className="w-4 h-4 rotate-90 text-muted-foreground" />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  onWeekChange && onWeekChange(Math.min(totalWeeks - 1, currentWeekIndex + 1))
-                }}
-                disabled={currentWeekIndex >= totalWeeks - 1}
-                className="p-1.5 rounded-md bg-background border border-border hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                aria-label="Next week"
-              >
-                <ChevronDown className="w-4 h-4 -rotate-90 text-muted-foreground" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Time Column Headers (horizontal axis) */}
       <div className="grid gap-2 mb-4" style={{ gridTemplateColumns: `70px repeat(${timeColumns.length}, 1fr)` }}>
-        {/* Empty corner cell */}
-        <div className="p-2"></div>
-        
+        {/* Week navigation in top left corner */}
+        <div className="p-2">
+          {needsPagination && (
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-xs font-medium text-muted-foreground text-center">
+                Week
+              </span>
+              <span className="text-xs font-medium text-muted-foreground text-center">
+                {currentWeekIndex + 1} of {totalWeeks}
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    onWeekChange && onWeekChange(Math.max(0, currentWeekIndex - 1))
+                  }}
+                  disabled={currentWeekIndex === 0}
+                  className="p-1 rounded-md bg-background border border-border hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Previous week"
+                >
+                  <ChevronDown className="w-3 h-3 rotate-90 text-muted-foreground" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    onWeekChange && onWeekChange(Math.min(totalWeeks - 1, currentWeekIndex + 1))
+                  }}
+                  disabled={currentWeekIndex >= totalWeeks - 1}
+                  className="p-1 rounded-md bg-background border border-border hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Next week"
+                >
+                  <ChevronDown className="w-3 h-3 -rotate-90 text-muted-foreground" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Time column headers */}
         {timeColumns.map((timeCol, index) => (
           <div key={index} className="text-center">
@@ -584,21 +737,37 @@ export function MobileTimecardGrid({
         {dayRows.map((day, dayIndex) => {
           // Calculate actual day index accounting for pagination
           let actualDayIndex = dayIndex
-          if (needsPagination) {
-            actualDayIndex = (currentWeekIndex * 7) + dayIndex
+          
+          // Only calculate field IDs for days that have entries
+          if (day.entry) {
+            if (isCalendarWeekMode && timecard.daily_entries) {
+              // In calendar week mode, find the actual index in the original daily_entries array
+              const originalIndex = timecard.daily_entries.findIndex(entry => 
+                entry.work_date === day.entry?.work_date
+              )
+              actualDayIndex = originalIndex >= 0 ? originalIndex : dayIndex
+            } else if (needsPagination) {
+              actualDayIndex = (currentWeekIndex * 7) + dayIndex
+            }
           }
 
           return (
             <div key={dayIndex} className="grid gap-2" style={{ gridTemplateColumns: `70px repeat(${timeColumns.length}, 1fr)` }}>
               {/* Date header (left column) - Compact format: MON 16 Sep (approve context) or 16 Sep (regular) */}
-              <div className="flex items-center justify-center p-2 border rounded-lg border-border bg-card">
+              <div className={`flex items-center justify-center p-2 border rounded-lg ${
+                day.entry 
+                  ? 'border-border bg-muted/30' 
+                  : 'border-muted-foreground/30 bg-muted/10'
+              }`}>
                 <div className="text-center leading-tight space-y-0.5">
                   {isApproveContext && day.dayOfWeek && (
                     <div className="text-xs text-muted-foreground leading-none font-medium">
                       {day.dayOfWeek}
                     </div>
                   )}
-                  <div className="text-lg font-bold text-foreground leading-none">
+                  <div className={`text-lg font-bold leading-none ${
+                    day.entry ? 'text-foreground' : 'text-muted-foreground'
+                  }`}>
                     {day.dayNumber}
                   </div>
                   <div className="text-xs text-muted-foreground leading-none">
@@ -609,42 +778,45 @@ export function MobileTimecardGrid({
 
               {/* Time value cells */}
               {timeColumns.map((timeCol, timeIndex) => {
-                const fieldId = getFieldId(timeCol.fieldType, actualDayIndex)
+                // Only create field IDs for days that have entries
+                const fieldId = day.entry ? getFieldId(timeCol.fieldType, actualDayIndex) : null
                 const originalValue = day.entry?.[timeCol.fieldType as keyof typeof day.entry]
-                const isSelected = isFieldSelected(fieldId)
-                const isEdited = isFieldEdited(fieldId, originalValue)
-                const isEditing = isFieldEditing(fieldId)
-                const currentValue = getFieldValue(fieldId, originalValue)
-                const hasValidationError = validationErrors[fieldId]
+                const isSelected = fieldId ? isFieldSelected(fieldId) : false
+                const isEdited = fieldId ? isFieldEdited(fieldId, originalValue) : false
+                const isEditing = fieldId ? isFieldEditing(fieldId) : false
+                const currentValue = fieldId ? getFieldValue(fieldId, originalValue) : originalValue
+                const hasValidationError = fieldId ? validationErrors[fieldId] : false
                 const hasValue = !!originalValue
-                
+
                 return (
                   <div
                     key={timeIndex}
-                    className={`p-3 rounded-lg border transition-all relative ${
-                      hasValidationError
-                        ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
-                        : isEditing
-                          ? 'border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
-                          : isEdited
-                            ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
-                            : isSelected
+                    className={`p-3 rounded-lg border transition-all relative flex items-center justify-center ${
+                      !day.entry
+                        ? 'border-muted-foreground/30 bg-muted/10'
+                        : hasValidationError
+                          ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                          : isEditing
+                            ? 'border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
+                            : isEdited
                               ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
-                              : isFieldRejected(fieldId)
-                                ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
-                                : isRejectionMode
-                                  ? hasValue
-                                    ? 'border-border bg-card hover:border-muted-foreground cursor-pointer'
-                                    : 'border-dashed border-muted-foreground/30 bg-muted/30 hover:border-muted-foreground cursor-pointer'
-                                  : hasValue
-                                    ? 'border-border bg-card'
-                                    : 'border-dashed border-muted-foreground/30 bg-muted/30'
+                              : isSelected
+                                ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
+                                : fieldId && isFieldRejected(fieldId)
+                                  ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                                  : isRejectionMode && fieldId
+                                    ? hasValue
+                                      ? 'border-border hover:border-muted-foreground cursor-pointer'
+                                      : 'border-muted-foreground/30 hover:border-muted-foreground cursor-pointer'
+                                    : hasValue
+                                      ? 'border-border'
+                                      : 'border-muted-foreground/30'
                     }`}
-                    onClick={() => !isEditing && handleFieldClick(fieldId)}
+                    onClick={() => !isEditing && fieldId && handleFieldClick(fieldId)}
                   >
-                    {day.entry ? 
+                    {day.entry && fieldId ?
                       renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, hasValue, actualDayIndex) :
-                      <div className="flex items-center justify-center min-h-[2.5rem] text-muted-foreground text-sm">—</div>
+                      <div className="flex items-center justify-center min-h-[2.5rem] text-muted-foreground text-sm w-full">—</div>
                     }
                   </div>
                 )

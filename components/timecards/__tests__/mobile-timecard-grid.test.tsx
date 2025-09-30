@@ -206,7 +206,8 @@ describe('MobileTimecardGrid', () => {
     )
     
     // Should show week navigation
-    expect(screen.getByText('Week 2 of 3')).toBeInTheDocument()
+    expect(screen.getByText('week')).toBeInTheDocument()
+    expect(screen.getByText('2 of 3')).toBeInTheDocument()
     expect(screen.getByLabelText('Previous week')).toBeInTheDocument()
     expect(screen.getByLabelText('Next week')).toBeInTheDocument()
   })

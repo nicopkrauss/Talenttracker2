@@ -246,82 +246,60 @@ export function MultiDayTimecardDisplay({
 
   return (
     <div>
-      {/* Mobile: Time breakdown grid - moved outside Card to be in same container as name/role badge */}
+      {/* Mobile/Tablet: Time breakdown grid - moved outside Card to be in same container as name/role badge */}
       {(timecard.check_in_time || timecard.daily_entries?.length > 0) && (!showBreakdownToggle || isExpanded) && (
-        <MobileTimecardGrid
-          timecard={timecard}
-          isRejectionMode={isRejectionMode}
-          selectedFields={[]}
-          onFieldToggle={() => { }}
-          showRejectedFields={showRejectedFields}
-          fieldEdits={fieldEdits}
-          onFieldEdit={onFieldEdit}
-          currentWeekEntries={currentWeekEntries.filter(entry => entry !== null)} // Remove null entries
-          currentWeekIndex={currentWeekIndex}
-          totalWeeks={totalWeeks}
-          onWeekChange={setCurrentWeekIndex}
-          isCalendarWeekMode={false} // Mobile doesn't need calendar week mode
-          showBreakdownToggle={showBreakdownToggle}
-          isApproveContext={isApproveContext}
-        />
+        <div className="lg:hidden">
+          <MobileTimecardGrid
+            timecard={timecard}
+            isRejectionMode={isRejectionMode}
+            selectedFields={[]}
+            onFieldToggle={() => { }}
+            showRejectedFields={showRejectedFields}
+            fieldEdits={fieldEdits}
+            onFieldEdit={onFieldEdit}
+            currentWeekEntries={currentWeekEntries} // Pass all entries including null for calendar week mode
+            currentWeekIndex={currentWeekIndex}
+            totalWeeks={totalWeeks}
+            onWeekChange={setCurrentWeekIndex}
+            isCalendarWeekMode={true} // Enable calendar week mode to match desktop behavior
+            showBreakdownToggle={showBreakdownToggle}
+            isApproveContext={isApproveContext}
+          />
+        </div>
       )}
 
       {/* Only render Card if there's content to show */}
       {((showUserName || showHeaderStats) || 
-        (isDesktop && (timecard.check_in_time || timecard.daily_entries?.length > 0) && (!showBreakdownToggle || isExpanded)) ||
+        (timecard.check_in_time || timecard.daily_entries?.length > 0) ||
         (timecard.status === 'rejected' && timecard.rejection_reason)) && (
         <Card className="hover:shadow-md transition-shadow">
         {(showUserName || showHeaderStats) && (
         <CardHeader className="pb-0 gap-0">
-          <div className="space-y-3 sm:space-y-0">
-            {/* Name and badges row - on desktop this includes stats */}
-            <div className="flex flex-col sm:grid sm:grid-cols-3 sm:items-center sm:gap-4">
-              {/* Left section: Name and role badge */}
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-start">
-                {showUserName && (
-                  <div className="space-y-2 sm:space-y-0 sm:flex sm:items-center sm:gap-3">
-                    {/* Mobile: Two-row layout to prevent name wrapping */}
-                    <div className="sm:hidden space-y-2">
-                      {/* Top row: Name (left) + Status badges (right) */}
-                      <div className="flex items-start justify-between gap-3">
-                        <h3 className="font-semibold text-lg text-foreground flex-1">
-                          {Array.isArray(timecard.profiles)
-                            ? timecard.profiles[0]?.full_name || 'Unknown User'
-                            : timecard.profiles?.full_name || 'Unknown User'}
-                        </h3>
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            variant="outline"
-                            className={getStatusColor(timecard.status)}
-                          >
-                            {getStatusText(timecard.status)}
-                          </Badge>
-                        </div>
-                      </div>
-
-                      {/* Bottom row: Role badge only */}
-                      <div className="flex items-center justify-start">
-                        <div>
-                          {userProjectRole ? (
-                            <Badge variant="outline" className={`text-sm ${getRoleColor(userProjectRole)}`}>
-                              {getRoleDisplayName(userProjectRole as any)}
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-sm bg-muted text-muted-foreground border-border">
-                              Team Member
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
+          <div className="space-y-3 lg:space-y-0">
+            {/* Mobile/Tablet Layout */}
+            <div className="lg:hidden space-y-2">
+              {showUserName && (
+                <>
+                  {/* Top row: Name (left) + Status badges (right) */}
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="font-semibold text-lg text-foreground flex-1">
+                      {Array.isArray(timecard.profiles)
+                        ? timecard.profiles[0]?.full_name || 'Unknown User'
+                        : timecard.profiles?.full_name || 'Unknown User'}
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className={getStatusColor(timecard.status)}
+                      >
+                        {getStatusText(timecard.status)}
+                      </Badge>
                     </div>
+                  </div>
 
-                    {/* Desktop: Single row layout */}
-                    <div className="hidden sm:flex sm:items-center sm:gap-3">
-                      <h3 className="font-semibold text-lg text-foreground">
-                        {Array.isArray(timecard.profiles)
-                          ? timecard.profiles[0]?.full_name || 'Unknown User'
-                          : timecard.profiles?.full_name || 'Unknown User'}
-                      </h3>
+                  {/* Bottom row: Role badge only */}
+                  <div className="flex items-center justify-start">
+                    <div>
                       {userProjectRole ? (
                         <Badge variant="outline" className={`text-sm ${getRoleColor(userProjectRole)}`}>
                           {getRoleDisplayName(userProjectRole as any)}
@@ -333,39 +311,36 @@ export function MultiDayTimecardDisplay({
                       )}
                     </div>
                   </div>
+                </>
+              )}
+            </div>
+
+            {/* Desktop Layout: Simple flex with justify-between */}
+            <div className="hidden lg:flex lg:items-center lg:justify-between lg:gap-4">
+              {/* Left side: Name and role badge */}
+              <div className="flex items-center gap-3">
+                {showUserName && (
+                  <>
+                    <h3 className="font-semibold text-lg text-foreground">
+                      {Array.isArray(timecard.profiles)
+                        ? timecard.profiles[0]?.full_name || 'Unknown User'
+                        : timecard.profiles?.full_name || 'Unknown User'}
+                    </h3>
+                    {userProjectRole ? (
+                      <Badge variant="outline" className={`text-sm ${getRoleColor(userProjectRole)}`}>
+                        {getRoleDisplayName(userProjectRole as any)}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-sm bg-muted text-muted-foreground border-border">
+                        Team Member
+                      </Badge>
+                    )}
+                  </>
                 )}
               </div>
 
-              {/* Center section: Breakdown Toggle Button */}
-              {showBreakdownToggle && (
-                <div className="hidden sm:flex sm:justify-center">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      setIsExpanded(!isExpanded)
-                    }}
-                    className="flex items-center gap-2"
-                  >
-                    {isExpanded ? (
-                      <>
-                        <ChevronUp className="w-4 h-4" />
-                        Hide Details
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="w-4 h-4" />
-                        Show Details
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
-
-              {/* Right section: Stats and badges */}
-              <div className="hidden sm:flex sm:items-center sm:justify-end sm:gap-4">
+              {/* Right side: Stats, status badge, and show details button */}
+              <div className="flex items-center gap-4">
                 {showHeaderStats && (
                   <>
                     <div className="flex items-baseline gap-1 text-right">
@@ -401,41 +376,56 @@ export function MultiDayTimecardDisplay({
                 >
                   {getStatusText(timecard.status)}
                 </Badge>
+
+                {showBreakdownToggle && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setIsExpanded(!isExpanded)
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    {isExpanded ? (
+                      <>
+                        <ChevronUp className="w-4 h-4" />
+                        Hide Details
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="w-4 h-4" />
+                        Show Details
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
             </div>
 
-            {/* Mobile: Stats grid on separate row */}
+            {/* Mobile/Tablet: Stats grid on separate row */}
             {showHeaderStats && (
-              <div className="grid grid-cols-2 gap-3 sm:hidden">
-                {/* Rate - Top Left on mobile */}
-                <div className="text-center p-3 bg-card rounded-lg border">
-                  <p className="text-sm text-muted-foreground">Rate</p>
-                  <p className="text-lg font-semibold text-foreground">
-                    ${(timecard.pay_rate || 0).toFixed(0)}/h
-                  </p>
-                </div>
-
-                {/* Hours - Top Right on mobile */}
-                <div className="text-center p-3 bg-card rounded-lg border">
-                  <p className="text-sm text-muted-foreground">Hours</p>
-                  <p className="text-lg font-bold text-foreground">
-                    {(timecard.total_hours || 0).toFixed(1)}
-                  </p>
-                </div>
-
-                {/* Adjusted Hours - Bottom Left on mobile */}
+              <div className="grid grid-cols-2 gap-3 lg:hidden">
+                {/* Adjusted Hours - Top Left on mobile */}
                 <div className="text-center p-3 bg-card rounded-lg border">
                   <p className="text-sm text-muted-foreground whitespace-nowrap">Adjusted Hours</p>
                   <p className="text-lg font-bold text-foreground">
                     {calculateAdjustedHours(timecard).toFixed(1)}
                   </p>
+                  <p className="text-xs text-muted-foreground">
+                    {(timecard.total_hours || 0).toFixed(1)} actual hours
+                  </p>
                 </div>
 
-                {/* Total - Bottom Right on mobile */}
+                {/* Total Pay - Top Right on mobile */}
                 <div className="text-center p-3 bg-card rounded-lg border">
-                  <p className="text-sm text-muted-foreground">Total</p>
+                  <p className="text-sm text-muted-foreground">Total Pay</p>
                   <p className="text-lg font-bold text-green-600 dark:text-green-400">
                     ${(timecard.total_pay || 0).toFixed(0)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    ${((timecard.total_pay || 0) / Math.max(timecard.working_days || timecard.daily_entries?.length || 1, 1)).toFixed(0)} avg daily
                   </p>
                 </div>
               </div>
@@ -470,12 +460,43 @@ export function MultiDayTimecardDisplay({
           </div>
         )}
 
+        {/* Mobile/Tablet Breakdown Toggle Button */}
+        {showBreakdownToggle && (
+          <div className="flex justify-center mb-4 lg:hidden">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setIsExpanded(!isExpanded)
+              }}
+              className="flex items-center gap-2"
+            >
+              {isExpanded ? (
+                <>
+                  <ChevronUp className="w-4 h-4" />
+                  Hide Details
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="w-4 h-4" />
+                  Show Details
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+
         {/* Calendar Week Info for Multi-Week Timecards - Navigation handled by desktop grid arrows */}
         {needsPagination && (!showBreakdownToggle || isExpanded) && (
           <div className="mb-4 flex items-center justify-center p-3 bg-muted/50 rounded-lg border lg:hidden">
             <div className="flex flex-col items-center gap-1">
               <span className="text-sm font-medium text-muted-foreground">
-                Week {currentWeekIndex + 1} of {totalWeeks}
+                week
+              </span>
+              <span className="text-sm font-medium text-muted-foreground">
+                {currentWeekIndex + 1} of {totalWeeks}
               </span>
               {/* Show date range for current calendar week */}
               {(() => {
@@ -512,39 +533,13 @@ export function MultiDayTimecardDisplay({
           </div>
         )}
 
-        {/* Mobile Breakdown Toggle Button - Hide for multi-day timecards since we always show all days */}
-        {showBreakdownToggle && !timecard.is_multi_day && (
-          <div className="flex justify-center mb-4 sm:hidden">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                setIsExpanded(!isExpanded)
-              }}
-              className="flex items-center gap-2"
-            >
-              {isExpanded ? (
-                <>
-                  <ChevronUp className="w-4 h-4" />
-                  Hide Daily Breakdown
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="w-4 h-4" />
-                  Show Daily Breakdown
-                </>
-              )}
-            </Button>
-          </div>
-        )}
+
 
         {/* Time Details Section - Desktop uses desktop grid, mobile uses mobile grid */}
         {(timecard.check_in_time || timecard.daily_entries?.length > 0) && (!showBreakdownToggle || isExpanded) && (
           <>
-            {/* Desktop: Use DesktopTimecardGrid (same as approve tab) */}
-            {isDesktop && (
+            {/* Large Desktop: Use DesktopTimecardGrid (same as approve tab) */}
+            <div className="hidden lg:block">
               <div className={showBreakdownToggle ? "pt-4" : ""}>
                 <DesktopTimecardGrid
                   timecard={timecard}
@@ -562,7 +557,7 @@ export function MultiDayTimecardDisplay({
                   isCalendarWeekMode={true} // Enable calendar week mode for breakdown view
                 />
               </div>
-            )}
+            </div>
 
 
 

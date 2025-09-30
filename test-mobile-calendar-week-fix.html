@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Calendar Week Fix</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .week-grid {
+            display: grid;
+            grid-template-columns: 80px repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .day-row {
+            display: contents;
+        }
+
+        .date-cell {
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background: #f9fafb;
+            text-align: center;
+        }
+
+        .time-cell {
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background: white;
+            text-align: center;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .empty-cell {
+            background: #f3f4f6;
+            color: #9ca3af;
+        }
+
+        .before {
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+        }
+
+        .after {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+        }
+
+        .day-name {
+            font-size: 10px;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .day-number {
+            font-size: 18px;
+            font-weight: bold;
+            color: #111827;
+        }
+
+        .month-abbr {
+            font-size: 10px;
+            color: #6b7280;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Mobile Timecard Calendar Week Fix</h1>
+
+    <div class="test-container">
+        <h2>Before (Issue)</h2>
+        <p>Mobile timecards only showed days with data, not a full 7-day calendar week</p>
+        <div class="week-grid before">
+            <div class="date-cell">
+                <div class="day-name">TUE</div>
+                <div class="day-number">15</div>
+                <div class="month-abbr">Jan</div>
+            </div>
+            <div class="time-cell">9:00 AM</div>
+            <div class="time-cell">12:00 PM</div>
+            <div class="time-cell">1:00 PM</div>
+            <div class="time-cell">5:00 PM</div>
+
+            <div class="date-cell">
+                <div class="day-name">WED</div>
+                <div class="day-number">16</div>
+                <div class="month-abbr">Jan</div>
+            </div>
+            <div class="time-cell">9:00 AM</div>
+            <div class="time-cell">12:00 PM</div>
+            <div class="time-cell">1:00 PM</div>
+            <div class="time-cell">5:00 PM</div>
+
+            <div class="date-cell">
+                <div class="day-name">THU</div>
+                <div class="day-number">17</div>
+                <div class="month-abbr">Jan</div>
+            </div>
+            <div class="time-cell">9:00 AM</div>
+            <div class="time-cell">12:00 PM</div>
+            <div class="time-cell">1:00 PM</div>
+            <div class="time-cell">5:00 PM</div>
+        </div>
+        <p>Problem: Only showing 3 days (Tue-Thu), missing Sunday, Monday, Friday, Saturday</p>
+    </div>
+
+    <div class="test-container">
+        <h2>After (Fixed - Calendar Week Mode)</h2>
+        <p>Mobile timecards now show full 7-day calendar week (Sunday through Saturday)</p>
+        <div class="week-grid after">
+            <div class="date-cell">
+                <div class="day-name">SUN</div>
+                <div class="day-number">13</div>
+                <div class="month-abbr">Jan</div>
+            </div>
+            <div class="time-cell empty-cell">—</div>
+            <div class="time-cell empty-cell">—</div>
+            <div class="time-cell empty-cell">—</div>
+            <div class="time-cell empty-cell">—</div>
+
+            <div class="date-cell">
+                <div class="day-name">MON</div>
+                <div class="day-number">14</div>
+                <div class="month-abbr">Jan</div>
+            </div>
+            <div class="time-cell empty-cell">—</div>
+            <div class="time-cell empty-cell">—</div>
+            <div class="time-cell empty-cell">—</div>
+            <div class="time-cell empty-cell">—</div>
+
+            <div class="date-cell">
+                <div class="day-name">TUE</div>
+                <div class="day-number">15</div>
+                <div class="month-abbr">Jan</div>
+            </div>
+            <div class="time-cell">9:00 AM</div>
+            <div class="time-cell">12:00 PM</div>
+            <div class="time-cell">1:00 PM</div>
+            <div class="time-cell">5:00 PM</div>
+
+            <div class="date-cell">
+                <div class="day-name">WED</div>
+                <div class="day-number">16</div>
+                <div class="month-abbr">Jan</div>
+            </div>
+            <div class="time-cell">9:00 AM</div>
+            <div class="time-cell">12:00 PM</div>
+            <div class="time-cell">1:00 PM</div>
+            <div class="time-cell">5:00 PM</div>
+
+            <div class="date-cell">
+                <div class="day-name">THU</div>
+                <div class="day-number">17</div>
+                <div class="month-abbr">Jan</div>
+            </div>
+            <div class="time-cell">9:00 AM</div>
+            <div class="time-cell">12:00 PM</div>
+            <div class="time-cell">1:00 PM</div>
+            <div class="time-cell">5:00 PM</div>
+
+            <div class="date-cell">
+                <div class="day-name">FRI</div>
+                <div class="day-number">18</div>
+                <div class="month-abbr">Jan</div>
+            </div>
+            <div class="time-cell empty-cell">—</div>
+            <div class="time-cell empty-cell">—</div>
+            <div class="time-cell empty-cell">—</div>
+            <div class="time-cell empty-cell">—</div>
+
+            <div class="date-cell">
+                <div class="day-name">SAT</div>
+                <div class="day-number">19</div>
+                <div class="month-abbr">Jan</div>
+            </div>
+            <div class="time-cell empty-cell">—</div>
+            <div class="time-cell empty-cell">—</div>
+            <div class="time-cell empty-cell">—</div>
+            <div class="time-cell empty-cell">—</div>
+        </div>
+        <p>Solution: Full 7-day calendar week starting Sunday, showing all days with empty cells for non-working days
+        </p>
+    </div>
+
+    <div class="test-container">
+        <h2>Implementation Details</h2>
+        <ul>
+            <li>✅ Added calendar week mode logic to mobile timecard grid</li>
+            <li>✅ Always creates 7 rows (Sunday through Saturday)</li>
+            <li>✅ Calculates week start by going to Sunday (getDay() = 0)</li>
+            <li>✅ Shows empty cells (—) for days without timecard entries</li>
+            <li>✅ Matches desktop timecard grid behavior exactly</li>
+            <li>✅ Proper day index calculation for calendar week mode</li>
+            <li>✅ Fixed TypeScript issues with optional dayOfWeek property</li>
+        </ul>
+
+        <h3>Calendar Week Logic:</h3>
+        <pre>
+// Find first date in week entries
+const firstDate = parseDate(firstEntry.work_date)
+weekStart.setTime(firstDate.getTime())
+weekStart.setDate(firstDate.getDate() - firstDate.getDay()) // Go to Sunday
+
+// Create 7 days starting from Sunday
+for (let i = 0; i < 7; i++) {
+  const dayDate = new Date(weekStart)
+  dayDate.setDate(weekStart.getDate() + i)
+  // ... create row for this day
+}
+        </pre>
+    </div>
+</body>
+
+</html>

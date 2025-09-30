@@ -63,6 +63,8 @@ export async function GET(request: NextRequest) {
         total_break_duration,
         total_pay,
         pay_rate,
+        rejection_reason,
+        rejected_fields,
         created_at,
         updated_at,
         daily_entries:timecard_daily_entries(

@@ -633,36 +633,38 @@ export function DesktopTimecardGrid({
     <Card>
       {showHeader && (
         <CardHeader>
-          <CardTitle className="flex items-center justify-center min-h-[2rem] relative">
-            {/* Title on the left */}
-            <div className="absolute left-0 flex items-center">
-              <Clock className="w-5 h-5 mr-2" />
-              {personName ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-semibold">{personName}</span>
-                  {personRoleBadge}
-                  {timecardCount && (
-                    <span className="text-sm text-muted-foreground">({timecardCount})</span>
-                  )}
-                </div>
-              ) : (
-                <span>{isMultiDay ? 'Daily Time Breakdown' : 'Time Details'}</span>
-              )}
-              <span className={`ml-2 text-sm text-red-600 dark:text-red-400 font-normal transition-opacity ${
-                isRejectionMode ? 'opacity-100' : 'opacity-0'
-              }`}>
-                (Click fields to edit)
-              </span>
-            </div>
-            
-            {/* Centered action buttons */}
-            <div className="flex items-center gap-2">
-              {actionButtons}
-            </div>
+          <CardTitle className="space-y-2">
+            {/* Main header row - responsive layout */}
+            <div className="flex items-center justify-between min-h-[2rem] relative">
+              {/* Title on the left */}
+              <div className="flex items-center flex-1 min-w-0">
+                <Clock className="w-5 h-5 mr-2 flex-shrink-0" />
+                {personName ? (
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-lg font-semibold truncate">{personName}</span>
+                    <div className="flex-shrink-0">{personRoleBadge}</div>
+                    {timecardCount && (
+                      <span className="text-sm text-muted-foreground flex-shrink-0">({timecardCount})</span>
+                    )}
+                  </div>
+                ) : (
+                  <span className="truncate">{isMultiDay ? 'Daily Time Breakdown' : 'Time Details'}</span>
+                )}
+                <span className={`ml-2 text-sm text-red-600 dark:text-red-400 font-normal transition-opacity flex-shrink-0 ${
+                  isRejectionMode ? 'opacity-100' : 'opacity-0'
+                }`}>
+                  (Click fields to edit)
+                </span>
+              </div>
+              
+              {/* Action buttons - centered on large screens, below on smaller */}
+              <div className="hidden xl:flex items-center gap-2 absolute left-1/2 transform -translate-x-1/2">
+                {actionButtons}
+              </div>
 
-            {/* Summary Stats on the right */}
-            {showSummaryInHeader && (
-              <div className="absolute right-0 hidden lg:flex lg:items-center lg:gap-4">
+              {/* Summary Stats on the right */}
+              {showSummaryInHeader && (
+                <div className="hidden lg:flex lg:items-center lg:gap-4 flex-shrink-0">
                 <div className="flex items-baseline gap-1 text-right">
                   <p className="text-lg font-semibold text-foreground">
                     ${(timecard.pay_rate || 0).toFixed(0)}/h
@@ -686,6 +688,16 @@ export function DesktopTimecardGrid({
                     ${(timecard.total_pay || 0).toFixed(0)}
                   </p>
                   <p className="text-xs text-muted-foreground">Total</p>
+                </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Action buttons row for smaller desktop screens */}
+            {actionButtons && (
+              <div className="xl:hidden flex justify-center">
+                <div className="flex items-center gap-2">
+                  {actionButtons}
                 </div>
               </div>
             )}
@@ -785,45 +797,53 @@ export function DesktopTimecardGrid({
             {dayColumns.map((day, index) => {
               // Calculate actual day index accounting for pagination
               let actualDayIndex = index
-              if (isCalendarWeekMode && timecard.daily_entries) {
-                // In calendar week mode, find the actual index in the original daily_entries array
-                const originalIndex = timecard.daily_entries.findIndex(entry => 
-                  entry.work_date === day.entry?.work_date
-                )
-                actualDayIndex = originalIndex >= 0 ? originalIndex : index
-              } else if (needsPagination) {
-                actualDayIndex = (currentWeekIndex * 7) + index
+              let fieldId: string | null = null
+              
+              if (day.entry) {
+                // Only create field IDs for days that have entries
+                if (isCalendarWeekMode && timecard.daily_entries) {
+                  // In calendar week mode, find the actual index in the original daily_entries array
+                  const originalIndex = timecard.daily_entries.findIndex(entry => 
+                    entry.work_date === day.entry?.work_date
+                  )
+                  actualDayIndex = originalIndex >= 0 ? originalIndex : index
+                } else if (needsPagination) {
+                  actualDayIndex = (currentWeekIndex * 7) + index
+                }
+                fieldId = getFieldId('check_in_time', actualDayIndex)
               }
-              const fieldId = getFieldId('check_in_time', actualDayIndex)
+              
               const originalValue = day.entry?.check_in_time
-              const isSelected = isFieldSelected(fieldId)
-              const isEdited = isFieldEdited(fieldId, originalValue)
-              const isEditing = isFieldEditing(fieldId)
-              const currentValue = getFieldValue(fieldId, originalValue)
-              const hasValidationError = validationErrors[fieldId]
+              const isSelected = fieldId ? isFieldSelected(fieldId) : false
+              const isEdited = fieldId ? isFieldEdited(fieldId, originalValue) : false
+              const isEditing = fieldId ? isFieldEditing(fieldId) : false
+              const currentValue = fieldId ? getFieldValue(fieldId, originalValue) : originalValue
+              const hasValidationError = fieldId ? validationErrors[fieldId] : false
               
               return (
                 <div
                   key={index}
                   className={`p-3 rounded-lg border transition-all relative ${
-                    hasValidationError
-                      ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
-                      : isEditing
-                        ? 'border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
-                        : isEdited
-                          ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
-                          : isSelected
+                    !day.entry
+                      ? 'border-dashed border-muted-foreground/30 bg-muted/30'
+                      : hasValidationError
+                        ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                        : isEditing
+                          ? 'border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
+                          : isEdited
                             ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
-                            : isFieldRejected(fieldId)
-                              ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
-                              : isRejectionMode
-                                ? 'border-border bg-card hover:border-white cursor-pointer'
-                                : 'border-border bg-card'
+                            : isSelected
+                              ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
+                              : fieldId && isFieldRejected(fieldId)
+                                ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                                : isRejectionMode && fieldId
+                                  ? 'border-border bg-card hover:border-white cursor-pointer'
+                                  : 'border-border bg-card'
                   }`}
-                  onClick={() => !isEditing && handleFieldClick(fieldId)}
+                  onClick={() => !isEditing && fieldId && handleFieldClick(fieldId)}
 
                 >
-                  {day.entry ? 
+                  {day.entry && fieldId ? 
                     renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, true, actualDayIndex) :
                     <div className="flex items-center justify-center h-7 text-muted-foreground text-sm">—</div>
                   }
@@ -841,50 +861,58 @@ export function DesktopTimecardGrid({
             {dayColumns.map((day, index) => {
               // Calculate actual day index accounting for pagination
               let actualDayIndex = index
-              if (isCalendarWeekMode && timecard.daily_entries) {
-                // In calendar week mode, find the actual index in the original daily_entries array
-                const originalIndex = timecard.daily_entries.findIndex(entry => 
-                  entry.work_date === day.entry?.work_date
-                )
-                actualDayIndex = originalIndex >= 0 ? originalIndex : index
-              } else if (needsPagination) {
-                actualDayIndex = (currentWeekIndex * 7) + index
+              let fieldId: string | null = null
+              
+              if (day.entry) {
+                // Only create field IDs for days that have entries
+                if (isCalendarWeekMode && timecard.daily_entries) {
+                  // In calendar week mode, find the actual index in the original daily_entries array
+                  const originalIndex = timecard.daily_entries.findIndex(entry => 
+                    entry.work_date === day.entry?.work_date
+                  )
+                  actualDayIndex = originalIndex >= 0 ? originalIndex : index
+                } else if (needsPagination) {
+                  actualDayIndex = (currentWeekIndex * 7) + index
+                }
+                fieldId = getFieldId('break_start_time', actualDayIndex)
               }
-              const fieldId = getFieldId('break_start_time', actualDayIndex)
+              
               const originalValue = day.entry?.break_start_time
-              const isSelected = isFieldSelected(fieldId)
-              const isEdited = isFieldEdited(fieldId, originalValue)
-              const isEditing = isFieldEditing(fieldId)
-              const currentValue = getFieldValue(fieldId, originalValue)
-              const hasBreak = true // Always use normal background for break fields
-              const hasValidationError = validationErrors[fieldId]
+              const isSelected = fieldId ? isFieldSelected(fieldId) : false
+              const isEdited = fieldId ? isFieldEdited(fieldId, originalValue) : false
+              const isEditing = fieldId ? isFieldEditing(fieldId) : false
+              const currentValue = fieldId ? getFieldValue(fieldId, originalValue) : originalValue
+              const hasBreak = !!originalValue // Has break if there's a break start time
+              const hasValidationError = fieldId ? validationErrors[fieldId] : false
               
               return (
                 <div
                   key={index}
                   className={`p-3 rounded-lg border transition-all relative ${
-                    hasValidationError
-                      ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
-                      : isEditing
-                        ? 'border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
-                        : isEdited
-                          ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
-                          : isSelected
+                    !day.entry
+                      ? 'border-dashed border-muted-foreground/30 bg-muted/30'
+                      : hasValidationError
+                        ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                        : isEditing
+                          ? 'border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
+                          : isEdited
                             ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
-                            : isFieldRejected(fieldId)
-                              ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
-                              : isRejectionMode
-                                ? hasBreak
-                                  ? 'border-border bg-card hover:border-white cursor-pointer'
-                                  : 'border-dashed border-muted-foreground/30 bg-muted/30 hover:border-white cursor-pointer'
-                                : hasBreak
-                                  ? 'border-border bg-card'
-                                  : 'border-dashed border-muted-foreground/30 bg-muted/30'
+                            : isSelected
+                              ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
+                              : fieldId && isFieldRejected(fieldId)
+                                ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                                : isRejectionMode && fieldId
+                                  ? hasBreak
+                                    ? 'border-border bg-card hover:border-white cursor-pointer'
+                                    : 'border-dashed border-muted-foreground/30 bg-muted/30 hover:border-white cursor-pointer'
+                                  : hasBreak
+                                    ? 'border-border bg-card'
+                                    : 'border-dashed border-muted-foreground/30 bg-muted/30'
                   }`}
-                  onClick={() => !isEditing && handleFieldClick(fieldId)}
+                  onClick={() => !isEditing && fieldId && handleFieldClick(fieldId)}
 
                 >
-                  {day.entry && originalValue ? 
+                  {day.entry && originalValue && fieldId ? 
                     renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, hasBreak, actualDayIndex) :
                     <div className="flex items-center justify-center h-7 text-muted-foreground text-sm">—</div>
                   }
@@ -902,50 +930,58 @@ export function DesktopTimecardGrid({
             {dayColumns.map((day, index) => {
               // Calculate actual day index accounting for pagination
               let actualDayIndex = index
-              if (isCalendarWeekMode && timecard.daily_entries) {
-                // In calendar week mode, find the actual index in the original daily_entries array
-                const originalIndex = timecard.daily_entries.findIndex(entry => 
-                  entry.work_date === day.entry?.work_date
-                )
-                actualDayIndex = originalIndex >= 0 ? originalIndex : index
-              } else if (needsPagination) {
-                actualDayIndex = (currentWeekIndex * 7) + index
+              let fieldId: string | null = null
+              
+              if (day.entry) {
+                // Only create field IDs for days that have entries
+                if (isCalendarWeekMode && timecard.daily_entries) {
+                  // In calendar week mode, find the actual index in the original daily_entries array
+                  const originalIndex = timecard.daily_entries.findIndex(entry => 
+                    entry.work_date === day.entry?.work_date
+                  )
+                  actualDayIndex = originalIndex >= 0 ? originalIndex : index
+                } else if (needsPagination) {
+                  actualDayIndex = (currentWeekIndex * 7) + index
+                }
+                fieldId = getFieldId('break_end_time', actualDayIndex)
               }
-              const fieldId = getFieldId('break_end_time', actualDayIndex)
+              
               const originalValue = day.entry?.break_end_time
-              const isSelected = isFieldSelected(fieldId)
-              const isEdited = isFieldEdited(fieldId, originalValue)
-              const isEditing = isFieldEditing(fieldId)
-              const currentValue = getFieldValue(fieldId, originalValue)
-              const hasBreak = true // Always use normal background for break fields
-              const hasValidationError = validationErrors[fieldId]
+              const isSelected = fieldId ? isFieldSelected(fieldId) : false
+              const isEdited = fieldId ? isFieldEdited(fieldId, originalValue) : false
+              const isEditing = fieldId ? isFieldEditing(fieldId) : false
+              const currentValue = fieldId ? getFieldValue(fieldId, originalValue) : originalValue
+              const hasBreak = !!originalValue // Has break if there's a break end time
+              const hasValidationError = fieldId ? validationErrors[fieldId] : false
               
               return (
                 <div
                   key={index}
                   className={`p-3 rounded-lg border transition-all relative ${
-                    hasValidationError
-                      ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
-                      : isEditing
-                        ? 'border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
-                        : isEdited
-                          ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
-                          : isSelected
+                    !day.entry
+                      ? 'border-dashed border-muted-foreground/30 bg-muted/30'
+                      : hasValidationError
+                        ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                        : isEditing
+                          ? 'border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
+                          : isEdited
                             ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
-                            : isFieldRejected(fieldId)
-                              ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
-                              : isRejectionMode
-                                ? hasBreak
-                                  ? 'border-border bg-card hover:border-white cursor-pointer'
-                                  : 'border-dashed border-muted-foreground/30 bg-muted/30 hover:border-white cursor-pointer'
-                                : hasBreak
-                                  ? 'border-border bg-card'
-                                  : 'border-dashed border-muted-foreground/30 bg-muted/30'
+                            : isSelected
+                              ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
+                              : fieldId && isFieldRejected(fieldId)
+                                ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                                : isRejectionMode && fieldId
+                                  ? hasBreak
+                                    ? 'border-border bg-card hover:border-white cursor-pointer'
+                                    : 'border-dashed border-muted-foreground/30 bg-muted/30 hover:border-white cursor-pointer'
+                                  : hasBreak
+                                    ? 'border-border bg-card'
+                                    : 'border-dashed border-muted-foreground/30 bg-muted/30'
                   }`}
-                  onClick={() => !isEditing && handleFieldClick(fieldId)}
+                  onClick={() => !isEditing && fieldId && handleFieldClick(fieldId)}
 
                 >
-                  {day.entry && originalValue ? 
+                  {day.entry && originalValue && fieldId ? 
                     renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, hasBreak, actualDayIndex) :
                     <div className="flex items-center justify-center h-7 text-muted-foreground text-sm">—</div>
                   }
@@ -963,45 +999,53 @@ export function DesktopTimecardGrid({
             {dayColumns.map((day, index) => {
               // Calculate actual day index accounting for pagination
               let actualDayIndex = index
-              if (isCalendarWeekMode && timecard.daily_entries) {
-                // In calendar week mode, find the actual index in the original daily_entries array
-                const originalIndex = timecard.daily_entries.findIndex(entry => 
-                  entry.work_date === day.entry?.work_date
-                )
-                actualDayIndex = originalIndex >= 0 ? originalIndex : index
-              } else if (needsPagination) {
-                actualDayIndex = (currentWeekIndex * 7) + index
+              let fieldId: string | null = null
+              
+              if (day.entry) {
+                // Only create field IDs for days that have entries
+                if (isCalendarWeekMode && timecard.daily_entries) {
+                  // In calendar week mode, find the actual index in the original daily_entries array
+                  const originalIndex = timecard.daily_entries.findIndex(entry => 
+                    entry.work_date === day.entry?.work_date
+                  )
+                  actualDayIndex = originalIndex >= 0 ? originalIndex : index
+                } else if (needsPagination) {
+                  actualDayIndex = (currentWeekIndex * 7) + index
+                }
+                fieldId = getFieldId('check_out_time', actualDayIndex)
               }
-              const fieldId = getFieldId('check_out_time', actualDayIndex)
+              
               const originalValue = day.entry?.check_out_time
-              const isSelected = isFieldSelected(fieldId)
-              const isEdited = isFieldEdited(fieldId, originalValue)
-              const isEditing = isFieldEditing(fieldId)
-              const currentValue = getFieldValue(fieldId, originalValue)
-              const hasValidationError = validationErrors[fieldId]
+              const isSelected = fieldId ? isFieldSelected(fieldId) : false
+              const isEdited = fieldId ? isFieldEdited(fieldId, originalValue) : false
+              const isEditing = fieldId ? isFieldEditing(fieldId) : false
+              const currentValue = fieldId ? getFieldValue(fieldId, originalValue) : originalValue
+              const hasValidationError = fieldId ? validationErrors[fieldId] : false
               
               return (
                 <div
                   key={index}
                   className={`p-3 rounded-lg border transition-all relative ${
-                    hasValidationError
-                      ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
-                      : isEditing
-                        ? 'border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
-                        : isEdited
-                          ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
-                          : isSelected
+                    !day.entry
+                      ? 'border-dashed border-muted-foreground/30 bg-muted/30'
+                      : hasValidationError
+                        ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                        : isEditing
+                          ? 'border-red-500 bg-red-100 dark:bg-red-900/30 cursor-text shadow-lg'
+                          : isEdited
                             ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
-                            : isFieldRejected(fieldId)
-                              ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
-                              : isRejectionMode
-                                ? 'border-border bg-card hover:border-white cursor-pointer'
-                                : 'border-border bg-card'
+                            : isSelected
+                              ? 'border-red-500 bg-red-50 dark:bg-red-950/20 cursor-pointer'
+                              : fieldId && isFieldRejected(fieldId)
+                                ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                                : isRejectionMode && fieldId
+                                  ? 'border-border bg-card hover:border-white cursor-pointer'
+                                  : 'border-border bg-card'
                   }`}
-                  onClick={() => !isEditing && handleFieldClick(fieldId)}
+                  onClick={() => !isEditing && fieldId && handleFieldClick(fieldId)}
 
                 >
-                  {day.entry ? 
+                  {day.entry && fieldId ? 
                     renderTimeField(fieldId, originalValue, currentValue, isEdited, isEditing, true, actualDayIndex) :
                     <div className="flex items-center justify-center h-7 text-muted-foreground text-sm">—</div>
                   }

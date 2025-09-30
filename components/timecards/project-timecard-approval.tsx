@@ -690,27 +690,7 @@ export function ProjectTimecardApproval({
       )}
 
       {/* Mobile Layout - Simplified */}
-      <div className="lg:hidden relative">
-        {/* Previous Arrow - Larger and more rounded */}
-        <button
-          onClick={goToPreviousTimecard}
-          disabled={currentApprovalIndex === 0}
-          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 z-20 p-2.5 rounded-lg bg-background border border-border hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          aria-label="Previous timecard"
-        >
-          <ChevronLeft className="w-5 h-5 text-muted-foreground" />
-        </button>
-
-        {/* Next Arrow - Larger and more rounded */}
-        <button
-          onClick={goToNextTimecard}
-          disabled={currentApprovalIndex === submittedTimecards.length - 1}
-          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 z-20 p-2.5 rounded-lg bg-background border border-border hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          aria-label="Next timecard"
-        >
-          <ChevronRight className="w-5 h-5 text-muted-foreground" />
-        </button>
-
+      <div className="lg:hidden">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
@@ -729,10 +709,25 @@ export function ProjectTimecardApproval({
                 </div>
               </div>
 
-              {/* Count indicator */}
-              <span className="text-sm text-muted-foreground">
-                {currentApprovalIndex + 1} of {submittedTimecards.length}
-              </span>
+              {/* Navigation arrows */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={goToPreviousTimecard}
+                  disabled={currentApprovalIndex === 0}
+                  className="p-1.5 rounded-lg bg-background border border-border hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Previous timecard"
+                >
+                  <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+                </button>
+                <button
+                  onClick={goToNextTimecard}
+                  disabled={currentApprovalIndex === submittedTimecards.length - 1}
+                  className="p-1.5 rounded-lg bg-background border border-border hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Next timecard"
+                >
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </div>
             </CardTitle>
 
             {/* Rejection mode indicator */}
@@ -809,137 +804,238 @@ export function ProjectTimecardApproval({
 
 
       {/* Enhanced Rejection Reason Dialog */}
-      <Dialog open={showReasonDialog} onOpenChange={setShowReasonDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className={Object.keys(fieldEdits).length > 0 ? "text-blue-600 dark:text-blue-400" : "text-red-600 dark:text-red-400"}>
-              {Object.keys(fieldEdits).length > 0 ? 'Return Timecard with Changes' : 'Reject Timecard'}
-            </DialogTitle>
-          </DialogHeader>
+      {showReasonDialog && (
+        <>
+          {/* Desktop: Use original Dialog */}
+          {isDesktop ? (
+            <Dialog open={showReasonDialog} onOpenChange={setShowReasonDialog}>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle className={Object.keys(fieldEdits).length > 0 ? "text-white" : "text-red-600 dark:text-red-400"}>
+                    {Object.keys(fieldEdits).length > 0 ? 'Reject Timecard with Changes' : 'Reject Timecard'}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  {Object.keys(fieldEdits).length > 0 && (
+                    <div>
+                      <Label className="text-sm font-medium">Changes made:</Label>
+                      <div className="mt-2 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+                        <div className="space-y-2">
+                          {Object.entries(fieldEdits).map(([fieldId, newValue]) => {
+                            const originalValue = getOriginalValue(fieldId)
 
-          <div className="space-y-4">
-            {Object.keys(fieldEdits).length > 0 && (
-              <div>
-                <Label className="text-sm font-medium">Modified fields:</Label>
-                <div className="mt-2 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
-                  <div className="flex flex-wrap gap-2">
-                    {Object.keys(fieldEdits).map((fieldId, index) => (
-                      <span
-                        key={index}
-                        className="px-2 py-1 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded text-xs font-medium"
-                      >
-                        {getFieldDisplayName(fieldId)}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
+                            const formatTime = (timeString: string | null) => {
+                              if (!timeString) return "Not Recorded"
 
-            {/* Show changes made */}
-            {Object.keys(fieldEdits).length > 0 && (
-              <div>
-                <Label className="text-sm font-medium">Changes made:</Label>
-                <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <div className="space-y-2">
-                    {Object.entries(fieldEdits).map(([fieldId, newValue]) => {
-                      const originalValue = getOriginalValue(fieldId)
+                              try {
+                                // Handle both full datetime and simple time formats
+                                let date: Date;
 
-                      const formatTime = (timeString: string | null) => {
-                        if (!timeString) return "Not Recorded"
+                                if (timeString.includes('T')) {
+                                  // Full datetime string
+                                  date = new Date(timeString)
+                                } else if (timeString.includes(':')) {
+                                  // Simple time format (HH:MM:SS) - combine with today's date
+                                  const today = new Date().toISOString().split('T')[0]
+                                  date = new Date(`${today}T${timeString}`)
+                                } else {
+                                  return "Not Recorded"
+                                }
 
-                        try {
-                          // Handle both full datetime and simple time formats
-                          let date: Date;
+                                if (isNaN(date.getTime())) return "Not Recorded"
 
-                          if (timeString.includes('T')) {
-                            // Full datetime string
-                            date = new Date(timeString)
-                          } else if (timeString.includes(':')) {
-                            // Simple time format (HH:MM:SS) - combine with today's date
-                            const today = new Date().toISOString().split('T')[0]
-                            date = new Date(`${today}T${timeString}`)
-                          } else {
-                            return "Not Recorded"
-                          }
+                                return date.toLocaleTimeString('en-US', {
+                                  hour: 'numeric',
+                                  minute: '2-digit'
+                                })
+                              } catch {
+                                return "Not Recorded"
+                              }
+                            }
 
-                          if (isNaN(date.getTime())) return "Not Recorded"
-
-                          return date.toLocaleTimeString('en-US', {
-                            hour: 'numeric',
-                            minute: '2-digit'
-                          })
-                        } catch {
-                          return "Not Recorded"
-                        }
-                      }
-
-                      return (
-                        <div key={fieldId} className="text-sm">
-                          <span className="font-medium text-blue-700 dark:text-blue-300">
-                            {getFieldDisplayName(fieldId)}:
-                          </span>
-                          <span className="ml-2 text-muted-foreground line-through">
-                            {formatTime(originalValue as string)}
-                          </span>
-                          <span className="mx-2 text-blue-600 dark:text-blue-400">→</span>
-                          <span className="font-medium text-blue-600 dark:text-blue-400">
-                            {formatTime(newValue)}
-                          </span>
-                          <div className="text-xs text-muted-foreground mt-1 font-mono">
-                            Raw: {originalValue} → {newValue}
-                          </div>
+                            return (
+                              <div key={fieldId} className="text-sm">
+                                <span className="font-medium text-white">
+                                  {getFieldDisplayName(fieldId)}:
+                                </span>
+                                <span className="ml-2 text-muted-foreground line-through">
+                                  {formatTime(originalValue as string)}
+                                </span>
+                                <span className="mx-2 text-white">→</span>
+                                <span className="font-medium text-red-600 dark:text-red-400">
+                                  {formatTime(newValue)}
+                                </span>
+                              </div>
+                            )
+                          })}
                         </div>
-                      )
-                    })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <Label htmlFor="rejection-reason" className="text-sm font-medium">
+                      {Object.keys(fieldEdits).length > 0 ? 'Explanation of changes' : 'Reason for rejection'} <span className="text-red-500">*</span>
+                    </Label>
+                    <Textarea
+                      id="rejection-reason"
+                      placeholder={Object.keys(fieldEdits).length > 0
+                        ? "Explain the corrections made and any remaining issues..."
+                        : "Please explain the issues with this timecard..."
+                      }
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      className="mt-1 min-h-[100px]"
+                    />
+                    {!rejectionReason.trim() && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {Object.keys(fieldEdits).length > 0
+                          ? 'An explanation is required when making changes'
+                          : 'A reason is required when rejecting a timecard'
+                        }
+                      </p>
+                    )}
                   </div>
                 </div>
+
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={closeReasonDialog}
+                    disabled={loadingRejection}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={submitRejection}
+                    disabled={!rejectionReason.trim() || loadingRejection}
+                    className="bg-red-600 dark:bg-red-800 hover:bg-red-700 dark:hover:bg-red-900 text-white"
+                  >
+                    {loadingRejection ? 'Processing...' : buttonText}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          ) : (
+            /* Mobile: Custom popup styled to match desktop Dialog */
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+              <div className="bg-background border rounded-lg shadow-lg mx-4 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                {/* Header - matches DialogHeader styling */}
+                <div className="flex flex-col space-y-1.5 text-center sm:text-left p-6 pb-4">
+                  <h2 className={`text-lg font-semibold leading-none tracking-tight ${Object.keys(fieldEdits).length > 0 ? "text-white" : "text-red-600 dark:text-red-400"}`}>
+                    {Object.keys(fieldEdits).length > 0 ? 'Reject Timecard with Changes' : 'Reject Timecard'}
+                  </h2>
+                </div>
+
+                {/* Content - matches Dialog content spacing */}
+                <div className="p-6 pt-0">
+                  <div className="space-y-4">
+                  {Object.keys(fieldEdits).length > 0 && (
+                    <div>
+                      <Label className="text-sm font-medium">Changes made:</Label>
+                      <div className="mt-2 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+                        <div className="space-y-2">
+                          {Object.entries(fieldEdits).map(([fieldId, newValue]) => {
+                            const originalValue = getOriginalValue(fieldId)
+
+                            const formatTime = (timeString: string | null) => {
+                              if (!timeString) return "Not Recorded"
+
+                              try {
+                                // Handle both full datetime and simple time formats
+                                let date: Date;
+
+                                if (timeString.includes('T')) {
+                                  // Full datetime string
+                                  date = new Date(timeString)
+                                } else if (timeString.includes(':')) {
+                                  // Simple time format (HH:MM:SS) - combine with today's date
+                                  const today = new Date().toISOString().split('T')[0]
+                                  date = new Date(`${today}T${timeString}`)
+                                } else {
+                                  return "Not Recorded"
+                                }
+
+                                if (isNaN(date.getTime())) return "Not Recorded"
+
+                                return date.toLocaleTimeString('en-US', {
+                                  hour: 'numeric',
+                                  minute: '2-digit'
+                                })
+                              } catch {
+                                return "Not Recorded"
+                              }
+                            }
+
+                            return (
+                              <div key={fieldId} className="text-sm">
+                                <span className="font-medium text-white">
+                                  {getFieldDisplayName(fieldId)}:
+                                </span>
+                                <span className="ml-2 text-muted-foreground line-through">
+                                  {formatTime(originalValue as string)}
+                                </span>
+                                <span className="mx-2 text-white">→</span>
+                                <span className="font-medium text-red-600 dark:text-red-400">
+                                  {formatTime(newValue)}
+                                </span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                    <div>
+                      <Label htmlFor="mobile-rejection-reason" className="text-sm font-medium">
+                        {Object.keys(fieldEdits).length > 0 ? 'Explanation of changes' : 'Reason for rejection'} <span className="text-red-500">*</span>
+                      </Label>
+                      <Textarea
+                        id="mobile-rejection-reason"
+                        placeholder={Object.keys(fieldEdits).length > 0
+                          ? "Explain the corrections made and any remaining issues..."
+                          : "Please explain the issues with this timecard..."
+                        }
+                        value={rejectionReason}
+                        onChange={(e) => setRejectionReason(e.target.value)}
+                        className="mt-1 min-h-[100px]"
+                      />
+                      {!rejectionReason.trim() && (
+                        <p className="text-xs text-red-500 mt-1">
+                          {Object.keys(fieldEdits).length > 0
+                            ? 'An explanation is required when making changes'
+                            : 'A reason is required when rejecting a timecard'
+                          }
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer - matches DialogFooter styling */}
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 p-6 pt-0">
+                  <Button
+                    variant="outline"
+                    onClick={closeReasonDialog}
+                    disabled={loadingRejection}
+                    className="mt-3 sm:mt-0"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={submitRejection}
+                    disabled={!rejectionReason.trim() || loadingRejection}
+                    className="bg-red-600 dark:bg-red-800 hover:bg-red-700 dark:hover:bg-red-900 text-white"
+                  >
+                    {loadingRejection ? 'Processing...' : buttonText}
+                  </Button>
+                </div>
               </div>
-            )}
-
-            <div>
-              <Label htmlFor="rejection-reason" className="text-sm font-medium">
-                {Object.keys(fieldEdits).length > 0 ? 'Explanation of changes' : 'Reason for rejection'} <span className="text-red-500">*</span>
-              </Label>
-              <Textarea
-                id="rejection-reason"
-                placeholder={Object.keys(fieldEdits).length > 0
-                  ? "Explain the corrections made and any remaining issues..."
-                  : "Please explain the issues with this timecard..."
-                }
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                className="mt-1 min-h-[100px]"
-              />
-              {!rejectionReason.trim() && (
-                <p className="text-xs text-red-500 mt-1">
-                  {Object.keys(fieldEdits).length > 0
-                    ? 'An explanation is required when making changes'
-                    : 'A reason is required when rejecting a timecard'
-                  }
-                </p>
-              )}
             </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={closeReasonDialog}
-              disabled={loadingRejection}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={submitRejection}
-              disabled={!rejectionReason.trim() || loadingRejection}
-              className="bg-red-600 dark:bg-red-800 hover:bg-red-700 dark:hover:bg-red-900 text-white"
-            >
-              {loadingRejection ? 'Processing...' : buttonText}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          )}
+        </>
+      )}
     </div>
   )
 }

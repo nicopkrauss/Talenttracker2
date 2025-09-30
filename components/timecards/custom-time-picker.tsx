@@ -357,44 +357,51 @@ export function CustomTimePicker({
       aria-valuenow={currentTime.hours * 60 + currentTime.minutes + (currentTime.ampm === 'PM' ? 720 : 0)}
       aria-valuetext={`${hoursDisplay}:${minutesDisplay} ${currentTime.ampm}`}
     >
-      <span
-        className={`rounded transition-colors ${
-          isFocused && highlightedPart === 'hours'
-            ? 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30'
-            : ''
-        }`}
-        onClick={() => handlePartClick('hours')}
-        role="button"
-        aria-label={`Hours: ${hoursDisplay}`}
-      >
-        {hoursDisplay}
-      </span>
-      <span className="select-none">:</span>
-      <span
-        className={`rounded transition-colors ${
-          isFocused && highlightedPart === 'minutes'
-            ? 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30'
-            : ''
-        }`}
-        onClick={() => handlePartClick('minutes')}
-        role="button"
-        aria-label={`Minutes: ${minutesDisplay}`}
-      >
-        {minutesDisplay}
-      </span>
-      <span className="select-none"> </span>
-      <span
-        className={`pl-1 rounded transition-colors ${
-          isFocused && highlightedPart === 'ampm'
-            ? 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30'
-            : ''
-        }`}
-        onClick={() => handlePartClick('ampm')}
-        role="button"
-        aria-label={`AM or PM: ${currentTime.ampm}`}
-      >
-        {currentTime.ampm}
-      </span>
+      <div className="flex flex-col items-center leading-tight">
+        {/* Time on first line */}
+        <div className="flex items-center">
+          <span
+            className={`rounded transition-colors ${
+              isFocused && highlightedPart === 'hours'
+                ? 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30'
+                : ''
+            }`}
+            onClick={() => handlePartClick('hours')}
+            role="button"
+            aria-label={`Hours: ${hoursDisplay}`}
+          >
+            {hoursDisplay}
+          </span>
+          <span className="select-none">:</span>
+          <span
+            className={`rounded transition-colors ${
+              isFocused && highlightedPart === 'minutes'
+                ? 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30'
+                : ''
+            }`}
+            onClick={() => handlePartClick('minutes')}
+            role="button"
+            aria-label={`Minutes: ${minutesDisplay}`}
+          >
+            {minutesDisplay}
+          </span>
+        </div>
+        {/* AM/PM on second line */}
+        <div className="text-xs">
+          <span
+            className={`rounded transition-colors ${
+              isFocused && highlightedPart === 'ampm'
+                ? 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30'
+                : ''
+            }`}
+            onClick={() => handlePartClick('ampm')}
+            role="button"
+            aria-label={`AM or PM: ${currentTime.ampm}`}
+          >
+            {currentTime.ampm}
+          </span>
+        </div>
+      </div>
     </div>
   )
 }

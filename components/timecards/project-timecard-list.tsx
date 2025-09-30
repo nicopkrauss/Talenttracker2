@@ -199,18 +199,25 @@ export function ProjectTimecardList({
                   <SelectItem value="rejected">Rejected</SelectItem>
                 </SelectContent>
               </Select>
-              <div className="text-sm text-muted-foreground">
+              {/* Desktop text - single line */}
+              <div className="hidden sm:block text-sm text-muted-foreground">
                 Showing {timecards.length} timecard{timecards.length !== 1 ? 's' : ''} for {project.name}
+              </div>
+              {/* Mobile text - two lines */}
+              <div className="block sm:hidden text-sm text-muted-foreground">
+                {timecards.length} timecard{timecards.length !== 1 ? 's' : ''}
+                <br />
+                for {project.name}
               </div>
             </div>
             
-            {/* Expand/Collapse All Button */}
+            {/* Expand/Collapse All Button - Hidden on mobile */}
             {timecards.length > 0 && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setAllExpanded(!allExpanded)}
-                className="flex items-center gap-2"
+                className="hidden sm:flex items-center gap-2"
               >
                 {allExpanded ? "Collapse All" : "Expand All"}
               </Button>
