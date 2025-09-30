@@ -664,7 +664,7 @@ export function DesktopTimecardGrid({
 
               {/* Summary Stats on the right */}
               {showSummaryInHeader && (
-                <div className="hidden lg:flex lg:items-center lg:gap-4 flex-shrink-0">
+                <div className="hidden xl:flex xl:items-center xl:gap-4 flex-shrink-0">
                 <div className="flex items-baseline gap-1 text-right">
                   <p className="text-lg font-semibold text-foreground">
                     ${(timecard.pay_rate || 0).toFixed(0)}/h

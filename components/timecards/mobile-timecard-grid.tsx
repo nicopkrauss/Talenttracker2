@@ -6,6 +6,7 @@ import { Clock, Coffee, AlertTriangle, ChevronDown } from "lucide-react"
 import type { Timecard } from "@/lib/types"
 import { parseDate } from "@/lib/timezone-utils"
 import { CustomTimePicker } from "./custom-time-picker"
+import { useMediaQuery } from "@/hooks/use-media-query"
 
 interface MobileTimecardGridProps {
   timecard: Timecard
@@ -51,6 +52,9 @@ export function MobileTimecardGrid({
 
   const [editingField, setEditingField] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  
+  // Use CustomTimePicker for the upper end of tablet range (1024px-1279px)
+  const useCustomTimePicker = useMediaQuery('(min-width: 1024px) and (max-width: 1279px)')
 
   // Helper function to get field ID for rejection mode
   const getFieldId = (fieldType: string, dayIndex?: number) => {
@@ -114,9 +118,9 @@ export function MobileTimecardGrid({
     return editingField === fieldId
   }
 
-  // Format time for display (two-line format: time on top, AM/PM on bottom)
+  // Format time for display (flexible format: one line when possible, wraps when needed)
   const formatTime = (timeStr?: string) => {
-    if (!timeStr) return { time: "—", ampm: "" }
+    if (!timeStr) return { time: "—", ampm: "", fullTime: "—" }
 
     try {
       let date: Date
@@ -134,10 +138,11 @@ export function MobileTimecardGrid({
       const hours12 = hours24 === 0 ? 12 : hours24 > 12 ? hours24 - 12 : hours24
       const ampm = hours24 >= 12 ? 'PM' : 'AM'
       const timeOnly = `${hours12}:${minutes.toString().padStart(2, '0')}`
+      const fullTime = `${timeOnly} ${ampm}`
 
-      return { time: timeOnly, ampm: ampm }
+      return { time: timeOnly, ampm: ampm, fullTime: fullTime }
     } catch (error) {
-      return { time: "—", ampm: "" }
+      return { time: "—", ampm: "", fullTime: "—" }
     }
   }
 
@@ -431,33 +436,46 @@ export function MobileTimecardGrid({
         <div className="flex flex-col items-center justify-center min-h-[2.5rem] w-full">
           {isEditing && isRejectionMode ? (
             <div className="flex items-center justify-center h-full">
-              {/* Native time input for mobile with 5-minute intervals */}
-              <input
-                type="time"
-                step="300"
-                value={formatTimeForInput(roundTimeToFiveMinutes(currentValue))}
-                onChange={(e) => {
-                  const newValue = formatTimeFromInput(e.target.value)
-                  handleTimeChange(fieldId, originalValue, newValue, dayIndex)
-                }}
-                onBlur={handleTimePickerBlur}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                autoFocus
-                title="Times are automatically rounded to 5-minute intervals"
-                aria-label="Select time (rounded to 5-minute intervals)"
-              />
-              {/* Visual display that matches the non-editing state */}
-              <div className="text-sm font-semibold text-center leading-tight pointer-events-none">
-                {(() => {
-                  const timeData = formatTime(currentValue)
-                  return (
-                    <>
-                      <div>{timeData.time}</div>
-                      {timeData.ampm && <div className="text-xs">{timeData.ampm}</div>}
-                    </>
-                  )
-                })()}
-              </div>
+              {useCustomTimePicker ? (
+                /* CustomTimePicker for upper tablet range (1024px-1279px) */
+                <CustomTimePicker
+                  value={currentValue}
+                  onChange={(newValue) => handleTimeChange(fieldId, originalValue, newValue, dayIndex)}
+                  onBlur={handleTimePickerBlur}
+                  className="text-sm font-semibold leading-none"
+                  autoFocus
+                />
+              ) : (
+                <>
+                  {/* Native time input for mobile and lower tablet range */}
+                  <input
+                    type="time"
+                    step="300"
+                    value={formatTimeForInput(roundTimeToFiveMinutes(currentValue))}
+                    onChange={(e) => {
+                      const newValue = formatTimeFromInput(e.target.value)
+                      handleTimeChange(fieldId, originalValue, newValue, dayIndex)
+                    }}
+                    onBlur={handleTimePickerBlur}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    autoFocus
+                    title="Times are automatically rounded to 5-minute intervals"
+                    aria-label="Select time (rounded to 5-minute intervals)"
+                  />
+                  {/* Visual display that matches the non-editing state */}
+                  <div className="text-sm font-semibold text-center leading-tight pointer-events-none">
+                    {(() => {
+                      const timeData = formatTime(currentValue)
+                      return (
+                        <div className="flex items-center justify-center flex-wrap">
+                          <span>{timeData.time}</span>
+                          {timeData.ampm && <span className="ml-1 text-xs">{timeData.ampm}</span>}
+                        </div>
+                      )
+                    })()}
+                  </div>
+                </>
+              )}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center min-h-[2.5rem] gap-0 w-full">
@@ -467,16 +485,16 @@ export function MobileTimecardGrid({
                   {(() => {
                     const timeData = formatTime(originalValue)
                     return (
-                      <>
-                        <div>{timeData.time}</div>
-                        {timeData.ampm && <div className="text-xs">{timeData.ampm}</div>}
-                      </>
+                      <div className="flex items-center justify-center flex-wrap">
+                        <span>{timeData.time}</span>
+                        {timeData.ampm && <span className="ml-1">{timeData.ampm}</span>}
+                      </div>
                     )
                   })()}
                 </div>
               )}
 
-              {/* Current time value - two line format */}
+              {/* Current time value - flexible format */}
               <div
                 className={`text-sm font-semibold m-0 text-center leading-tight ${isRejectionMode ? 'cursor-pointer' : ''
                   } ${validationError
@@ -492,10 +510,10 @@ export function MobileTimecardGrid({
                 {(() => {
                   const timeData = formatTime(currentValue)
                   return (
-                    <>
-                      <div>{timeData.time}</div>
-                      {timeData.ampm && <div className="text-xs">{timeData.ampm}</div>}
-                    </>
+                    <div className="flex items-center justify-center flex-wrap">
+                      <span>{timeData.time}</span>
+                      {timeData.ampm && <span className="ml-1 text-xs">{timeData.ampm}</span>}
+                    </div>
                   )
                 })()}
               </div>
@@ -678,7 +696,7 @@ export function MobileTimecardGrid({
   const dayRows = prepareDayRows()
 
   return (
-    <div className={`lg:hidden ${showBreakdownToggle ? "pt-4" : ""}`}>
+    <div className={`xl:hidden ${showBreakdownToggle ? "pt-4" : ""}`}>
       {/* Time Column Headers (horizontal axis) */}
       <div className="grid gap-2 mb-4" style={{ gridTemplateColumns: `70px repeat(${timeColumns.length}, 1fr)` }}>
         {/* Week navigation in top left corner */}

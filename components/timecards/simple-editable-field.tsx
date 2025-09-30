@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Edit3 } from "lucide-react"
 import { CustomTimePicker } from "./custom-time-picker"
+import { useIsDesktop } from "@/hooks/use-media-query"
 
 interface SimpleEditableFieldProps {
   fieldId: string
@@ -34,6 +35,21 @@ export function SimpleEditableField({
 }: SimpleEditableFieldProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [validationError, setValidationError] = useState<string | null>(null)
+  
+  // Use native time picker for mobile and tablet (non-desktop)
+  const isDesktop = useIsDesktop()
+  
+  // Debug logging to understand what's happening
+  useEffect(() => {
+    console.log('SimpleEditableField device detection:', {
+      fieldId,
+      isDesktop,
+      windowWidth: typeof window !== 'undefined' ? window.innerWidth : 'undefined',
+      useNativeTimePicker: !isDesktop
+    })
+  }, [isDesktop, fieldId])
+  
+  const useNativeTimePicker = !isDesktop
   
   // Get the current value (either edited value or original)
   const currentValue = fieldEdits[fieldId] !== undefined ? fieldEdits[fieldId] : originalValue
@@ -290,6 +306,80 @@ export function SimpleEditableField({
     }
   }
 
+  // Helper functions for native time picker (copied from mobile-timecard-grid.tsx)
+  const formatTimeForInput = (timeStr?: string) => {
+    if (!timeStr) return ""
+    
+    try {
+      let date: Date
+      if (timeStr.includes('T')) {
+        date = new Date(timeStr)
+      } else {
+        const today = new Date().toISOString().split('T')[0]
+        date = new Date(`${today}T${timeStr}`)
+      }
+      
+      const hours = date.getHours().toString().padStart(2, '0')
+      const minutes = date.getMinutes().toString().padStart(2, '0')
+      return `${hours}:${minutes}`
+    } catch {
+      return ""
+    }
+  }
+
+  const formatTimeFromInput = (inputValue: string) => {
+    if (!inputValue) return ""
+    
+    const [hours, minutes] = inputValue.split(':').map(Number)
+    const roundedMinutes = Math.round(minutes / 5) * 5
+    
+    let finalHours = hours
+    let finalMinutes = roundedMinutes
+    
+    if (finalMinutes >= 60) {
+      finalHours = (hours + 1) % 24
+      finalMinutes = 0
+    }
+    
+    const hoursStr = finalHours.toString().padStart(2, '0')
+    const minutesStr = finalMinutes.toString().padStart(2, '0')
+    
+    return `${hoursStr}:${minutesStr}:00`
+  }
+
+  const roundTimeToFiveMinutes = (timeStr: string) => {
+    if (!timeStr) return timeStr
+    
+    try {
+      let date: Date
+      if (timeStr.includes('T')) {
+        date = new Date(timeStr)
+      } else {
+        const today = new Date().toISOString().split('T')[0]
+        date = new Date(`${today}T${timeStr}`)
+      }
+      
+      const hours = date.getHours()
+      const minutes = date.getMinutes()
+      const roundedMinutes = Math.round(minutes / 5) * 5
+      
+      let finalHours = hours
+      let finalMinutes = roundedMinutes
+      
+      if (finalMinutes >= 60) {
+        finalHours = (hours + 1) % 24
+        finalMinutes = 0
+      }
+      
+      const hoursStr = finalHours.toString().padStart(2, '0')
+      const minutesStr = finalMinutes.toString().padStart(2, '0')
+      
+      return `${hoursStr}:${minutesStr}:00`
+    } catch {
+      return timeStr
+    }
+  }
+
   const handleTimeChange = (newValue: string) => {
     console.log('📝 SimpleEditableField handleTimeChange:', {
       fieldId,
@@ -409,7 +499,7 @@ export function SimpleEditableField({
         {label}
         {/* Mobile: Show edit indicator in label when in rejection mode */}
         {isRejectionMode && (
-          <div className="lg:hidden">
+          <div className="xl:hidden">
             {isEdited ? (
               <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">✏️</span>
             ) : (
@@ -425,20 +515,48 @@ export function SimpleEditableField({
         <div className="flex flex-col justify-center" style={{ minHeight: '48px', maxHeight: '48px', height: '48px', overflow: 'hidden' }}>
           {isEditing ? (
             <div className="flex items-center justify-center h-full">
-              <CustomTimePicker
-                value={currentValue}
-                onChange={handleTimeChange}
-                onBlur={handleInputBlur}
-                className="text-lg font-semibold leading-none"
-                autoFocus
-              />
+              {useNativeTimePicker ? (
+                <>
+                  {/* Native time input for mobile and tablet */}
+                  {console.log('SimpleEditableField: Using NATIVE time picker for', fieldId)}
+                  <input
+                    type="time"
+                    step="300"
+                    value={formatTimeForInput(roundTimeToFiveMinutes(currentValue))}
+                    onChange={(e) => {
+                      const newValue = formatTimeFromInput(e.target.value)
+                      handleTimeChange(newValue)
+                    }}
+                    onBlur={handleInputBlur}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    autoFocus
+                    title="Times are automatically rounded to 5-minute intervals"
+                    aria-label="Select time (rounded to 5-minute intervals)"
+                  />
+                  {/* Visual display that matches the non-editing state */}
+                  <div className="text-lg font-semibold leading-none pointer-events-none">
+                    {formatTime(currentValue)}
+                  </div>
+                </>
+              ) : (
+                <>
+                  {console.log('SimpleEditableField: Using CUSTOM time picker for', fieldId)}
+                  <CustomTimePicker
+                  value={currentValue}
+                  onChange={handleTimeChange}
+                  onBlur={handleInputBlur}
+                  className="text-lg font-semibold leading-none"
+                  autoFocus
+                />
+                </>
+              )}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full gap-0">
               {/* Show original time above current time when edited */}
               {isEdited && (
                 <div className="text-xs text-muted-foreground line-through text-center leading-tight">
-                  <span className="hidden lg:inline">Original: </span>{formatTime(originalValue)}
+                  <span className="hidden xl:inline">Original: </span>{formatTime(originalValue)}
                 </div>
               )}
               
@@ -455,7 +573,7 @@ export function SimpleEditableField({
               
               {/* Desktop: Keep the tap to edit text */}
               {isRejectionMode && (
-                <div className="hidden lg:block text-xs text-gray-500 mt-1 text-center">
+                <div className="hidden xl:block text-xs text-gray-500 mt-1 text-center">
                   {isEdited ? '✏️ Modified' : 'Tap to edit'}
                 </div>
               )}

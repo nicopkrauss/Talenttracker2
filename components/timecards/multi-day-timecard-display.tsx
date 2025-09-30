@@ -248,7 +248,7 @@ export function MultiDayTimecardDisplay({
     <div>
       {/* Mobile/Tablet: Time breakdown grid - moved outside Card to be in same container as name/role badge */}
       {(timecard.check_in_time || timecard.daily_entries?.length > 0) && (!showBreakdownToggle || isExpanded) && (
-        <div className="lg:hidden">
+        <div className="xl:hidden">
           <MobileTimecardGrid
             timecard={timecard}
             isRejectionMode={isRejectionMode}
@@ -275,9 +275,9 @@ export function MultiDayTimecardDisplay({
         <Card className="hover:shadow-md transition-shadow">
         {(showUserName || showHeaderStats) && (
         <CardHeader className="pb-0 gap-0">
-          <div className="space-y-3 lg:space-y-0">
+          <div className="space-y-3 xl:space-y-0">
             {/* Mobile/Tablet Layout */}
-            <div className="lg:hidden space-y-2">
+            <div className="xl:hidden space-y-2">
               {showUserName && (
                 <>
                   {/* Top row: Name (left) + Status badges (right) */}
@@ -316,7 +316,7 @@ export function MultiDayTimecardDisplay({
             </div>
 
             {/* Desktop Layout: Simple flex with justify-between */}
-            <div className="hidden lg:flex lg:items-center lg:justify-between lg:gap-4">
+            <div className="hidden xl:flex xl:items-center xl:justify-between xl:gap-4">
               {/* Left side: Name and role badge */}
               <div className="flex items-center gap-3">
                 {showUserName && (
@@ -406,7 +406,7 @@ export function MultiDayTimecardDisplay({
 
             {/* Mobile/Tablet: Stats grid on separate row */}
             {showHeaderStats && (
-              <div className="grid grid-cols-2 gap-3 lg:hidden">
+              <div className="grid grid-cols-2 gap-3 xl:hidden">
                 {/* Adjusted Hours - Top Left on mobile */}
                 <div className="text-center p-3 bg-card rounded-lg border">
                   <p className="text-sm text-muted-foreground whitespace-nowrap">Adjusted Hours</p>
@@ -462,7 +462,7 @@ export function MultiDayTimecardDisplay({
 
         {/* Mobile/Tablet Breakdown Toggle Button */}
         {showBreakdownToggle && (
-          <div className="flex justify-center mb-4 lg:hidden">
+          <div className="flex justify-center mb-4 xl:hidden">
             <Button
               variant="outline"
               size="sm"
@@ -490,7 +490,7 @@ export function MultiDayTimecardDisplay({
 
         {/* Calendar Week Info for Multi-Week Timecards - Navigation handled by desktop grid arrows */}
         {needsPagination && (!showBreakdownToggle || isExpanded) && (
-          <div className="mb-4 flex items-center justify-center p-3 bg-muted/50 rounded-lg border lg:hidden">
+          <div className="mb-4 flex items-center justify-center p-3 bg-muted/50 rounded-lg border xl:hidden">
             <div className="flex flex-col items-center gap-1">
               <span className="text-sm font-medium text-muted-foreground">
                 week
@@ -539,7 +539,7 @@ export function MultiDayTimecardDisplay({
         {(timecard.check_in_time || timecard.daily_entries?.length > 0) && (!showBreakdownToggle || isExpanded) && (
           <>
             {/* Large Desktop: Use DesktopTimecardGrid (same as approve tab) */}
-            <div className="hidden lg:block">
+            <div className="hidden xl:block">
               <div className={showBreakdownToggle ? "pt-4" : ""}>
                 <DesktopTimecardGrid
                   timecard={timecard}

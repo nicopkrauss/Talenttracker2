@@ -13,6 +13,7 @@ import { utcToDatetimeLocal, parseDate, formatDateSafe } from "@/lib/timezone-ut
 import { useAuth } from "@/lib/auth-context"
 import { canApproveTimecardsWithSettings } from "@/lib/role-utils"
 import { DesktopTimecardGrid } from "@/components/timecards/desktop-timecard-grid"
+import { MobileTimecardGrid } from "@/components/timecards/mobile-timecard-grid"
 import { SimpleEditableField } from "@/components/timecards/simple-editable-field"
 
 interface MultiDayTimecardDetailProps {
@@ -193,7 +194,7 @@ export function MultiDayTimecardDetail({
       {timecard.daily_entries && timecard.daily_entries.length > 0 && (
         <>
           {/* Desktop Layout - Days as columns, categories as rows */}
-          <div className="hidden lg:block">
+          <div className="hidden xl:block">
             <DesktopTimecardGrid
               timecard={timecard}
               isRejectionMode={isRejectionMode}
@@ -210,8 +211,8 @@ export function MultiDayTimecardDetail({
             />
           </div>
 
-          {/* Mobile Layout - Show all days without pagination */}
-          <div className="lg:hidden">
+          {/* Mobile Layout - Use MobileTimecardGrid like approve and breakdown tabs */}
+          <div className="xl:hidden">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
@@ -224,144 +225,33 @@ export function MultiDayTimecardDetail({
                   )}
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {dailyEntries.map((entry, entryIndex) => {
-
-                    return (
-                      <div key={`day-${entryIndex}`} className="space-y-4">
-                        {/* Day Header */}
-                        <div className="flex items-center justify-between pb-2">
-                          <h3 className="text-sm font-medium text-foreground">
-                            {formatDate(entry.work_date, "EEEE, MMM d, yyyy")}
-                          </h3>
-                          <div className="flex items-center gap-4 text-sm">
-                            <span className="text-blue-600 dark:text-blue-400 font-medium">{(entry.hours_worked || 0).toFixed(1)} hrs</span>
-                            <span className="text-green-600 dark:text-green-400 font-medium">${(entry.daily_pay || 0).toFixed(2)}</span>
-                          </div>
-                        </div>
-
-                        {/* Time Events Grid */}
-                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                          {/* Check In */}
-                          <SimpleEditableField
-                            fieldId={getFieldId('check_in_time', entryIndex)}
-                            originalValue={entry.check_in_time || null}
-                            label="Check In"
-                            isRejectionMode={isRejectionMode}
-                            fieldEdits={fieldEdits}
-                            onFieldEdit={onFieldEdit || (() => { })}
-                            allFieldValues={{
-                              check_in_time: entry.check_in_time,
-                              break_start_time: entry.break_start_time,
-                              break_end_time: entry.break_end_time,
-                              check_out_time: entry.check_out_time
-                            }}
-                            isRejected={isFieldRejected(getFieldId('check_in_time', entryIndex))}
-                          />
-
-                          {/* Break Start */}
-                          <SimpleEditableField
-                            fieldId={getFieldId('break_start_time', entryIndex)}
-                            originalValue={entry.break_start_time || null}
-                            label="Break Start"
-                            isRejectionMode={isRejectionMode}
-                            fieldEdits={fieldEdits}
-                            onFieldEdit={onFieldEdit || (() => { })}
-                            allFieldValues={{
-                              check_in_time: entry.check_in_time,
-                              break_start_time: entry.break_start_time,
-                              break_end_time: entry.break_end_time,
-                              check_out_time: entry.check_out_time
-                            }}
-                            isRejected={isFieldRejected(getFieldId('break_start_time', entryIndex))}
-                          />
-
-                          {/* Break End */}
-                          <SimpleEditableField
-                            fieldId={getFieldId('break_end_time', entryIndex)}
-                            originalValue={entry.break_end_time || null}
-                            label="Break End"
-                            isRejectionMode={isRejectionMode}
-                            fieldEdits={fieldEdits}
-                            onFieldEdit={onFieldEdit || (() => { })}
-                            allFieldValues={{
-                              check_in_time: entry.check_in_time,
-                              break_start_time: entry.break_start_time,
-                              break_end_time: entry.break_end_time,
-                              check_out_time: entry.check_out_time
-                            }}
-                            isRejected={isFieldRejected(getFieldId('break_end_time', entryIndex))}
-                          />
-
-                          {/* Check Out */}
-                          <SimpleEditableField
-                            fieldId={getFieldId('check_out_time', entryIndex)}
-                            originalValue={entry.check_out_time || null}
-                            label="Check Out"
-                            isRejectionMode={isRejectionMode}
-                            fieldEdits={fieldEdits}
-                            onFieldEdit={onFieldEdit || (() => { })}
-                            allFieldValues={{
-                              check_in_time: entry.check_in_time,
-                              break_start_time: entry.break_start_time,
-                              break_end_time: entry.break_end_time,
-                              check_out_time: entry.check_out_time
-                            }}
-                            isRejected={isFieldRejected(getFieldId('check_out_time', entryIndex))}
-                          />
-                        </div>
-
-                        {/* Dividing line between days (except for last entry) */}
-                        {entryIndex < dailyEntries.length - 1 && (
-                          <div className="border-t border-border my-6"></div>
-                        )}
-                      </div>
-                    )
-                  })}
-
-                  {/* Mobile: Time Summary Stats at bottom of Daily Time Breakdown */}
-                  <div className="mt-6 pt-4 border-t border-border">
-                    <h4 className="text-sm font-medium text-muted-foreground mb-3">Time Summary</h4>
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                      <div className="text-center p-3 bg-card rounded-lg border">
-                        <p className="text-sm text-muted-foreground">Rate</p>
-                        <p className="text-lg font-semibold text-foreground">
-                          ${(timecard.pay_rate || 0).toFixed(0)}/h
-                        </p>
-                      </div>
-
-                      <div className="text-center p-3 bg-card rounded-lg border">
-                        <p className="text-sm text-muted-foreground">Break</p>
-                        <p className="text-lg font-bold text-foreground">
-                          {Math.round((timecard.break_duration || 0))} min
-                        </p>
-                      </div>
-
-                      <div className="text-center p-3 bg-card rounded-lg border">
-                        <p className="text-sm text-muted-foreground">Hours</p>
-                        <p className="text-lg font-bold text-foreground">
-                          {(timecard.total_hours || 0).toFixed(1)}
-                        </p>
-                      </div>
-
-                      <div className="text-center p-3 bg-card rounded-lg border">
-                        <p className="text-sm text-muted-foreground">Total</p>
-                        <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                          ${(timecard.total_pay || 0).toFixed(0)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Mobile Action Buttons */}
-                  {actionButtons && (
-                    <div className="flex justify-center gap-2 mt-6 pt-4 border-t border-border">
-                      {actionButtons}
-                    </div>
-                  )}
-                </div>
+              <CardContent className="pb-0">
+                <MobileTimecardGrid
+                  timecard={timecard}
+                  isRejectionMode={isRejectionMode}
+                  selectedFields={[]}
+                  onFieldToggle={() => { }}
+                  showRejectedFields={showRejectedFields}
+                  fieldEdits={fieldEdits}
+                  onFieldEdit={onFieldEdit}
+                  currentWeekEntries={currentWeekEntries} // Pass all entries including null for calendar week mode
+                  currentWeekIndex={currentWeekIndex}
+                  totalWeeks={totalWeeks}
+                  onWeekChange={setCurrentWeekIndex}
+                  isCalendarWeekMode={true} // Enable calendar week mode to match desktop behavior
+                  showBreakdownToggle={false} // No breakdown toggle in details view
+                  isApproveContext={false} // This is details context, not approve
+                />
               </CardContent>
+
+              {/* Mobile Action Buttons - Outside the grid like in approve tab */}
+              {actionButtons && (
+                <div className="border-t border-border p-6">
+                  <div className="flex justify-center gap-2">
+                    {actionButtons}
+                  </div>
+                </div>
+              )}
             </Card>
           </div>
         </>

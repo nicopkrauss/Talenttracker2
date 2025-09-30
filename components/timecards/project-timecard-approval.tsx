@@ -690,7 +690,7 @@ export function ProjectTimecardApproval({
       )}
 
       {/* Mobile Layout - Simplified */}
-      <div className="lg:hidden">
+      <div className="xl:hidden">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
