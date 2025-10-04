@@ -83,7 +83,8 @@ describe('ProjectTimecardStatistics', () => {
     )
 
     expect(screen.getByText('Timecard Overview')).toBeInTheDocument()
-    expect(screen.getByLabelText('Collapse timecard overview')).toBeInTheDocument()
+    // Check for chevron icon indicating collapsible functionality
+    expect(screen.getByText('Timecard Overview').closest('[data-slot="card-header"]')).toHaveClass('cursor-pointer')
   })
 
   it('displays statistics correctly after loading', async () => {
@@ -215,21 +216,19 @@ describe('ProjectTimecardStatistics', () => {
     })
 
     // Initially expanded, should show statistics
-    expect(screen.getAllByText('Total').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Total Timecards').length).toBeGreaterThan(0)
 
-    // Click collapse button
-    const collapseButton = screen.getByLabelText('Collapse timecard overview')
-    await user.click(collapseButton)
+    // Click header to collapse
+    const header = screen.getByText('Timecard Overview').closest('[data-slot="card-header"]')
+    await user.click(header!)
 
     // Should be collapsed now, statistics should not be visible
-    expect(screen.queryByText('Total')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Expand timecard overview')).toBeInTheDocument()
+    expect(screen.queryByText('Total Timecards')).not.toBeInTheDocument()
 
-    // Click expand button
-    const expandButton = screen.getByLabelText('Expand timecard overview')
-    await user.click(expandButton)
+    // Click header again to expand
+    await user.click(header!)
 
     // Should be expanded again, statistics should be visible
-    expect(screen.getAllByText('Total').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Total Timecards').length).toBeGreaterThan(0)
   })
 })

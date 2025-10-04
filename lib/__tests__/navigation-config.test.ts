@@ -10,10 +10,10 @@ import { UserRole } from '../types'
 describe('Navigation Configuration', () => {
   describe('navigationItems', () => {
     it('should contain all expected navigation items', () => {
-      expect(navigationItems).toHaveLength(6)
+      expect(navigationItems).toHaveLength(5)
       
       const itemIds = navigationItems.map(item => item.id)
-      expect(itemIds).toEqual(['projects', 'team', 'talent', 'timecards', 'settings', 'profile'])
+      expect(itemIds).toEqual(['projects', 'team', 'talent', 'timecards', 'profile'])
     })
 
     it('should have proper structure for each navigation item', () => {
@@ -45,8 +45,7 @@ describe('Navigation Configuration', () => {
       const timecardsItem = navigationItems.find(item => item.id === 'timecards')
       expect(timecardsItem?.roles).toEqual(['admin', 'in_house', 'supervisor', 'coordinator', 'talent_escort'])
 
-      const settingsItem = navigationItems.find(item => item.id === 'settings')
-      expect(settingsItem?.roles).toEqual(['admin'])
+
 
       const profileItem = navigationItems.find(item => item.id === 'profile')
       expect(profileItem?.roles).toEqual(['admin', 'in_house', 'supervisor', 'coordinator', 'talent_escort'])
@@ -58,7 +57,6 @@ describe('Navigation Configuration', () => {
         team: '/team',
         talent: '/talent',
         timecards: '/timecards',
-        settings: '/settings',
         profile: '/profile',
       }
 
@@ -71,10 +69,10 @@ describe('Navigation Configuration', () => {
   describe('getNavigationItemsForRole', () => {
     it('should return all items for admin role', () => {
       const items = getNavigationItemsForRole('admin')
-      expect(items).toHaveLength(6)
+      expect(items).toHaveLength(5)
       
       const itemIds = items.map(item => item.id)
-      expect(itemIds).toEqual(['projects', 'team', 'talent', 'timecards', 'settings', 'profile'])
+      expect(itemIds).toEqual(['projects', 'team', 'talent', 'timecards', 'profile'])
     })
 
     it('should return all items for in_house role', () => {
@@ -210,10 +208,10 @@ describe('Navigation Configuration', () => {
   })
 
   describe('Role-based navigation requirements', () => {
-    it('should meet requirement 1.1: Admin sees Projects, Team, Talent, Timecards, Settings, Profile', () => {
+    it('should meet requirement 1.1: Admin sees Projects, Team, Talent, Timecards, Profile', () => {
       const adminItems = getNavigationItemsForRole('admin')
       
-      const expectedAdminItems = ['projects', 'team', 'talent', 'timecards', 'settings', 'profile']
+      const expectedAdminItems = ['projects', 'team', 'talent', 'timecards', 'profile']
       const adminItemIds = adminItems.map(item => item.id)
       expect(adminItemIds).toEqual(expectedAdminItems)
     })

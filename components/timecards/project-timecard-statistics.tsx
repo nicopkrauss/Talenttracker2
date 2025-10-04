@@ -4,8 +4,7 @@ import { useState, useEffect } from "react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { DollarSign, FileText, FileEdit, Clock, TrendingUp, Calendar, ChevronDown, ChevronUp } from "lucide-react"
+import { DollarSign, FileText, FileEdit, Clock, TrendingUp, Calendar, ChevronDown, ChevronRight } from "lucide-react"
 import { getRoleColor, getRoleDisplayName } from "@/lib/role-utils"
 
 interface Project {
@@ -170,23 +169,15 @@ export function ProjectTimecardStatistics({ projectId }: ProjectTimecardStatisti
   if (loading) {
     return (
       <Card className={isCollapsed ? "py-4" : "pt-4 pb-6"}>
-        <CardHeader className={isCollapsed ? "pb-0 gap-0" : ""}>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold">Timecard Overview</CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleCollapsed}
-              className="h-8 w-8 p-0"
-              aria-label={isCollapsed ? "Expand timecard overview" : "Collapse timecard overview"}
-            >
-              {isCollapsed ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronUp className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
+        <CardHeader className={`cursor-pointer ${isCollapsed ? "pb-0 gap-0" : ""}`} onClick={toggleCollapsed}>
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+            {isCollapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+            Timecard Overview
+          </CardTitle>
         </CardHeader>
         {!isCollapsed && (
           <CardContent>
@@ -206,23 +197,15 @@ export function ProjectTimecardStatistics({ projectId }: ProjectTimecardStatisti
   if (error) {
     return (
       <Card className={isCollapsed ? "py-4" : "pt-4 pb-6"}>
-        <CardHeader className={isCollapsed ? "pb-0 gap-0" : ""}>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold">Timecard Overview</CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleCollapsed}
-              className="h-8 w-8 p-0"
-              aria-label={isCollapsed ? "Expand timecard overview" : "Collapse timecard overview"}
-            >
-              {isCollapsed ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronUp className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
+        <CardHeader className={`cursor-pointer ${isCollapsed ? "pb-0 gap-0" : ""}`} onClick={toggleCollapsed}>
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+            {isCollapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+            Timecard Overview
+          </CardTitle>
         </CardHeader>
         {!isCollapsed && (
           <CardContent>
@@ -237,23 +220,15 @@ export function ProjectTimecardStatistics({ projectId }: ProjectTimecardStatisti
 
   return (
     <Card className={isCollapsed ? "py-4" : "pt-4 pb-6"}>
-      <CardHeader className={isCollapsed ? "pb-0 gap-0" : ""}>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold">Timecard Overview</CardTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleCollapsed}
-            className="h-8 w-8 p-0"
-            aria-label={isCollapsed ? "Expand timecard overview" : "Collapse timecard overview"}
-          >
-            {isCollapsed ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronUp className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
+      <CardHeader className={`cursor-pointer ${isCollapsed ? "pb-0 gap-0" : ""}`} onClick={toggleCollapsed}>
+        <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+          {isCollapsed ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
+            <ChevronDown className="h-4 w-4" />
+          )}
+          Timecard Overview
+        </CardTitle>
       </CardHeader>
       {!isCollapsed && (
         <CardContent className="space-y-0 md:space-y-6">

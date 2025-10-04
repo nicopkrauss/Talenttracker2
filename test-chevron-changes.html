@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chevron Changes Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .card {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            background: white;
+        }
+        .card-header {
+            padding: 16px;
+            border-bottom: 1px solid #e2e8f0;
+            cursor: pointer;
+            user-select: none;
+        }
+        .card-header:hover {
+            background-color: #f8fafc;
+        }
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0;
+        }
+        .card-content {
+            padding: 16px;
+        }
+        .chevron {
+            width: 16px;
+            height: 16px;
+            transition: transform 0.2s;
+        }
+        .chevron.collapsed {
+            transform: rotate(-90deg);
+        }
+        .icon {
+            width: 20px;
+            height: 20px;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chevron Position Changes Test</h1>
+    
+    <div class="card">
+        <div class="card-header" onclick="toggleCard('timecard')">
+            <h2 class="card-title">
+                <svg class="chevron" id="timecard-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="m6 9 6 6 6-6"/>
+                </svg>
+                Timecard Overview
+            </h2>
+        </div>
+        <div class="card-content" id="timecard-content">
+            <p><strong>✅ UPDATED:</strong> Chevron moved to the left side of the title</p>
+            <p><strong>✅ UPDATED:</strong> Click anywhere on the header to collapse/expand</p>
+            <p><strong>✅ UPDATED:</strong> ChevronDown when expanded, ChevronRight when collapsed</p>
+            <p><strong>✅ UPDATED:</strong> Removed icon from title (cleaner look)</p>
+            <div style="background: #f1f5f9; padding: 12px; border-radius: 4px; margin-top: 12px;">
+                <p><strong>Statistics would appear here...</strong></p>
+                <p>• Total Timecards: 5</p>
+                <p>• Approved: 3</p>
+                <p>• Submitted: 1</p>
+                <p>• Draft: 1</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header" onclick="toggleCard('project')">
+            <h2 class="card-title">
+                <svg class="chevron" id="project-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="m6 9 6 6 6-6"/>
+                </svg>
+                Project Overview
+            </h2>
+        </div>
+        <div class="card-content" id="project-content">
+            <p><strong>✅ NEW:</strong> Added collapsible functionality to Project Overview</p>
+            <p><strong>✅ NEW:</strong> Chevron on the left side matching the pattern</p>
+            <p><strong>✅ NEW:</strong> Click header to collapse/expand</p>
+            <p><strong>✅ NEW:</strong> Clean title without icon (consistent with timecard)</p>
+            <div style="background: #f1f5f9; padding: 12px; border-radius: 4px; margin-top: 12px;">
+                <p><strong>Project details would appear here...</strong></p>
+                <p>• Dates: Jan 15 - Jan 20, 2025</p>
+                <p>• Location: Los Angeles, CA</p>
+                <p>• Production: ABC Studios</p>
+                <p>• Status: Active</p>
+            </div>
+        </div>
+    </div>
+
+    <div style="background: #e0f2fe; padding: 16px; border-radius: 8px; margin-top: 20px;">
+        <h3>Changes Summary:</h3>
+        <ul>
+            <li><strong>Timecard Overview:</strong> Moved chevron from right to left, changed from button to header click</li>
+            <li><strong>Project Overview:</strong> Added new collapsible functionality with left-aligned chevron</li>
+            <li><strong>Consistency:</strong> Both components now follow the same pattern as the project tabs (roles & team)</li>
+            <li><strong>Icons:</strong> Removed icons from titles for cleaner appearance</li>
+            <li><strong>Interaction:</strong> Click anywhere on the header to toggle collapse state</li>
+        </ul>
+    </div>
+
+    <script>
+        function toggleCard(cardId) {
+            const content = document.getElementById(cardId + '-content');
+            const chevron = document.getElementById(cardId + '-chevron');
+            
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                chevron.classList.remove('collapsed');
+            } else {
+                content.classList.add('hidden');
+                chevron.classList.add('collapsed');
+            }
+        }
+    </script>
+</body>
+</html>

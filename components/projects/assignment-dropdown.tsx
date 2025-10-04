@@ -138,7 +138,7 @@ export function AssignmentDropdown({
             onMouseLeave={() => setIsXHovered(false)}
             disabled={disabled}
             className={cn(
-              "border border-l-0 rounded-l-none rounded-r px-1.5 flex items-center justify-center transition-all duration-200",
+              "border border-l-0 rounded-l-none rounded-r-md px-1.5 flex items-center justify-center transition-all duration-200",
               "!bg-white !text-black !border-gray-300 dark:!bg-white dark:!text-black dark:!border-gray-300"
             )}
           >
@@ -226,7 +226,9 @@ export function AssignmentDropdown({
                     <div className="font-medium">{escort.escortName}</div>
                     {escort.currentAssignment && (
                       <div className="text-xs text-muted-foreground">
-                        with {escort.currentAssignment.talentName}
+                        {escort.currentAssignment.talentName === 'Floater' 
+                          ? 'is a floater' 
+                          : `with ${escort.currentAssignment.talentName}`}
                       </div>
                     )}
                   </div>
@@ -260,7 +262,9 @@ export function AssignmentDropdown({
                         <div className="font-medium">{escort.escortName}</div>
                         {escort.currentAssignment && (
                           <div className="text-xs text-muted-foreground">
-                            with {escort.currentAssignment.talentName}
+                            {escort.currentAssignment.talentName === 'Floater' 
+                              ? 'is a floater' 
+                              : `with ${escort.currentAssignment.talentName}`}
                           </div>
                         )}
                       </div>

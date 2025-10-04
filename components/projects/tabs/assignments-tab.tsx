@@ -12,7 +12,8 @@ import {
   EnhancedProject, 
   TalentEscortPair, 
   EscortAvailabilityStatus,
-  ProjectSchedule
+  ProjectSchedule,
+  FloaterAssignment
 } from '@/lib/types'
 import { createProjectScheduleFromStrings } from '@/lib/schedule-utils'
 import { useSchedulingValidation } from '@/hooks/use-scheduling-validation'
@@ -29,6 +30,7 @@ interface AssignmentsTabProps {
 export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [availableEscorts, setAvailableEscorts] = useState<EscortAvailabilityStatus[]>([])
+  const [floaterAssignments, setFloaterAssignments] = useState<FloaterAssignment[]>([])
   const [loading, setLoading] = useState(false)
   const [projectSchedule, setProjectSchedule] = useState<ProjectSchedule | null>(null)
   const [isOnline, setIsOnline] = useState(true)
@@ -171,8 +173,10 @@ export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps
           )
         ])
 
-        // Update state with fetched data
-        refreshAssignments((assignmentsResult as any)?.assignments || [])
+        // Update state with fetched data (now includes floaters in assignments response)
+        const assignmentData = (assignmentsResult as any) || {}
+        refreshAssignments(assignmentData.assignments || [])
+        setFloaterAssignments(assignmentData.floaters || [])
         setAvailableEscorts((escortsResult as any)?.escorts || [])
       })
       
@@ -564,6 +568,162 @@ export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps
     }
   }
 
+  const handleFloaterAssignmentChange = async (floaterId: string, escortId: string | null) => {
+    if (!selectedDate) return
+    
+    try {
+      // Update floater assignment optimistically
+      const optimisticFloaters = floaterAssignments.map(floater => 
+        floater.id === floaterId 
+          ? { 
+              ...floater, 
+              escortId: escortId || undefined,
+              escortName: escortId ? availableEscorts.find(e => e.escortId === escortId)?.escortName : undefined
+            }
+          : floater
+      )
+      
+      setFloaterAssignments(optimisticFloaters)
+      
+      const dateStr = selectedDate.toISOString().split('T')[0]
+      
+      // Make API call to update floater assignment
+      const response = await fetch(`/api/projects/${project.id}/assignments/${dateStr}/floaters`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ floaterId, escortId })
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to update floater assignment')
+      }
+      
+      // Update available escorts status
+      setAvailableEscorts(prevEscorts => {
+        return prevEscorts.map(escort => {
+          if (escortId && escort.escortId === escortId) {
+            return {
+              ...escort,
+              section: 'current_day_assigned' as const,
+              currentAssignment: {
+                talentName: 'Floater',
+                date: selectedDate
+              }
+            }
+          }
+          
+          // If removing escort assignment, check if they should go back to available
+          if (!escortId) {
+            const currentFloater = floaterAssignments.find(f => f.id === floaterId)
+            if (currentFloater?.escortId === escort.escortId && escort.section === 'current_day_assigned') {
+              // Check if this escort has any other assignments
+              const hasOtherAssignments = scheduledTalent.some(t => t.escortId === escort.escortId) ||
+                optimisticFloaters.some(f => f.id !== floaterId && f.escortId === escort.escortId)
+              
+              if (!hasOtherAssignments) {
+                return {
+                  ...escort,
+                  section: 'available' as const,
+                  currentAssignment: undefined
+                }
+              }
+            }
+          }
+          
+          return escort
+        })
+      })
+      
+    } catch (err: any) {
+      console.error('Error updating floater assignment:', err)
+      setError(err)
+      // Revert optimistic update
+      if (selectedDate) {
+        fetchAssignmentsForDate(selectedDate)
+      }
+    }
+  }
+
+  const handleAddFloater = async () => {
+    if (!selectedDate) return
+    
+    try {
+      const dateStr = selectedDate.toISOString().split('T')[0]
+      
+      const response = await fetch(`/api/projects/${project.id}/assignments/${dateStr}/floaters`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to add floater')
+      }
+      
+      const result = await response.json()
+      
+      // Add the new floater to the list
+      setFloaterAssignments(prev => [...prev, result.floaterAssignment])
+      
+    } catch (err: any) {
+      console.error('Error adding floater:', err)
+      setError(err)
+    }
+  }
+
+  const handleRemoveFloater = async (floaterId: string) => {
+    if (!selectedDate) return
+    
+    try {
+      // Remove floater optimistically
+      const floaterToRemove = floaterAssignments.find(f => f.id === floaterId)
+      setFloaterAssignments(prev => prev.filter(f => f.id !== floaterId))
+      
+      const dateStr = selectedDate.toISOString().split('T')[0]
+      
+      const response = await fetch(`/api/projects/${project.id}/assignments/${dateStr}/floaters?floaterId=${floaterId}`, {
+        method: 'DELETE'
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to remove floater')
+      }
+      
+      // If the floater had an assigned escort, update their status
+      if (floaterToRemove?.escortId) {
+        setAvailableEscorts(prevEscorts => {
+          return prevEscorts.map(escort => {
+            if (escort.escortId === floaterToRemove.escortId && escort.section === 'current_day_assigned') {
+              // Check if this escort has any other assignments
+              const hasOtherAssignments = scheduledTalent.some(t => t.escortId === escort.escortId) ||
+                floaterAssignments.some(f => f.id !== floaterId && f.escortId === escort.escortId)
+              
+              if (!hasOtherAssignments) {
+                return {
+                  ...escort,
+                  section: 'available' as const,
+                  currentAssignment: undefined
+                }
+              }
+            }
+            return escort
+          })
+        })
+      }
+      
+    } catch (err: any) {
+      console.error('Error removing floater:', err)
+      setError(err)
+      // Revert optimistic update
+      if (selectedDate) {
+        fetchAssignmentsForDate(selectedDate)
+      }
+    }
+  }
+
   const handleRefresh = () => {
     if (selectedDate) {
       fetchAssignmentsForDate(selectedDate)
@@ -687,12 +847,14 @@ export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps
           </div>
 
           {/* Assignment Progress Row */}
-          {selectedDate && scheduledTalent.length > 0 && (
+          {selectedDate && (scheduledTalent.length > 0 || floaterAssignments.length > 0) && (
             <div className="flex items-center justify-between pt-3 border-t border-border">
               <div className="text-sm text-muted-foreground">
                 <span className="font-medium">
                   {scheduledTalent.length}
-                </span> talent currently assigned for the day
+                </span> talent + <span className="font-medium">
+                  {floaterAssignments.length}
+                </span> floaters for the day
               </div>
               
               <div className="flex items-center gap-4">
@@ -700,12 +862,14 @@ export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps
                   <div 
                     className="bg-primary h-2 rounded-full transition-all duration-300"
                     style={{
-                      width: `${scheduledTalent.length > 0 ? (scheduledTalent.filter(t => t.escortId).length / scheduledTalent.length) * 100 : 0}%`
+                      width: `${(scheduledTalent.length + floaterAssignments.length) > 0 ? 
+                        ((scheduledTalent.filter(t => t.escortId).length + floaterAssignments.filter(f => f.escortId).length) / 
+                         (scheduledTalent.length + floaterAssignments.length)) * 100 : 0}%`
                     }}
                   />
                 </div>
                 <span className="text-sm text-muted-foreground">
-                  {scheduledTalent.filter(t => t.escortId).length} / {scheduledTalent.length} assigned
+                  {scheduledTalent.filter(t => t.escortId).length + floaterAssignments.filter(f => f.escortId).length} / {scheduledTalent.length + floaterAssignments.length} assigned
                 </span>
               </div>
               
@@ -736,11 +900,15 @@ export function AssignmentsTab({ project, onProjectUpdate }: AssignmentsTabProps
           selectedDate={selectedDate}
           projectSchedule={projectSchedule}
           scheduledTalent={scheduledTalent}
+          floaterAssignments={floaterAssignments}
           availableEscorts={availableEscorts}
           onAssignmentChange={handleAssignmentChange}
           onMultiDropdownChange={handleMultiDropdownChange}
           onAddDropdown={handleAddDropdown}
           onRemoveDropdown={handleRemoveDropdown}
+          onFloaterAssignmentChange={handleFloaterAssignmentChange}
+          onAddFloater={handleAddFloater}
+          onRemoveFloater={handleRemoveFloater}
           onClearDay={handleClearDayAssignments}
           loading={loading}
         />

@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { DevModeButton } from '@/components/dev-mode'
 
 interface DesktopNavItemProps {
   href: string
@@ -142,8 +143,9 @@ export function DesktopNavigation() {
           ))}
         </div>
 
-        {/* Right side - User menu */}
-        <div className="flex items-center">
+        {/* Right side - Dev mode button and User menu */}
+        <div className="flex items-center gap-2">
+          <DevModeButton />
           {user && <UserMenu user={user} />}
         </div>
       </div>

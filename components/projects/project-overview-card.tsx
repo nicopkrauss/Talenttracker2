@@ -15,7 +15,9 @@ import {
   CheckCircle2,
   Circle,
   Loader2,
-  Edit
+  Edit,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react'
 import { ProjectScheduleDisplay } from './project-schedule-display'
 import { EscortAssignmentTracker } from './escort-assignment-tracker'
@@ -40,6 +42,14 @@ export function ProjectOverviewCard({
   canEdit 
 }: ProjectOverviewCardProps) {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    // Load collapsed state from localStorage
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('project-overview-collapsed')
+      return saved === 'true'
+    }
+    return false
+  })
 
   const formatDate = (dateString: string) => {
     return formatDateStringShort(dateString)
@@ -97,11 +107,32 @@ export function ProjectOverviewCard({
     }
   }
 
+  const toggleCollapsed = () => {
+    setIsCollapsed(!isCollapsed)
+  }
+
+  // Save collapsed state to localStorage whenever it changes
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('project-overview-collapsed', isCollapsed.toString())
+    }
+  }, [isCollapsed])
+
   return (
-    <Card>
-      <CardHeader>
+    <Card className={isCollapsed ? "py-4" : ""}>
+      <CardHeader className={`${isCollapsed ? "pb-0 gap-0" : ""}`}>
         <div className="flex items-center justify-between">
-          <CardTitle>Project Overview</CardTitle>
+          <CardTitle 
+            className="flex items-center gap-2 cursor-pointer" 
+            onClick={toggleCollapsed}
+          >
+            {isCollapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+            Project Overview
+          </CardTitle>
           {canEdit && (
             <Button 
               variant="ghost" 
@@ -114,7 +145,8 @@ export function ProjectOverviewCard({
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
+      {!isCollapsed && (
+        <CardContent className="space-y-6">
         {/* Project Details Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Left Column - Dates and Location */}
@@ -272,7 +304,8 @@ export function ProjectOverviewCard({
             </Button>
           </div>
         )}
-      </CardContent>
+        </CardContent>
+      )}
     </Card>
   )
 }

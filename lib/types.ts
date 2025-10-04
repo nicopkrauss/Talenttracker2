@@ -924,6 +924,17 @@ export interface TalentEscortPair {
   }>
 }
 
+// Floater assignment interface
+export interface FloaterAssignment {
+  id: string
+  projectId: string
+  assignmentDate: string
+  escortId?: string
+  escortName?: string
+  createdAt: string
+  updatedAt: string
+}
+
 // Enhanced Team Assignment with availability dates
 export interface EnhancedTeamAssignment extends TeamAssignment {
   availableDates?: Date[]

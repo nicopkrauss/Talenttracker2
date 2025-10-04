@@ -69,48 +69,15 @@ export async function PUT(
       return dateObj.toISOString().split('T')[0]
     }) : []
 
-    // Update scheduling using the unified daily assignment system
-    // First, remove all existing scheduling entries for this group
-    const { error: deleteError } = await supabase
-      .from('group_daily_assignments')
-      .delete()
-      .eq('project_id', projectId)
-      .eq('group_id', groupId)
+    // Update scheduling by storing dates directly in the talent_groups table
+    // This avoids the constraint issue with group_daily_assignments.escort_id
+    // The group_daily_assignments table will be used only for actual escort assignments
 
-    if (deleteError) {
-      console.error('Error clearing existing schedule:', deleteError)
-      return NextResponse.json(
-        { error: 'Failed to clear existing schedule', code: 'DELETE_ERROR', details: deleteError.message },
-        { status: 500 }
-      )
-    }
-
-    // Insert new scheduling entries (with escort_id = null for scheduling without assignment)
-    if (processedDates.length > 0) {
-      const schedulingRecords = processedDates.map(date => ({
-        group_id: groupId,
-        project_id: projectId,
-        assignment_date: date,
-        escort_id: null // Scheduled but not assigned
-      }))
-
-      const { error: insertError } = await supabase
-        .from('group_daily_assignments')
-        .insert(schedulingRecords)
-
-      if (insertError) {
-        console.error('Error creating schedule entries:', insertError)
-        return NextResponse.json(
-          { error: 'Failed to create schedule entries', code: 'INSERT_ERROR', details: insertError.message },
-          { status: 500 }
-        )
-      }
-    }
-
-    // Update the talent group timestamp and get updated data
+    // Update the talent group with new scheduled dates
     const { data: updatedGroup, error: updateError } = await supabase
       .from('talent_groups')
       .update({
+        scheduled_dates: processedDates,
         updated_at: new Date().toISOString()
       })
       .eq('id', groupId)
@@ -120,6 +87,7 @@ export async function PUT(
         project_id,
         group_name,
         members,
+        scheduled_dates,
         assigned_escort_id,
         point_of_contact_name,
         point_of_contact_phone,
@@ -149,7 +117,7 @@ export async function PUT(
       projectId: updatedGroup.project_id,
       groupName: updatedGroup.group_name,
       members: updatedGroup.members,
-      scheduledDates: processedDates,
+      scheduledDates: updatedGroup.scheduled_dates || [],
       assignedEscortId: updatedGroup.assigned_escort_id,
       pointOfContactName: updatedGroup.point_of_contact_name,
       pointOfContactPhone: updatedGroup.point_of_contact_phone,

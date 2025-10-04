@@ -291,23 +291,8 @@ export async function POST(
       }
     }
 
-    // Also create a corresponding talent_project_assignments entry for the group
-    // This allows the group to appear in the talent roster and be scheduled
-    const { error: talentAssignmentError } = await supabase
-      .from('talent_project_assignments')
-      .insert({
-        talent_id: newGroup.id, // Use group ID as talent ID for groups
-        project_id: projectId,
-        assigned_by: user.id,
-        status: 'active',
-        display_order: nextDisplayOrder
-      })
-
-    if (talentAssignmentError) {
-      console.error('Error creating talent assignment for group:', talentAssignmentError)
-      // Don't fail the whole operation, but log the error
-      // The group is still created successfully
-    }
+    // Note: Groups are separate entities from talent and don't need talent_project_assignments entries
+    // Groups appear in the roster through their own talent_groups table and are scheduled via group_daily_assignments
 
     // Get the final scheduled dates from the unified system
     const { data: dailyAssignments } = await supabase

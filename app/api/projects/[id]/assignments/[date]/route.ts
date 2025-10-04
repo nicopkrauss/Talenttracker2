@@ -89,8 +89,8 @@ export async function GET(
       return NextResponse.json(error, { status: 400 })
     }
 
-    // Get all talent scheduled for this date (from daily assignments table - unified system)
-    const { data: talentAssignments, error: talentError } = await supabase
+    // Get all assignments for this date (talent and floaters from unified daily assignments table)
+    const { data: allAssignments, error: assignmentsError } = await supabase
       .from('talent_daily_assignments')
       .select(`
         id,
@@ -110,13 +110,13 @@ export async function GET(
       .eq('assignment_date', dateStr) as { 
         data: Array<{
           id: string
-          talent_id: string
+          talent_id: string | null
           escort_id: string | null
           talent: {
             id: string
             first_name: string
             last_name: string
-          }
+          } | null
           escort: {
             id: string
             full_name: string
@@ -125,18 +125,24 @@ export async function GET(
         error: any
       }
 
-    if (talentError) {
-      console.error('Error fetching talent daily assignments:', talentError)
+    if (assignmentsError) {
+      console.error('Error fetching daily assignments:', assignmentsError)
       const error = SchedulingErrorHandler.createError(
         SchedulingErrorCode.DATABASE_ERROR,
-        'Failed to fetch talent assignments from database'
+        'Failed to fetch assignments from database'
       )
-      SchedulingErrorHandler.logError(error, { projectId, date: dateStr, originalError: talentError })
+      SchedulingErrorHandler.logError(error, { projectId, date: dateStr, originalError: assignmentsError })
       return NextResponse.json(error, { status: 500 })
     }
 
+    // Separate talent assignments from floater assignments
+    const talentAssignments = allAssignments?.filter(a => a.talent_id !== null) || []
+    const floaterAssignments = allAssignments?.filter(a => a.talent_id === null) || []
+
+
+
     // Get display orders for talent
-    const talentIds = talentAssignments?.map(ta => ta.talent_id) || []
+    const talentIds = talentAssignments?.map(ta => ta.talent_id).filter(id => id !== null) as string[] || []
     let talentDisplayOrders: Record<string, number> = {}
     
     if (talentIds.length > 0) {
@@ -154,7 +160,8 @@ export async function GET(
       }
     }
 
-    // Get all talent groups scheduled for this date (from daily assignments table - unified system)
+    // Get all talent groups scheduled for this date
+    // First check group_daily_assignments for actual escort assignments
     const { data: groupAssignments, error: groupsError } = await supabase
       .from('group_daily_assignments')
       .select(`
@@ -197,6 +204,36 @@ export async function GET(
         'Failed to fetch group assignments from database'
       )
       SchedulingErrorHandler.logError(error, { projectId, date: dateStr, originalError: groupsError })
+      return NextResponse.json(error, { status: 500 })
+    }
+
+    // Also check talent_groups.scheduled_dates for groups scheduled but not yet assigned
+    const { data: scheduledGroups, error: scheduledGroupsError } = await supabase
+      .from('talent_groups')
+      .select(`
+        id,
+        group_name,
+        display_order,
+        scheduled_dates
+      `)
+      .eq('project_id', projectId)
+      .contains('scheduled_dates', [dateStr]) as {
+        data: Array<{
+          id: string
+          group_name: string
+          display_order: number
+          scheduled_dates: string[]
+        }> | null
+        error: any
+      }
+
+    if (scheduledGroupsError) {
+      console.error('Error fetching scheduled groups:', scheduledGroupsError)
+      const error = SchedulingErrorHandler.createError(
+        SchedulingErrorCode.DATABASE_ERROR,
+        'Failed to fetch scheduled groups from database'
+      )
+      SchedulingErrorHandler.logError(error, { projectId, date: dateStr, originalError: scheduledGroupsError })
       return NextResponse.json(error, { status: 500 })
     }
 
@@ -259,10 +296,35 @@ export async function GET(
       }
     }
 
-    // Process all scheduled talent groups (from unified daily assignments)
+    // Create a set of group IDs that already have assignments
+    const groupsWithAssignments = new Set(groupAssignmentMap.keys())
+
+    // Add scheduled groups that don't have assignments yet
+    if (scheduledGroups) {
+      for (const group of scheduledGroups) {
+        if (!groupsWithAssignments.has(group.id)) {
+          // This group is scheduled but has no assignments yet
+          groupAssignmentMap.set(group.id, [])
+        }
+      }
+    }
+
+    // Process all scheduled talent groups (from both sources)
     groupAssignmentMap.forEach((escorts, groupId) => {
-      const firstAssignment = groupAssignments?.find(ga => ga.group_id === groupId)
-      if (firstAssignment?.group) {
+      // Find group info from either assignments or scheduled groups
+      let groupInfo = groupAssignments?.find(ga => ga.group_id === groupId)?.group
+      if (!groupInfo) {
+        const scheduledGroup = scheduledGroups?.find(sg => sg.id === groupId)
+        if (scheduledGroup) {
+          groupInfo = {
+            id: scheduledGroup.id,
+            group_name: scheduledGroup.group_name,
+            display_order: scheduledGroup.display_order
+          }
+        }
+      }
+
+      if (groupInfo) {
         // Filter out null escorts and use assigned escorts
         const assignedEscorts = escorts.filter(e => e.escortId !== null)
         const primaryEscort = assignedEscorts[0]
@@ -277,15 +339,26 @@ export async function GET(
         
         assignments.push({
           talentId: groupId,
-          talentName: firstAssignment.group.group_name,
+          talentName: groupInfo.group_name,
           isGroup: true,
           escortId: primaryEscort?.escortId || undefined,
           escortName: primaryEscort?.escortName || undefined,
           escortAssignments,
-          displayOrder: firstAssignment.group.display_order || 0
+          displayOrder: groupInfo.display_order || 0
         })
       }
     })
+
+    // Process floater assignments (where talent_id is NULL)
+    const floaters = floaterAssignments.map(floater => ({
+      id: floater.id,
+      projectId: projectId,
+      assignmentDate: dateStr,
+      escortId: floater.escort_id || undefined,
+      escortName: floater.escort?.full_name || undefined,
+      createdAt: '', // We'll get this from the database if needed
+      updatedAt: ''
+    }))
 
     // Sort assignments by display_order (descending) to match draggable area
     assignments.sort((a, b) => b.displayOrder - a.displayOrder)
@@ -293,7 +366,8 @@ export async function GET(
     return NextResponse.json({
       data: {
         date: dateStr,
-        assignments
+        assignments,
+        floaters
       }
     })
 
@@ -582,7 +656,7 @@ export async function POST(
             throw new Error(`Failed to clear existing group assignments: ${clearError.message}`)
           }
 
-          // Insert new assignments (or empty entry if no escorts)
+          // Insert new assignments only if there are escorts assigned
           if (group.escortIds.length > 0) {
             const groupAssignmentRecords = group.escortIds.map(escortId => ({
               group_id: group.groupId,
@@ -598,21 +672,9 @@ export async function POST(
             if (insertError) {
               throw new Error(`Failed to insert group assignments: ${insertError.message}`)
             }
-          } else {
-            // Insert empty entry to maintain scheduling
-            const { error: insertError } = await supabase
-              .from('group_daily_assignments')
-              .insert({
-                group_id: group.groupId,
-                project_id: projectId,
-                assignment_date: dateStr,
-                escort_id: null
-              })
-
-            if (insertError) {
-              throw new Error(`Failed to insert group scheduling entry: ${insertError.message}`)
-            }
           }
+          // Note: If no escorts are assigned, the group remains scheduled via talent_groups.scheduled_dates
+          // No need to insert empty entries into group_daily_assignments
         }
         operationsCompleted.groupInserted = true
       }
